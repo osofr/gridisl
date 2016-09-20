@@ -126,6 +126,8 @@ predictHoldout <- function(OData, verbose = getOption("growthcurveSL.verbose")) 
   gvars$verbose <- verbose
   nodes <- OData$nodes
   modelfit <- OData$modelfit
+  sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode)
+
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
   # Get predictions for holdout data only:
   preds <- modelfit$predict(newdata = OData, subset_exprs = "hold == TRUE")
@@ -143,6 +145,8 @@ predictHoldout <- function(OData, verbose = getOption("growthcurveSL.verbose")) 
 #' Predict for a holdout set
 #'
 #' @param OData Input data object created by \code{importData} function.
+#' @param tmin ...
+#' @param tmax ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 #' @export
@@ -150,29 +154,22 @@ predictCurve <- function(OData, tmin, tmax, verbose = getOption("growthcurveSL.v
   gvars$verbose <- verbose
   nodes <- OData$nodes
   modelfit <- OData$modelfit
+  sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode)
   if (missing(tmin)) tmin <- OData$min.t
   if (missing(tmax)) tmax <- min(OData$max.t, 700)
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
-  # Get predictions for holdout data only:
 
-  sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode)
 
   # Predict a full curve based on a grid for each subject. The grid is tmin to tmax. Covariates are carried forward:
-  browser()
   gridDT <- CJ(unique(OData$dat.sVar[[nodes$IDnode]]), tmin:tmax)
   colnames(gridDT) <- c(nodes$IDnode, nodes$tnode)
   setkeyv(gridDT, cols = c(nodes$IDnode, nodes$tnode))
-
   gridDT <- OData$dat.sVar[, sel_vars, with = FALSE][gridDT, roll = TRUE]
-
   newOData <- OData$clone()
   newOData$dat.sVar <- gridDT
-  newOData$dat.sVar
-  OData$dat.sVar
-
+  # newOData$dat.sVar
+  # OData$dat.sVar
   preds <- modelfit$predict(newdata = newOData, subset_exprs = NULL)
-  # holdoutDT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Lnodes, nodes$Ynode, OData$hold_column), with = FALSE]
-
   if (is.matrix(preds$getprobA1)) {
     gridDT[, (colnames(preds$getprobA1)) := as.data.table(preds$getprobA1)]
   } else {

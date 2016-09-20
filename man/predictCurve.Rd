@@ -9,6 +9,10 @@ predictCurve(OData, tmin, tmax, verbose = getOption("growthcurveSL.verbose"))
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
 
+\item{tmin}{...}
+
+\item{tmax}{...}
+
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
 }
 \value{
