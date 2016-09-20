@@ -52,7 +52,7 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
   # Evaluate the MSE based on the leave-one-out data point
   # ----------------------------------------------------------------------------------------------------
   # ....
-  browser()
+  # browser()
 
   # # Specify a defalt GLM as the metalearner
   # metalearner <- model_contrl$metalearner

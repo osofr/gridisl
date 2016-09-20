@@ -320,7 +320,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       odata_wide <- dcast(self$dat.sVar, formula = nodes$ID %+% " ~ " %+% nodes$tnode, value.var = cast.vars)
       return(odata_wide)
     }
-
   ),
 
   active = list(

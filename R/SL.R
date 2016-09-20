@@ -33,8 +33,8 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                   intercept = TRUE,
                   seed = 1,
-                  fold_column = fold_column,
-                  keep_cross_validation_predictions = TRUE,
+                  # fold_column = fold_column,
+                  # keep_cross_validation_predictions = TRUE,
                   family = family,
                   standardize = TRUE,
                   solver = "L_BFGS",
@@ -105,6 +105,8 @@ fit.h2oSuperLearner <- function(fit.class, fit, training_frame, y, x, model_cont
     fitted_models_all <- NULL
     nfolds <- model_contrl$nfolds
     model_contrl$nfolds <- NULL
+    model_contrl$fold_column <- fold_column
+    model_contrl$keep_cross_validation_predictions <- TRUE
 
     if (is.null(grid.algorithms) && is.null(learners)) {
       stop("must specify either 'grid.algorithm' or 'learner' when performing estimation with SuperLearner")

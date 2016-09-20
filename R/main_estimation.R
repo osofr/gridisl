@@ -103,7 +103,13 @@ get_fit <- function(OData, predvars, params, holdout = FALSE, random = FALSE, se
   # ------------------------------------------------------------------------------------------
   # DEFINE a single regression class
   # ------------------------------------------------------------------------------------------
-  regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_vars = NULL, model_contrl = params)
+  browser()
+
+  # To select the non-holdout set for fitting the models:
+  regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_exprs = list("!hold"), model_contrl = params)
+
+  # To select only the holdout set (for MSE evaluation):
+  # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_exprs = list("hold"), model_contrl = params)
   modelfits <- OutcomeModel$new(reg = regobj)
 
   # Perform fit and prediction
@@ -111,10 +117,11 @@ get_fit <- function(OData, predvars, params, holdout = FALSE, random = FALSE, se
   modelfits$fit(data = OData)
   # modelfits$fit(data = OData, predict = TRUE)
 
-  # get predictions
+  # get predictions for new data (holdout + grid by time dataset):
+
   # h_gN <- modelfits.g0$predictAeqa(n = OData$nobs)
 
-  browser()
+  modelfits$fit(data = OData)
 
   # ------------------------------------------------------------------------------------------
   OData$modelfit <- modelfits
