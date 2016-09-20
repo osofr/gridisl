@@ -141,11 +141,10 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
       }
 
       private$model.fit <- model.fit
-      str(private$model.fit)
-      names(private$model.fit)
-      private$model.fit$fitted_models_all
-
-      browser()
+      # str(private$model.fit)
+      # names(private$model.fit)
+      # private$model.fit$fitted_models_all
+      # browser()
 
       self$is.fitted <- TRUE
       if (predict) {
@@ -161,12 +160,16 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
 
     # Predict the response P(Bin = 1|sW = sw);
     # uses private$model.fit to generate predictions for data:
-    predict = function(newdata, ...) {
+    predict = function(newdata, subset_exprs, ...) {
       assert_that(self$is.fitted)
       if (missing(newdata) && is.null(private$probA1)) {
         private$probA1 <- self$binomialModelObj$predictP1(subset_idx = self$subset_idx)
       } else {
         self$n <- newdata$nobs
+
+        self$subset_vars <- NULL
+        if (!missing(subset_exprs)) self$subset_exprs <- subset_exprs
+
         self$define.subset.idx(newdata)
         private$probA1 <- self$binomialModelObj$predictP1(data = newdata, subset_idx = self$subset_idx)
       }
@@ -197,6 +200,7 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
       if (any(is.na(probA1) & !is.nan(probA1))) {
         stop("some of the modeling predictions resulted in NAs, which indicates an error of a prediction routine")
       }
+
       # assert_that(!any(is.na(probA1)))
 
       # Discrete version for joint density:
@@ -227,6 +231,8 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
         stop("calls aren't allowed in binomialModelObj$subset_vars")
       } else if (is.character(self$subset_vars)) {
         subset_idx <- data$evalsubst(subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
+      } else if (is.null(self$subset_vars)) {
+        subset_idx <- data$evalsubst(subset_exprs = self$subset_exprs)
       }
 
       assert_that(is.logical(subset_idx))

@@ -141,21 +141,21 @@ fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_cont
 # Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
 # ----------------------------------------------------------------
 predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
-  assert_that(!is.null(subset_idx))
-  if (!missing(DataStorageObject)) {
-    rows_subset <- which(subset_idx)
-    data <- DataStorageObject
-    outvar <- m.fit$params$outvar
-    predvars <- m.fit$params$predvars
+  subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
+  # assert_that(!is.null(subset_idx))
+  # if (!missing(DataStorageObject)) {
+  #   rows_subset <- which(subset_idx)
+  #   data <- DataStorageObject
+  #   outvar <- m.fit$params$outvar
+  #   predvars <- m.fit$params$predvars
 
-    # 1. works on a single core, but fails in parallel:
-    subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
-                                            saveH2O = FALSE,
-                                            destination_frame = "subsetH2Oframe")
-  } else {
-    subsetH2Oframe <- ParentObject$getsubsetH2Oframe
-  }
-
+  #   # 1. works on a single core, but fails in parallel:
+  #   subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
+  #                                           saveH2O = FALSE,
+  #                                           destination_frame = "subsetH2Oframe")
+  # } else {
+  #   subsetH2Oframe <- ParentObject$getsubsetH2Oframe
+  # }
   pAout <- rep.int(gvars$misval, n)
   if (sum(subset_idx) > 0) {
     predictFrame <- h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)
@@ -172,21 +172,20 @@ predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
 # Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
 # ----------------------------------------------------------------
 predictP1.H2Oensemblemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
-  assert_that(!is.null(subset_idx))
-  if (!missing(DataStorageObject)) {
-    rows_subset <- which(subset_idx)
-    data <- DataStorageObject
-    outvar <- m.fit$params$outvar
-    predvars <- m.fit$params$predvars
-
-    # 1. works on a single core, but fails in parallel:
-    subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
-                                            saveH2O = FALSE,
-                                            destination_frame = "subsetH2Oframe")
-
-  } else {
-    subsetH2Oframe <- ParentObject$getsubsetH2Oframe
-  }
+  subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
+  # assert_that(!is.null(subset_idx))
+  # if (!missing(DataStorageObject)) {
+  #   rows_subset <- which(subset_idx)
+  #   data <- DataStorageObject
+  #   outvar <- m.fit$params$outvar
+  #   predvars <- m.fit$params$predvars
+  #   # 1. works on a single core, but fails in parallel:
+  #   subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
+  #                                           saveH2O = FALSE,
+  #                                           destination_frame = "subsetH2Oframe")
+  # } else {
+  #   subsetH2Oframe <- ParentObject$getsubsetH2Oframe
+  # }
 
   pAout <- rep.int(gvars$misval, n)
   if (sum(subset_idx) > 0) {
@@ -199,6 +198,37 @@ predictP1.H2Oensemblemodel <- function(m.fit, ParentObject, DataStorageObject, s
     }
   }
   return(pAout)
+}
+
+getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_idx) {
+  assert_that(!is.null(subset_idx))
+  if (!missing(DataStorageObject)) {
+    rows_subset <- which(subset_idx)
+    data <- DataStorageObject
+    outvar <- m.fit$params$outvar
+    predvars <- m.fit$params$predvars
+    # 1. works on a single core, but fails in parallel:
+    subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
+                                            saveH2O = FALSE,
+                                            destination_frame = "subsetH2Oframe")
+  } else {
+    subsetH2Oframe <- ParentObject$getsubsetH2Oframe
+  }
+  return(subsetH2Oframe)
+}
+
+predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
+  subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
+  pAoutMat <- matrix(gvars$misval, nrow = n, ncol = length(m.fit$fitted_models_all))
+  colnames(pAoutMat) <- "PredModel" %+% (1:length(m.fit$fitted_models_all))
+
+  if (sum(subset_idx) > 0) {
+    for (idx in seq_along(m.fit$fitted_models_all)) {
+      predictFrame <- predict(m.fit$fitted_models_all[[idx]], newdata = subsetH2Oframe)
+      pAoutMat[subset_idx, idx] <- as.vector(predictFrame[,"predict"])
+    }
+  }
+  return(pAoutMat)
 }
 
 # IMPLEMENTING NEW CLASS FOR BINARY REGRESSION THAT USES h2o

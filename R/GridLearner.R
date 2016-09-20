@@ -94,6 +94,6 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
   fit$fitted_models_all <- fitted_models_all
 
   # class(fit) <- c(class(fit)[1], c("H2Oensemblemodel"))
-  class(fit) <- c(class(fit)[1], c("H2Omodel"))
+  class(fit) <- c(class(fit)[1], c("H2Ogridmodel"))
   return(fit)
 }
