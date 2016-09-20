@@ -1,0 +1,32 @@
+Package: growthcurveSL
+Title: SuperLearner for Imputing Growth Curves
+Version: 0.0.2.9000
+Authors@R: c(
+    person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"))
+Description: SuperLearner for Imputing Growth Curves.
+Depends:
+    R (>= 3.2.1)
+Imports:
+    assertthat,
+    data.table,
+    ggplot2,
+    methods,
+    R6,
+    Rcpp,
+    rmarkdown,
+    pander,
+    speedglm,
+    stats,
+    stringr,
+    zoo
+LinkingTo: Rcpp
+Suggests:
+    h2o,
+    h2oEnsemble,
+    knitr,
+    magrittr,
+    RUnit,
+    simcausal
+License: GPL-2
+LazyData: true
+RoxygenNote: 5.0.1
