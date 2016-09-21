@@ -98,12 +98,10 @@ define_LR_summaries <- function(OData, holdout = FALSE, verbose = getOption("gro
   OData$dat.sVar[, c("left.t", "right.t") := list(NULL, NULL)]
   OData$dat.sVar[, c("Yleft.t", "Yright.t") := list(NULL, NULL)]
   OData$dat.sVar[, c("left.most", "middle", "right.most") := list(NULL, NULL, NULL)]
+  # OData$dat.sVar[, c("sum.Y","sum.Y.sq") := list(NULL, NULL)]
 
   OData$dat.sVar[non_hold_idx, c("left.t", "right.t") := list(shift(eval(as.name(nodes$tnode)), type = "lag"), shift(eval(as.name(nodes$tnode)), type = "lead")), by = eval(nodes$IDnode)]
   OData$dat.sVar[non_hold_idx, c("Yleft.t", "Yright.t") := list(shift(eval(as.name(nodes$Ynode)), type = "lag", fill = 0), shift(eval(as.name(nodes$Ynode)), type = "lead", fill = 0)), by = eval(nodes$IDnode)]
-
-  OData$dat.sVar[non_hold_idx, c("sum.Y") := list(sum(eval(as.name(nodes$Ynode)))), by = eval(nodes$IDnode)]
-  OData$dat.sVar[non_hold_idx, c("sum.Y.sq") := list(sum(eval(as.name(nodes$Ynode))^2)), by = eval(nodes$IDnode)]
 
   # Add dummy indicator column(s) of being left-most / middle / right-most observation
   OData$dat.sVar[non_hold_idx, c("left.most", "middle", "right.most"):= list(0L, 0L, 0L)]
@@ -116,6 +114,17 @@ define_LR_summaries <- function(OData, holdout = FALSE, verbose = getOption("gro
   OData$dat.sVar[non_hold_idx & is.na(right.t), right.t := eval(as.name(nodes$tnode))]
   # OData$dat.sVar[1:100, ]
 
+  # browser()
+
+  # Only evaluate these summaries once on the training set (omit the holdout set)
+  # OData$dat.sVar[, c("sum.Y","sum.Y.sq") := list(NULL, NULL)]
+  if (!is.null(OData$hold_column) && holdout) {
+    OData$dat.sVar <- OData$dat.sVar[OData$dat.sVar[non_hold_idx, {sum.Y=sum(eval(as.name(nodes$Ynode))); list(sum.Y = sum.Y)}, by = eval(nodes$IDnode)]]
+    OData$dat.sVar <- OData$dat.sVar[OData$dat.sVar[non_hold_idx, {sum.Y.sq=sum(eval(as.name(nodes$Ynode))^2); list(sum.Y.sq = sum.Y.sq)}, by = eval(nodes$IDnode)]]
+  }
+
+  # OData$dat.sVar[non_hold_idx, c("sum.Y") := list(sum(eval(as.name(nodes$Ynode)))), by = eval(nodes$IDnode)]
+  # OData$dat.sVar[non_hold_idx, c("sum.Y.sq") := list(sum(eval(as.name(nodes$Ynode))^2)), by = eval(nodes$IDnode)]
 
   # Add total sum of observed Y's and other summaries?
   # ...
