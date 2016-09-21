@@ -99,8 +99,8 @@ define_LR_summaries <- function(OData, holdout = FALSE, verbose = getOption("gro
   OData$dat.sVar[, c("Yleft.t", "Yright.t") := list(NULL, NULL)]
   OData$dat.sVar[, c("left.most", "middle", "right.most") := list(NULL, NULL, NULL)]
 
-  OData$dat.sVar[non_hold_idx, c("left.t", "right.t") := list(shift(eval(as.name(nodes$tnode)), type = "lag"), shift(eval(as.name(nodes$tnode)), type = "lead")), by = subjid]
-  OData$dat.sVar[non_hold_idx, c("Yleft.t", "Yright.t") := list(shift(eval(as.name(nodes$Ynode)), type = "lag", fill = 0), shift(eval(as.name(nodes$Ynode)), type = "lead", fill = 0)), by = subjid]
+  OData$dat.sVar[non_hold_idx, c("left.t", "right.t") := list(shift(eval(as.name(nodes$tnode)), type = "lag"), shift(eval(as.name(nodes$tnode)), type = "lead")), by = eval(nodes$IDnode)]
+  OData$dat.sVar[non_hold_idx, c("Yleft.t", "Yright.t") := list(shift(eval(as.name(nodes$Ynode)), type = "lag", fill = 0), shift(eval(as.name(nodes$Ynode)), type = "lead", fill = 0)), by = eval(nodes$IDnode)]
 
   # Add dummy indicator column(s) of being left-most / middle / right-most observation
   OData$dat.sVar[non_hold_idx, c("left.most", "middle", "right.most"):= list(0L, 0L, 0L)]
