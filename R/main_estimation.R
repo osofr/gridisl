@@ -103,18 +103,17 @@ define_LR_summaries <- function(OData, holdout = FALSE, verbose = getOption("gro
   OData$dat.sVar[non_hold_idx, c("left.t", "right.t") := list(shift(eval(as.name(nodes$tnode)), type = "lag"), shift(eval(as.name(nodes$tnode)), type = "lead")), by = eval(nodes$IDnode)]
   OData$dat.sVar[non_hold_idx, c("Yleft.t", "Yright.t") := list(shift(eval(as.name(nodes$Ynode)), type = "lag", fill = NA), shift(eval(as.name(nodes$Ynode)), type = "lead", fill = NA)), by = eval(nodes$IDnode)]
 
-  OData$dat.sVar[non_hold_idx & is.na(Yleft.t), Yleft.t := Yright.t]
-  OData$dat.sVar[non_hold_idx & is.na(Yright.t), Yright.t := Yleft.t]
-
   # Add dummy indicator column(s) of being left-most / middle / right-most observation:
   OData$dat.sVar[non_hold_idx, c("left.most", "middle", "right.most"):= list(0L, 0L, 0L)]
   OData$dat.sVar[non_hold_idx & is.na(left.t), left.most := 1L]
   OData$dat.sVar[non_hold_idx & !is.na(left.t) & !is.na(right.t), middle := 1L]
   OData$dat.sVar[non_hold_idx & is.na(right.t), right.most := 1L]
 
-  # Set missing left.t & right.t to current t value:
-  OData$dat.sVar[non_hold_idx & is.na(left.t), left.t := eval(as.name(nodes$tnode))]
-  OData$dat.sVar[non_hold_idx & is.na(right.t), right.t := eval(as.name(nodes$tnode))]
+  # Set missing left.t & right.t in the same manner as missing Yleft / Yright:
+  OData$dat.sVar[non_hold_idx & is.na(Yleft.t), Yleft.t := Yright.t]
+  OData$dat.sVar[non_hold_idx & is.na(left.t),  left.t  := right.t]
+  OData$dat.sVar[non_hold_idx & is.na(Yright.t), Yright.t := Yleft.t]
+  OData$dat.sVar[non_hold_idx & is.na(right.t), right.t := left.t]
   # OData$dat.sVar[1:100, ]
 
   # browser()
