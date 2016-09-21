@@ -51,7 +51,7 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
     is.fitted = FALSE,
 
     binomialModelObj = NULL, # object of class binomialModelObj that is used in fitting / prediction, never saved (need to be initialized with $new())
-    fit.package = c("speedglm", "glm", "h2o"),
+    fit.package = c("speedglm", "glm", "h2o", "face"),
     fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"),
     model_contrl = list(),
 
@@ -72,7 +72,8 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
       } else {
         self$fit.package <- reg$fit.package[1]
       }
-      if (!(self$fit.package %in% c("speedglm", "glm", "h2o"))) stop("fit.package must be one of: 'speedglm', 'glm', 'h2o'")
+      if (!(self$fit.package %in% c("speedglm", "glm", "h2o", "face")))
+        stop("fit.package must be one of: 'speedglm', 'glm', 'h2o', 'face'")
 
       if ("fit.algorithm" %in% names(self$model_contrl)) {
         self$fit.algorithm <- self$model_contrl[['fit.algorithm']]
@@ -80,7 +81,8 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
       } else {
         self$fit.algorithm <- reg$fit.algorithm[1]
       }
-      if (!(self$fit.algorithm %in% c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner", "GridLearner"))) stop("fit.algorithm must be one of: 'glm', 'gbm', 'randomForest', 'deeplearning', 'SuperLearner', 'GridLearner'")
+      if (!(self$fit.algorithm %in% c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner", "GridLearner")))
+        stop("fit.algorithm must be one of: 'glm', 'gbm', 'randomForest', 'deeplearning', 'SuperLearner', 'GridLearner'")
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
@@ -100,9 +102,12 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
 
       # ***************************************************************************
       # Add any additional options passed on to modeling functions as extra args
+      # ****** NOTE: This needs to be changed to S3 dispatch for greater flexibility ******
       # ***************************************************************************
       if (self$fit.package %in% c("h2o", "h2oEnsemble")) {
         self$binomialModelObj <- BinomialH2O$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
+      } else if (self$fit.package %in% c("face")) {
+        self$binomialModelObj <- faceClass$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
       } else {
         self$binomialModelObj <- BinomialGLM$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
       }

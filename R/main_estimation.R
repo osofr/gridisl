@@ -232,7 +232,6 @@ predictCurve <- function(OData, tmin, tmax, modelIDs, verbose = getOption("growt
   nodes <- OData$nodes
   modelfit <- OData$modelfit
   sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode)
-
   # browser()
 
   if (missing(tmin)) tmin <- OData$min.t
@@ -243,7 +242,6 @@ predictCurve <- function(OData, tmin, tmax, modelIDs, verbose = getOption("growt
   gridDT <- CJ(unique(OData$dat.sVar[[nodes$IDnode]]), tmin:tmax)
   colnames(gridDT) <- c(nodes$IDnode, nodes$tnode)
   setkeyv(gridDT, cols = c(nodes$IDnode, nodes$tnode))
-
 
   gridDT <- OData$dat.sVar[, sel_vars, with = FALSE][gridDT, roll = TRUE]
   gridDT <- OData$dat.sVar[][gridDT, roll = TRUE]
@@ -260,6 +258,7 @@ predictCurve <- function(OData, tmin, tmax, modelIDs, verbose = getOption("growt
   } else {
     gridDT[, ("PredModel1") := preds$getprobA1]
   }
+
   return(gridDT)
 }
 
