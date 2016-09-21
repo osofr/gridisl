@@ -85,8 +85,8 @@ define_LR_summaries <- function(OData, holdout = FALSE, verbose = getOption("gro
   # browser()
 
   # Add new predictors (summaries), for each observed outcome, but ignore the holdouts, if holdout==TRUE
-  # 1. Left Y[lt], lt, if exists (otherwise lt = t)
-  # 2. Right Y[rt], rt, if exists (otherwise rt = t)
+  # 1. Left Y[lt], lt, if exists (otherwise lt = rt)
+  # 2. Right Y[rt], rt, if exists (otherwise rt = lt)
 
   # Define which observations are in the hold-out set (and thus should be ignored for creating summaries)
   if (!is.null(OData$hold_column) && holdout) {
@@ -188,28 +188,35 @@ get_fit <- function(OData, predvars, params, holdout = FALSE, random = FALSE, se
 #' @param OData Input data object created by \code{importData} function.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @param modelIDs ...
+#' @param all_obs Predict values for all observations (including holdout) or just the holdout observations?
 #' @return ...
 #' @export
-predictHoldout <- function(OData, modelIDs, verbose = getOption("growthcurveSL.verbose")) {
+predictHoldout <- function(OData, modelIDs, all_obs = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
   modelfit <- OData$modelfit
   sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode)
 
   OData <- define_LR_summaries(OData, holdout = FALSE)
-  OData$dat.sVar
+  # OData$dat.sVar
   # browser()
 
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
+  if (all_obs) {
+    subset_exprs <- NULL
+  } else {
+    subset_exprs <- "hold == TRUE"
+  }
+
   # Get predictions for holdout data only when the actual outcome was also not missing:
-  preds <- modelfit$predict(newdata = OData, subset_exprs = "hold == TRUE")
+  preds <- modelfit$predict(newdata = OData, subset_exprs = subset_exprs)
   holdoutDT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode, OData$hold_column), with = FALSE]
 
   holdoutDT[, (colnames(preds$getprobA1)) := as.data.table(preds$getprobA1)]
 
   # browser()
   MSE <- modelfit$evalMSE(OData)
-  print("MSE: "); print(MSE)
+  print("MSE: "); print(unlist(MSE))
   return(holdoutDT)
 }
 
