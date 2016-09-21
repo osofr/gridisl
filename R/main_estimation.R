@@ -74,6 +74,53 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
 }
 
 # ---------------------------------------------------------------------------------------
+#' Define various summaries of observed outcome
+#'
+#' @param OData Input data object created by \code{importData} function.
+#' @param holdout ...
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @return ...
+define_LR_summaries <- function(OData, holdout = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+  nodes <- OData$nodes
+  # browser()
+
+  # Add new predictors (summaries), for each observed outcome, but ignore the holdouts, if holdout==TRUE
+  # 1. Left Y[lt], lt, if exists (otherwise lt = t)
+  # 2. Right Y[rt], rt, if exists (otherwise rt = t)
+
+  # Define which observations are in the hold-out set (and thus should be ignored for creating summaries)
+  if (!is.null(OData$hold_column) && holdout) {
+    non_hold_idx <- !OData$dat.sVar[[OData$hold_column]]
+  } else {
+    non_hold_idx <- TRUE
+  }
+
+  OData$dat.sVar[, c("left.t", "right.t") := list(NULL, NULL)]
+  OData$dat.sVar[, c("Yleft.t", "Yright.t") := list(NULL, NULL)]
+  OData$dat.sVar[, c("left.most", "middle", "right.most") := list(NULL, NULL, NULL)]
+
+  OData$dat.sVar[non_hold_idx, c("left.t", "right.t") := list(shift(eval(as.name(nodes$tnode)), type = "lag"), shift(eval(as.name(nodes$tnode)), type = "lead")), by = subjid]
+  OData$dat.sVar[non_hold_idx, c("Yleft.t", "Yright.t") := list(shift(eval(as.name(nodes$Ynode)), type = "lag", fill = 0), shift(eval(as.name(nodes$Ynode)), type = "lead", fill = 0)), by = subjid]
+
+  # Add dummy indicator column(s) of being left-most / middle / right-most observation
+  OData$dat.sVar[non_hold_idx, c("left.most", "middle", "right.most"):= list(0L, 0L, 0L)]
+  OData$dat.sVar[non_hold_idx & is.na(left.t), left.most := 1L]
+  OData$dat.sVar[non_hold_idx & !is.na(left.t) & !is.na(right.t), middle := 1L]
+  OData$dat.sVar[non_hold_idx & is.na(right.t), right.most := 1L]
+
+  # Set missing left.t & right.t to current t value
+  OData$dat.sVar[non_hold_idx & is.na(left.t), left.t := eval(as.name(nodes$tnode))]
+  OData$dat.sVar[non_hold_idx & is.na(right.t), right.t := eval(as.name(nodes$tnode))]
+  # OData$dat.sVar[1:100, ]
+
+  # Add total sum of observed Y's and other summaries?
+  # ...
+
+  return(OData)
+}
+
+
+# ---------------------------------------------------------------------------------------
 #' Define and fit growth models.
 #'
 #' @param OData Input data object created by \code{importData} function.
@@ -91,10 +138,13 @@ get_fit <- function(OData, predvars, params, holdout = FALSE, random = FALSE, se
                     verbose = getOption("growthcurveSL.verbose")) {
 # stratify = NULL, reg,
   gvars$verbose <- verbose
+  OData$nodes$predvars <- predvars
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
   if (holdout) OData$add_holdout_ind(hold_column = "hold", random = random, seed = seed)
+
+  OData <- define_LR_summaries(OData, holdout)
 
   # ------------------------------------------------------------------------------------------
   # DEFINE a single regression class
@@ -120,56 +170,73 @@ get_fit <- function(OData, predvars, params, holdout = FALSE, random = FALSE, se
 #'
 #' @param OData Input data object created by \code{importData} function.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @param modelIDs ...
 #' @return ...
 #' @export
-predictHoldout <- function(OData, verbose = getOption("growthcurveSL.verbose")) {
+predictHoldout <- function(OData, modelIDs, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
   modelfit <- OData$modelfit
   sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode)
 
+  OData <- define_LR_summaries(OData, holdout = FALSE)
+  OData$dat.sVar
+  # browser()
+
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
-  # Get predictions for holdout data only:
+  # Get predictions for holdout data only when the actual outcome was also not missing:
   preds <- modelfit$predict(newdata = OData, subset_exprs = "hold == TRUE")
   holdoutDT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode, OData$hold_column), with = FALSE]
 
-  if (is.matrix(preds$getprobA1)) {
-    holdoutDT[, (colnames(preds$getprobA1)) := as.data.table(preds$getprobA1)]
-  } else {
-    holdoutDT[, ("PredModel1") := preds$getprobA1]
-  }
+  holdoutDT[, (colnames(preds$getprobA1)) := as.data.table(preds$getprobA1)]
+
+  # browser()
+  MSE <- modelfit$evalMSE(OData)
+  print("MSE: "); print(MSE)
   return(holdoutDT)
 }
 
+# ---------------------------------------------------------------------------------------
+# TO DO: Add prediction only based on the subset of models (rather than predicting for all models)
+# using modelIDs argument
 # ---------------------------------------------------------------------------------------
 #' Predict for a holdout set
 #'
 #' @param OData Input data object created by \code{importData} function.
 #' @param tmin ...
 #' @param tmax ...
+#' @param modelIDs ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 #' @export
-predictCurve <- function(OData, tmin, tmax, verbose = getOption("growthcurveSL.verbose")) {
+predictCurve <- function(OData, tmin, tmax, modelIDs, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
   modelfit <- OData$modelfit
   sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode)
+
+  # browser()
+
   if (missing(tmin)) tmin <- OData$min.t
   if (missing(tmax)) tmax <- min(OData$max.t, 700)
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
-
 
   # Predict a full curve based on a grid for each subject. The grid is tmin to tmax. Covariates are carried forward:
   gridDT <- CJ(unique(OData$dat.sVar[[nodes$IDnode]]), tmin:tmax)
   colnames(gridDT) <- c(nodes$IDnode, nodes$tnode)
   setkeyv(gridDT, cols = c(nodes$IDnode, nodes$tnode))
+
+
   gridDT <- OData$dat.sVar[, sel_vars, with = FALSE][gridDT, roll = TRUE]
+  gridDT <- OData$dat.sVar[][gridDT, roll = TRUE]
+
+  # gridDT[1:100, ]
+
   newOData <- OData$clone()
   newOData$dat.sVar <- gridDT
-  # newOData$dat.sVar
-  # OData$dat.sVar
-  preds <- modelfit$predict(newdata = newOData, subset_exprs = NULL)
+
+  preds <- modelfit$predict(newdata = newOData, subset_vars = NULL, subset_exprs = NULL)
+
   if (is.matrix(preds$getprobA1)) {
     gridDT[, (colnames(preds$getprobA1)) := as.data.table(preds$getprobA1)]
   } else {

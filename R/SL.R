@@ -191,6 +191,7 @@ fit.h2oSuperLearner <- function(fit.class, fit, training_frame, y, x, model_cont
 
   fit$fitfunname <- "h2oEnsemble::h2o.stack";
   fit$H2O.model.object <- stacked.fit
+  fit$modelnames <- "SL.model"
 
   # TO DIRECTLY SAVE ALL MODEL FITS FROM GRID SEARCH (base-learners)
   # fit$fitted_models_all <- fitted_models_all

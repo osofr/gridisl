@@ -92,6 +92,10 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
 
   # TO DIRECTLY SAVE ALL MODEL FITS FROM GRID SEARCH (base-learners)
   fit$fitted_models_all <- fitted_models_all
+  fit$modelnames <- lapply(fit$fitted_models_all, function(model) model@model_id)
+  # fit$fitted_models_all[[1]]@model_id
+  # str(fit$fitted_models_all[[1]])
+  # browser()
 
   # class(fit) <- c(class(fit)[1], c("H2Oensemblemodel"))
   class(fit) <- c(class(fit)[1], c("H2Ogridmodel"))

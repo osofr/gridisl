@@ -60,6 +60,7 @@ fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
   fit$coef <- out_coef;
   fit$linkfun <- "logit_linkinv";
 
+  fit$modelnames <- "GLM.model"
   fit$fitfunname <- "h2o.glm";
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
   fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
@@ -86,6 +87,8 @@ fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_cont
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.randomForest)
   model.fit <- do.call(h2o::h2o.randomForest, mainArgs)
   fit$coef <- NULL;
+
+  fit$modelnames <- "RF.model"
   fit$fitfunname <- "h2o.randomForest";
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
   fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
@@ -108,6 +111,8 @@ fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
   model.fit <- do.call(h2o::h2o.gbm, mainArgs)
   fit$coef <- NULL;
+
+  fit$modelnames <- "GBM.model"
   fit$fitfunname <- "h2o.gbm";
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
   fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
@@ -129,6 +134,8 @@ fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_cont
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
   model.fit <- do.call(h2o::h2o.deeplearning, mainArgs)
   fit$coef <- NULL;
+
+  fit$modelnames <- "DNN.model"
   fit$fitfunname <- "h2o.deeplearning";
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
   fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
@@ -186,7 +193,6 @@ predictP1.H2Oensemblemodel <- function(m.fit, ParentObject, DataStorageObject, s
   # } else {
   #   subsetH2Oframe <- ParentObject$getsubsetH2Oframe
   # }
-
   pAout <- rep.int(gvars$misval, n)
   if (sum(subset_idx) > 0) {
     predictObject <- predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)
@@ -207,7 +213,6 @@ getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_id
     data <- DataStorageObject
     outvar <- m.fit$params$outvar
     predvars <- m.fit$params$predvars
-    # 1. works on a single core, but fails in parallel:
     subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
                                             saveH2O = FALSE,
                                             destination_frame = "subsetH2Oframe")
@@ -217,6 +222,7 @@ getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_id
   return(subsetH2Oframe)
 }
 
+# TO DO: Add prediction only based on the subset of models (rather than predicting for all models)
 predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
   subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
   pAoutMat <- matrix(gvars$misval, nrow = n, ncol = length(m.fit$fitted_models_all))
@@ -228,6 +234,7 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
       pAoutMat[subset_idx, idx] <- as.vector(predictFrame[,"predict"])
     }
   }
+
   return(pAoutMat)
 }
 

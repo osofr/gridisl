@@ -25,6 +25,7 @@ fit.glm <- function(fit.class, fit, Xmat, Yvals, ...) {
   }
 
   fit$coef <- model.fit$coef;
+  fit$modelnames <- "GLM.model"
   fit$fitfunname <- "glm";
   fit$linkfun <- "logit_linkinv";
   fit$nobs <- nrow(Xmat)
@@ -63,6 +64,7 @@ fit.speedglm <- function(fit.class, fit, Xmat, Yvals, ...) {
   }
 
   fit$coef <- model.fit$coef;
+  fit$modelnames <- "GLM.model"
   fit$fitfunname <- "speedglm";
   fit$linkfun <- "logit_linkinv";
   fit$nobs <- nrow(Xmat)
@@ -175,6 +177,11 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
                       DataStorageObject = data,
                       subset_idx = subset_idx,
                       n = self$ParentModel$n)
+      # if (!is.matrix(P1)) P1 <- matrix(P1, nrow = length(P1), ncol = 1)
+      if (!is.matrix(P1)) {
+        P1 <- matrix(P1, byrow = TRUE)
+        colnames(P1) <- "PredModel"
+      }
       return(P1)
     },
 
