@@ -1,6 +1,13 @@
 #' @export
 fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contrl, fold_column, ...) {
   # if (is.null(fold_column)) stop("must define the column of CV fold IDs using data$define_CVfolds()")
+  # if (!is.null(model_contrl$load.ensemble) && model_contrl$load.ensemble) {
+  #   if (is.null(model_contrl$ensemble.dir.path) || (model_contrl$ensemble.dir.path %in% "")) {
+  #     stop("when loading ensemble must specify the directory path with 'ensemble.dir.path' parameter")
+  #   }
+  #   stacked.fit <- h2oEnsemble::h2o.load_ensemble(path = model_contrl$ensemble.dir.path, import_levelone = FALSE)
+  #   # stacked.fit <- h2oEnsemble::h2o.load_ensemble(path = model_contrl$ensemble.dir.path, import_levelone = TRUE)
+  # }
 
   family <- model_contrl$family
   grid.algorithms <- model_contrl$grid.algorithm
@@ -86,6 +93,17 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
   #   print("SuperLearner fits:")
   #   print(fit$coef)
   # }
+  # ----------------------------------------------------------------------------------------------------
+  # Saving the fits:
+  # ----------------------------------------------------------------------------------------------------
+  if (!is.null(model_contrl$save.ensemble) && model_contrl$save.ensemble) {
+    if (is.null(model_contrl$ensemble.dir.path) || (model_contrl$ensemble.dir.path %in% "")) {
+      stop("when saving ensemble must specify the directory path with 'ensemble.dir.path' parameter")
+    }
+    saveres <- lapply(fitted_models_all, function(h2omodel) h2o::h2o.saveModel(object = h2omodel, path = model_contrl$ensemble.dir.path, force = TRUE))
+    # h2oEnsemble::h2o.save_ensemble(stacked.fit, path = model_contrl$ensemble.dir.path, force = TRUE)
+    # h2oEnsemble::h2o.save_ensemble(stacked.fit, path = model_contrl$ensemble.dir.path, force = TRUE, export_levelone = TRUE)
+  }
 
   # fit$fitfunname <- "h2oEnsemble::h2o.stack";
   # fit$H2O.model.object <- stacked.fit
