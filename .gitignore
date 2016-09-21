@@ -1,0 +1,13 @@
+.Rproj.user
+.Rhistory
+.RData
+.DS_Store
+inst/doc
+src/*.o
+README.html
+tests/*.pdf
+tests/RUnit/*.html
+tests/RUnit/*.txt
+tests/RUnit/*.pdf
+*.sublime-project
+*.sublime-workspace
