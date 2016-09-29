@@ -31,7 +31,7 @@ fit.face <- function(fit.class, fit, subj, argvals, Yvals, ...) {
 }
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
-predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
+predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, predict.with.newYs = FALSE, ...) {
   if (!missing(DataStorageObject)) {
     # Will also obtain the outcomes of the prediction set:
     ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
@@ -45,16 +45,20 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
 
   new.argvals <- ParentObject$getargvals
   new.subj <- ParentObject$getsubj
-  new.Yvals <- ParentObject$getY
+
+  # ----------------------------------------------------------------------------
+  # Either include the new outcomes when predicting for new observations or not
+  # ----------------------------------------------------------------------------
+  new.Yvals <- rep.int(NA, length(new.subj))
+  if (predict.with.newYs) new.Yvals <- ParentObject$getY
   # new.Yvals2 <- rep.int(NA, length(new.subj))
-  # browser()
 
   assert_that(!is.null(subset_idx))
+
   # Set to default missing value for A[i] degenerate/degerministic/misval:
   # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newBinDatObject$n)
   pAout <- rep.int(gvars$misval, n)
   if (sum(subset_idx) > 0) {
-    # browser()
     ## get fits at new data point, while also including fitted (training data points)
 
     new.face.dat <- data.frame(
@@ -62,30 +66,23 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
       subj = c(fitted.subj, new.subj),
       y = c(fitted.Yvals, new.Yvals)
     )
-    # new_vals_idx <- which(is.na(new.face.dat[,"y"]))
-    new_vals_idx <- (1:nrow(new.face.dat))[-(1:length(fitted.argvals))]
-
     # new.face.dat <- data.frame(
     #   argvals = c(fitted.argvals, new.argvals, new.argvals),
     #   subj = c(fitted.subj, new.subj, new.subj),
     #   y = c(fitted.Yvals, new.Yvals, new.Yvals2)
     # )
+
     # new_vals_idx <- which(is.na(new.face.dat[,"y"]))
+    new_vals_idx <- (1:nrow(new.face.dat))[-(1:length(fitted.argvals))]
 
     assert_that(length(new_vals_idx) == length(new.Yvals))
     assert_that(new_vals_idx[1] > length(fitted.Yvals))
 
     fpredict <- getFromNamespace("predict.face.sparse", "face")
     predict.res <- fpredict(face.model.object, new.face.dat)
-
-    # names(predict.res)
-    # cbind(Yvals, predict.res$y.pred)
     all.preds <- predict.res$y.pred
     assert_that(length(all.preds)==nrow(new.face.dat))
-    # cbind(all.preds, new.face.dat[,"y"])
     new.preds <- all.preds[new_vals_idx]
-    # cbind(all.preds[-(1:length(fitted.argvals))], new.preds)
-
     pAout[subset_idx] <- as.vector(new.preds)
   }
   return(pAout)
@@ -124,11 +121,14 @@ faceClass <- R6Class(classname = "faceClass",
     },
 
     predictP1 = function(data, subset_idx) {
+      predict.with.newYs <- self$ParentModel$model_contrl$predict.with.newYs
+      if (is.null(predict.with.newYs)) predict.with.newYs <- FALSE
       P1 <- predictP1(self$model.fit,
                       ParentObject = self,
                       DataStorageObject = data,
                       subset_idx = subset_idx,
-                      n = self$ParentModel$n)
+                      n = self$ParentModel$n,
+                      predict.with.newYs = predict.with.newYs)
 
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)

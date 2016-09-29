@@ -151,6 +151,7 @@ define_predictors <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, h
 #' @param predvars ...
 #' @param params ...
 #' @param holdout ...
+#' @param hold_column ..
 #' @param random ...
 #' @param seed ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
@@ -159,26 +160,31 @@ define_predictors <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, h
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
 # stratify = NULL, reg,
-get_fit <- function(OData, predvars, params, holdout = TRUE, random = FALSE, seed = NULL, verbose = getOption("growthcurveSL.verbose")) {
+get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL, random = FALSE, seed = NULL, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   OData$nodes$predvars <- predvars
   nodes <- OData$nodes
   new.factor.names <- OData$new.factor.names
 
-  if (holdout) OData$add_holdout_ind(hold_column = "hold", random = random, seed = seed)
+  if (holdout && is.null(hold_column)) {
+    OData$add_holdout_ind(hold_column = "hold", random = random, seed = seed)
+  } else if (holdout && !is.null(hold_column)) {
+    assert_that(hold_column %in% names(OData$dat.sVar))
+    OData$hold_column <- hold_column
+  }
 
   # ------------------------------------------------------------------------------------------
   # Define training data (excludes holdouts, summaries are created without the holdout observations):
   # ------------------------------------------------------------------------------------------
   dataDT <- OData$dat.sVar[,c(nodes$IDnode, nodes$tnode, nodes$Ynode, nodes$Lnodes, OData$hold_column, unlist(new.factor.names)), with = FALSE]
-  dataDTtrain <- define_predictors(dataDT, nodes, train_set = TRUE, holdout = holdout, hold_column = "hold")
+  dataDTtrain <- define_predictors(dataDT, nodes, train_set = TRUE, holdout = holdout, hold_column = OData$hold_column)
   OData_train <- OData$clone()
   OData_train$dat.sVar <- dataDTtrain[!dataDTtrain[[OData_train$hold_column]], ]
 
   # ------------------------------------------------------------------------------------------
   # Define validation data (includes the holdout only, summaries are created without the holdout observations):
   # ------------------------------------------------------------------------------------------
-  dataDTvalid <- define_predictors(dataDT, nodes, train_set = FALSE, hold_column = "hold")
+  dataDTvalid <- define_predictors(dataDT, nodes, train_set = FALSE, hold_column = OData$hold_column)
   OData_valid <- OData$clone()
   OData_valid$dat.sVar <- dataDTvalid[dataDTvalid[[OData_valid$hold_column]], ]
 
@@ -188,7 +194,7 @@ get_fit <- function(OData, predvars, params, holdout = TRUE, random = FALSE, see
   ## To select the non-holdout set for fitting the models:
   regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_exprs = list("!hold"), model_contrl = params)
   ## To select only the holdout set (for MSE evaluation):
-  # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_exprs = list("hold"), model_contrl = params)
+  # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_exprs = list(OData$hold_column), model_contrl = params)
   # browser()
   modelfit <- OutcomeModel$new(reg = regobj)
 
@@ -222,7 +228,7 @@ predictHoldout <- function(OData, modelIDs, verbose = getOption("growthcurveSL.v
 
   dataDT <- OData$dat.sVar[, sel_vars, with = FALSE]
 
-  dataDTvalid <- define_predictors(dataDT, nodes, train_set = FALSE, hold_column = "hold")
+  dataDTvalid <- define_predictors(dataDT, nodes, train_set = FALSE, hold_column = OData$hold_column)
   OData_valid <- OData$clone()
   OData_valid$dat.sVar <- dataDTvalid[dataDTvalid[[OData_valid$hold_column]], ]
   # # OData$dat.sVar

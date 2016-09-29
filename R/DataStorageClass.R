@@ -65,7 +65,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
     # taken from hbgd R package:
     add_holdout_ind = function(hold_column = "hold", random = TRUE, seed = NULL) {
-      if (!is.null(TRUE)) set.seed(as.numeric(seed))
+      if (!is.null(seed)) set.seed(as.numeric(seed))
       if (hold_column %in% names(self$dat.sVar)) {
         self$dat.sVar[, (hold_column) := NULL]
       }
@@ -78,6 +78,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
           return(res)
         }
       }
+
       samplerandom2 <- function(x) {
         if (x == 1L) {
           return(FALSE)
