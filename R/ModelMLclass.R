@@ -264,9 +264,9 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
       invisible(self)
     },
 
-    fit = function(data, outvar, predvars, subset_idx, ...) {
+    fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
       assert_that(is.DataStorageClass(data))
-      self$setdata(data, subset_idx, self$classify, ...)
+      subsetH2Oframe <- self$setdata(data, subset_idx, self$classify, ...)
       if ((length(predvars) == 0L) || (sum(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
         message("unable to run " %+% self$fit.class %+% " with h2o for: intercept only models or designmat with zero rows or  constant outcome (y) ...")
         class(self$model.fit) <- "try-error"
@@ -275,12 +275,19 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         return(self$model.fit)
       }
 
+      if (!is.null(validation_data)) {
+        assert_that(is.DataStorageClass(validation_data))
+        validationH2Oframe <- self$setdata(validation_data, classify = self$classify, destination_frame = "validationH2Oframe", ...)
+      } else {
+        validationH2Oframe = NULL
+      }
+
+
       self$model.fit$params <- self$params
+
       self$model.fit <- try(
-                    fit(self$fit.class, self$model.fit,
-                           training_frame = private$subsetH2Oframe,
-                           y = outvar, x = predvars,
-                           model_contrl = self$model_contrl, fold_column = data$fold_column, ...),
+                    fit(self$fit.class, self$model.fit, training_frame = subsetH2Oframe, y = outvar, x = predvars,
+                        model_contrl = self$model_contrl, fold_column = data$fold_column, validationH2Oframe = validationH2Oframe, ...),
                     silent = FALSE)
 
       if (inherits(self$model.fit, "try-error")) {
@@ -291,12 +298,14 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
       return(self$model.fit)
     },
 
-    setdata = function(data, subset_idx, classify = TRUE, getoutvar = TRUE, ...) {
+    setdata = function(data, subset_idx, classify = FALSE, destination_frame = "newH2Osubset", ...) {
       outvar <- self$ParentModel$outvar
       predvars <- self$ParentModel$predvars
-      rows_subset <- which(subset_idx)
-      # a penalty for being able to obtain predictions from predictAeqA() right after fitting: need to store Yvals
-      if (getoutvar) private$Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
+      if (!missing(subset_idx)) {
+        rows_subset <- which(subset_idx)
+      } else {
+        rows_subset <- 1:data$nobs
+      }
 
       load_var_names <- c(outvar, predvars, data$fold_column)
 
@@ -316,7 +325,7 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
       load_subset_t <- system.time(
         subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, load_var_names, with = FALSE],
                                                 saveH2O = FALSE,
-                                                destination_frame = "newH2Osubset")
+                                                destination_frame = destination_frame)
       )
       if (gvars$verbose) {
         print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
@@ -331,8 +340,9 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         if (length(self$outfactors) > 2L) stop("cannot run binary regression/classification for outcome with more than 2 categories")
         subsetH2Oframe[, outvar] <- h2o::as.factor(subsetH2Oframe[, outvar])
       }
-      private$subsetH2Oframe <- subsetH2Oframe
-      return(invisible(self))
+      # private$subsetH2Oframe <- subsetH2Oframe
+      # return(invisible(self))
+      return(subsetH2Oframe)
     }
   ),
 

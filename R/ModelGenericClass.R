@@ -130,13 +130,13 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
 
     # if (predict) then use the same data to make predictions for all obs in self$subset_idx;
     # store these predictions in private$probA1 and private$probAeqa
-    fit = function(overwrite = FALSE, data, predict = FALSE, ...) { # Move overwrite to a field? ... self$overwrite
+    fit = function(overwrite = FALSE, data, predict = FALSE, validation_data = NULL, ...) { # Move overwrite to a field? ... self$overwrite
       self$n <- data$nobs
       if (gvars$verbose) print("fitting the model: " %+% self$show())
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
       self$define.subset.idx(data)
-      model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+      model.fit <- self$binomialModelObj$fit(data, self$outvar, self$predvars, self$subset_idx, validation_data = validation_data, ...)
 
       if (inherits(model.fit, "try-error")) {
         message("running " %+% self$binomialModelObj$fit.class %+% " with h2o has failed, trying to run speedglm as a backup...")

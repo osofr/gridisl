@@ -157,7 +157,7 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
       invisible(self)
     },
 
-    fit = function(data, outvar, predvars, subset_idx, ...) {
+    fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
       self$setdata(data, subset_idx = subset_idx, getXmat = TRUE, ...)
       self$model.fit$params <- self$params
       self$model.fit <- fit(self$fit.class, self$model.fit,

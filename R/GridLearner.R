@@ -26,10 +26,14 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
   if (!is.null(grid.algorithms)) {
     if (!is.character(grid.algorithms)) stop("'grid.algorithm' must be a vector of strings naming the grid.algorithms to use in 'h2o.grid'")
     fitted_models <- vector(mode = "list", length = length(grid.algorithms))
+    grids_objects <- vector(mode = "list", length = length(grid.algorithms))
     names(fitted_models) <- grid.algorithms
+    names(grids_objects) <- grid.algorithms
     for (grid.algorithm in grid.algorithms) {
-      grid_model_fit <- SLfit.h2ogrid(grid.algorithm = grid.algorithm, training_frame = training_frame, y = y, x = x, family = family, fold_column = fold_column, model_contrl = model_contrl, ...)
+      grid_model_fit <- SLfit.h2ogrid(grid.algorithm = grid.algorithm, training_frame = training_frame, y = y, x = x, family = family,
+                                      fold_column = fold_column, model_contrl = model_contrl, ...)
       grid_model_H2O <- grid_model_fit$H2O.model.object
+      grids_objects[[grid.algorithm]] <- grid_model_H2O
       fitted_models[[grid.algorithm]] <- lapply(grid_model_H2O@model_ids, function(model_id) h2o::h2o.getModel(model_id))
     }
     for (grid.algorithm in grid.algorithms) {
@@ -42,7 +46,8 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
     fitted_models_l <- vector(mode = "list", length = length(learners))
     names(fitted_models_l) <- learners
     for (learner in learners) {
-      learner_fit <- SLfit.h2oLearner(learner = learner, training_frame = training_frame, y = y, x = x, family = family, fold_column = fold_column, model_contrl = model_contrl, ...)
+      learner_fit <- SLfit.h2oLearner(learner = learner, training_frame = training_frame, y = y, x = x, family = family,
+                                      fold_column = fold_column, model_contrl = model_contrl, ...)
       learner_model_H2O <- learner_fit$H2O.model.object
       fitted_models_l[[learner]] <- learner_model_H2O
     }
@@ -107,6 +112,9 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
 
   # fit$fitfunname <- "h2oEnsemble::h2o.stack";
   # fit$H2O.model.object <- stacked.fit
+
+  fit$grids_objects <- grids_objects
+  fit$grid_ids <- lapply(fit$grids_objects, function(grids_object) grids_object@grid_id)
 
   # TO DIRECTLY SAVE ALL MODEL FITS FROM GRID SEARCH (base-learners)
   fit$fitted_models_all <- fitted_models_all

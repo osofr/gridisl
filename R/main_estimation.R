@@ -74,67 +74,74 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
 }
 
 # ---------------------------------------------------------------------------------------
-#' Define various summaries of observed outcome
+#' Define predictors for training or testing (validation) data
 #'
-#' @param OData Input data object created by \code{importData} function.
+#' @param dataDT Input data.table
+#' @param nodes ...
+#' @param train_set ...
 #' @param holdout ...
+#' @param hold_column ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
-define_LR_summaries <- function(OData, holdout = FALSE, verbose = getOption("growthcurveSL.verbose")) {
-  nodes <- OData$nodes
-  # browser()
+define_predictors <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, hold_column = "hold", verbose = getOption("growthcurveSL.verbose")) {
+  # Making sure nothing gets modified by reference:
+  dataDT <- copy(dataDT)
 
-  # Add new predictors (summaries), for each observed outcome, but ignore the holdouts, if holdout==TRUE
+  # Define which observations are in the hold-out set (and thus should be ignored when creating predictors for training set)
+  if (train_set && holdout) {
+    non_hold_idx <- !OData$dat.sVar[[hold_column]]
+  } else {
+    # to define (Y.lt, Y.rt, lt, rt, l.obs, mid.obs, r.obs) for validation data points we use the entire observed data
+    non_hold_idx <- rep.int(TRUE, nrow(dataDT))
+  }
+
+  # ---------------------------------------------------------------------------------------
+  # (A: train_set && holdout) Define predictors for training data after dropping the holdout observations
+  # (B: else) Use all observations to define predictors:
+  #   The predictors below turn out to be equivalent when defining validation data point as well as when training on ALL data
+  #   Will allow us to use every single observation as a test point for CV.MSE
+  # ---------------------------------------------------------------------------------------
+  # dataDT[, c("lt", "rt", "Y.lt", "Y.rt", "l.obs", "mid.obs", "r.obs") := list(NULL, NULL, NULL, NULL, NULL, NULL, NULL)]
+  # dataDT[, c("meanY", "sumYsq") := list(NULL, NULL)]
+  dataDT[non_hold_idx, c("Y.lt", "Y.rt") := list(shift(eval(as.name(nodes$Ynode)), type = "lag", fill = NA), shift(eval(as.name(nodes$Ynode)), type = "lead", fill = NA)), by = eval(nodes$IDnode)]
+  # Add dummy indicator column(s) of being left-most (l.obs) / middle (mid.obs) / right-most (r.obs) observation:
+  dataDT[non_hold_idx, c("l.obs", "mid.obs", "r.obs"):= list(0L, 0L, 0L)]
   # 1. Left Y[lt], lt, if exists (otherwise lt = rt)
   # 2. Right Y[rt], rt, if exists (otherwise rt = lt)
+  dataDT[non_hold_idx, c("lt", "rt") := list(shift(eval(as.name(nodes$tnode)), type = "lag"), shift(eval(as.name(nodes$tnode)), type = "lead")), by = eval(nodes$IDnode)]
+  dataDT[non_hold_idx, c("Y.lt", "Y.rt") := list(shift(eval(as.name(nodes$Ynode)), type = "lag", fill = NA), shift(eval(as.name(nodes$Ynode)), type = "lead", fill = NA)), by = eval(nodes$IDnode)]
+  # Add dummy indicator column(s) of being left-most (l.obs) / middle (mid.obs) / right-most (r.obs) observation:
+  dataDT[non_hold_idx, c("l.obs", "mid.obs", "r.obs"):= list(0L, 0L, 0L)]
+  dataDT[non_hold_idx & is.na(lt), l.obs := 1L]
+  dataDT[non_hold_idx & !is.na(lt) & !is.na(rt), mid.obs := 1L]
+  dataDT[non_hold_idx & is.na(rt), r.obs := 1L]
+  # Set missing lt & rt in the same manner as missing Yleft / Yright:
+  dataDT[non_hold_idx & is.na(Y.lt), Y.lt := Y.rt]
+  dataDT[non_hold_idx & is.na(lt),  lt  := rt]
+  dataDT[non_hold_idx & is.na(Y.rt), Y.rt := Y.lt]
+  dataDT[non_hold_idx & is.na(rt), rt := lt]
 
-  # Define which observations are in the hold-out set (and thus should be ignored for creating summaries)
-  if (!is.null(OData$hold_column) && holdout) {
-    non_hold_idx <- !OData$dat.sVar[[OData$hold_column]]
+  if (train_set) {
+    # Evaluate the summary (predictors) on a training set (for holdout=TRUE, this will evaluate the summaries by excluding the holdouts):
+    dataDT <- dataDT[dataDT[non_hold_idx, {meanY = mean(eval(as.name(nodes$Ynode))); list(meanY = meanY)}, by = eval(nodes$IDnode)]]
+    dataDT <- dataDT[dataDT[non_hold_idx, {sumYsq=sum(eval(as.name(nodes$Ynode))^2); list(sumYsq = sumYsq)}, by = eval(nodes$IDnode)]]
   } else {
-    non_hold_idx <- TRUE
+    # Evaluate the summary (predictors) for validation set. Treats each row of data as if it is a validation data point.
+    # Loop through every data-point row i, remove it, then evaluate the summary for that subject with row i removed.
+    # This will allow us to do validation set predictions when doing V-fold CV.
+    # NOTE: such summaries will allow us to use ANY observed data point as a validation point and do prediction ALL at once (rather than having to loop over each point)
+    dataDT[, c("meanY", "meanY_tmp") := list(0.0, eval(as.name(nodes$Ynode)))]
+    dataDT[, ("meanY") := { for (i in seq_len(.N)) { meanY[i] = mean(meanY_tmp[-i]) };  list(meanY = meanY)}, by = eval(nodes$IDnode)]
+    dataDT[, ("meanY_tmp") :=  NULL]
+    # dataDT <- dataDT[dataDT[, {meanY = eval(as.name(nodes$Ynode)); for (i in seq_len(.N)) {meanY[i] = mean(meanY[-i])};  list(meanY = meanY)}, by = eval(nodes$IDnode)]]
   }
 
-  OData$dat.sVar[, c("left.t", "right.t") := list(NULL, NULL)]
-  OData$dat.sVar[, c("Yleft.t", "Yright.t") := list(NULL, NULL)]
-  OData$dat.sVar[, c("left.most", "middle", "right.most") := list(NULL, NULL, NULL)]
-  # OData$dat.sVar[, c("sum.Y","sum.Y.sq") := list(NULL, NULL)]
+#   # Add total sum of observed Y's and other summaries?
+#   # ...
 
-  OData$dat.sVar[non_hold_idx, c("left.t", "right.t") := list(shift(eval(as.name(nodes$tnode)), type = "lag"), shift(eval(as.name(nodes$tnode)), type = "lead")), by = eval(nodes$IDnode)]
-  OData$dat.sVar[non_hold_idx, c("Yleft.t", "Yright.t") := list(shift(eval(as.name(nodes$Ynode)), type = "lag", fill = NA), shift(eval(as.name(nodes$Ynode)), type = "lead", fill = NA)), by = eval(nodes$IDnode)]
-
-  # Add dummy indicator column(s) of being left-most / middle / right-most observation:
-  OData$dat.sVar[non_hold_idx, c("left.most", "middle", "right.most"):= list(0L, 0L, 0L)]
-  OData$dat.sVar[non_hold_idx & is.na(left.t), left.most := 1L]
-  OData$dat.sVar[non_hold_idx & !is.na(left.t) & !is.na(right.t), middle := 1L]
-  OData$dat.sVar[non_hold_idx & is.na(right.t), right.most := 1L]
-
-  # Set missing left.t & right.t in the same manner as missing Yleft / Yright:
-  OData$dat.sVar[non_hold_idx & is.na(Yleft.t), Yleft.t := Yright.t]
-  OData$dat.sVar[non_hold_idx & is.na(left.t),  left.t  := right.t]
-  OData$dat.sVar[non_hold_idx & is.na(Yright.t), Yright.t := Yleft.t]
-  OData$dat.sVar[non_hold_idx & is.na(right.t), right.t := left.t]
-  # OData$dat.sVar[1:100, ]
-
-  # browser()
-  # Only evaluate these summaries once on the training set (omit the holdout set)
-  # OData$dat.sVar[, c("meanY") := list(NULL)]
-  if (!is.null(OData$hold_column) && holdout) {
-    OData$dat.sVar <- OData$dat.sVar[OData$dat.sVar[non_hold_idx, {meanY = mean(eval(as.name(nodes$Ynode))); list(meanY = meanY)}, by = eval(nodes$IDnode)]]
-    # OData$dat.sVar <- OData$dat.sVar[OData$dat.sVar[non_hold_idx, {sum.Y.sq=sum(eval(as.name(nodes$Ynode))^2); list(sum.Y.sq = sum.Y.sq)}, by = eval(nodes$IDnode)]]
-  }
-
-  # OData$dat.sVar[, c("sum.Y","sum.Y.sq") := list(NULL, NULL)]
-  # if (!is.null(OData$hold_column) && holdout) {
-  #   OData$dat.sVar <- OData$dat.sVar[OData$dat.sVar[non_hold_idx, {sum.Y=sum(eval(as.name(nodes$Ynode))); list(sum.Y = sum.Y)}, by = eval(nodes$IDnode)]]
-  #   OData$dat.sVar <- OData$dat.sVar[OData$dat.sVar[non_hold_idx, {sum.Y.sq=sum(eval(as.name(nodes$Ynode))^2); list(sum.Y.sq = sum.Y.sq)}, by = eval(nodes$IDnode)]]
-  # }
-
-  # Add total sum of observed Y's and other summaries?
-  # ...
-
-  return(OData)
+  return(dataDT)
 }
+
 
 
 # ---------------------------------------------------------------------------------------
@@ -151,9 +158,8 @@ define_LR_summaries <- function(OData, holdout = FALSE, verbose = getOption("gro
 # @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
-get_fit <- function(OData, predvars, params, holdout = FALSE, random = FALSE, seed = NULL,
-                    verbose = getOption("growthcurveSL.verbose")) {
 # stratify = NULL, reg,
+get_fit <- function(OData, predvars, params, holdout = TRUE, random = FALSE, seed = NULL, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   OData$nodes$predvars <- predvars
   nodes <- OData$nodes
@@ -161,20 +167,34 @@ get_fit <- function(OData, predvars, params, holdout = FALSE, random = FALSE, se
 
   if (holdout) OData$add_holdout_ind(hold_column = "hold", random = random, seed = seed)
 
-  OData <- define_LR_summaries(OData, holdout)
+  # ------------------------------------------------------------------------------------------
+  # Define training data (excludes holdouts, summaries are created without the holdout observations):
+  # ------------------------------------------------------------------------------------------
+  dataDT <- OData$dat.sVar[,c(nodes$IDnode, nodes$tnode, nodes$Ynode, nodes$Lnodes, OData$hold_column, unlist(new.factor.names)), with = FALSE]
+  dataDTtrain <- define_predictors(dataDT, nodes, train_set = TRUE, holdout = holdout, hold_column = "hold")
+  OData_train <- OData$clone()
+  OData_train$dat.sVar <- dataDTtrain[!dataDTtrain[[OData_train$hold_column]], ]
 
   # ------------------------------------------------------------------------------------------
-  # DEFINE a single regression class
+  # Define validation data (includes the holdout only, summaries are created without the holdout observations):
   # ------------------------------------------------------------------------------------------
-  # To select the non-holdout set for fitting the models:
+  dataDTvalid <- define_predictors(dataDT, nodes, train_set = FALSE, hold_column = "hold")
+  OData_valid <- OData$clone()
+  OData_valid$dat.sVar <- dataDTvalid[dataDTvalid[[OData_valid$hold_column]], ]
+
+  # ------------------------------------------------------------------------------------------
+  ## DEFINE a single regression class
+  # ------------------------------------------------------------------------------------------
+  ## To select the non-holdout set for fitting the models:
   regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_exprs = list("!hold"), model_contrl = params)
-  # To select only the holdout set (for MSE evaluation):
+  ## To select only the holdout set (for MSE evaluation):
   # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_exprs = list("hold"), model_contrl = params)
-
+  # browser()
   modelfit <- OutcomeModel$new(reg = regobj)
-  # Perform fitting:
-  modelfit$fit(data = OData)
-  # # Get predictions for holdout data only:
+
+  ## Perform fitting:
+  modelfit$fit(data = OData_train, validation_data = OData_valid)
+  ## Get predictions for holdout data only:
   # preds <- modelfit$predict(newdata = OData, subset_exprs = "hold == TRUE")
   # OData$dat.sVar[, holdoutPred := preds$getprobA1]
   # ------------------------------------------------------------------------------------------
@@ -188,35 +208,41 @@ get_fit <- function(OData, predvars, params, holdout = FALSE, random = FALSE, se
 #' @param OData Input data object created by \code{importData} function.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @param modelIDs ...
-#' @param all_obs Predict values for all observations (including holdout) or just the holdout observations?
 #' @return ...
 #' @export
-predictHoldout <- function(OData, modelIDs, all_obs = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+## @param all_obs Predict values for all observations (including holdout) or just the holdout observations?
+## all_obs = FALSE,
+predictHoldout <- function(OData, modelIDs, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
   modelfit <- OData$modelfit
-  sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode)
+  new.factor.names <- OData$new.factor.names
 
-  OData <- define_LR_summaries(OData, holdout = FALSE)
-  # OData$dat.sVar
-  # browser()
+  sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(new.factor.names), nodes$Ynode, OData$hold_column)
+
+  dataDT <- OData$dat.sVar[, sel_vars, with = FALSE]
+
+  dataDTvalid <- define_predictors(dataDT, nodes, train_set = FALSE, hold_column = "hold")
+  OData_valid <- OData$clone()
+  OData_valid$dat.sVar <- dataDTvalid[dataDTvalid[[OData_valid$hold_column]], ]
+  # # OData$dat.sVar
 
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
-  if (all_obs) {
-    subset_exprs <- NULL
-  } else {
+  # if (all_obs) {
+  #   subset_exprs <- NULL
+  # } else {
     subset_exprs <- "hold == TRUE"
-  }
+  # }
 
   # Get predictions for holdout data only when the actual outcome was also not missing:
-  preds <- modelfit$predict(newdata = OData, subset_exprs = subset_exprs)
-  holdoutDT <- OData$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode, OData$hold_column), with = FALSE]
+  preds <- modelfit$predict(newdata = OData_valid, subset_exprs = subset_exprs)
+  # preds <- modelfit$predict(newdata = OData, subset_exprs = subset_exprs)
+  holdoutDT <- OData_valid$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode, OData$hold_column), with = FALSE]
 
   holdoutDT[, (colnames(preds$getprobA1)) := as.data.table(preds$getprobA1)]
-
   # browser()
-  MSE <- modelfit$evalMSE(OData)
-  print("MSE: "); print(unlist(MSE))
+  MSE <- modelfit$evalMSE(OData_valid)
+  # print("MSE: "); print(unlist(MSE))
   return(holdoutDT)
 }
 

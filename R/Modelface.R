@@ -33,7 +33,9 @@ fit.face <- function(fit.class, fit, subj, argvals, Yvals, ...) {
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
 predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
   if (!missing(DataStorageObject)) {
-    ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE, getXmat = TRUE)
+    # Will also obtain the outcomes of the prediction set:
+    ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
+    # ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
   }
 
   face.model.object <- m.fit$face.model.object
@@ -43,7 +45,9 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
 
   new.argvals <- ParentObject$getargvals
   new.subj <- ParentObject$getsubj
-  new.Yvals <- rep.int(NA, length(new.subj))
+  new.Yvals <- ParentObject$getY
+  # new.Yvals2 <- rep.int(NA, length(new.subj))
+  # browser()
 
   assert_that(!is.null(subset_idx))
   # Set to default missing value for A[i] degenerate/degerministic/misval:
@@ -52,23 +56,35 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
   if (sum(subset_idx) > 0) {
     # browser()
     ## get fits at new data point, while also including fitted (training data points)
+
     new.face.dat <- data.frame(
       argvals = c(fitted.argvals, new.argvals),
       subj = c(fitted.subj, new.subj),
       y = c(fitted.Yvals, new.Yvals)
     )
-    new_vals_idx <- which(is.na(new.face.dat[,"y"]))
+    # new_vals_idx <- which(is.na(new.face.dat[,"y"]))
+    new_vals_idx <- (1:nrow(new.face.dat))[-(1:length(fitted.argvals))]
+
+    # new.face.dat <- data.frame(
+    #   argvals = c(fitted.argvals, new.argvals, new.argvals),
+    #   subj = c(fitted.subj, new.subj, new.subj),
+    #   y = c(fitted.Yvals, new.Yvals, new.Yvals2)
+    # )
+    # new_vals_idx <- which(is.na(new.face.dat[,"y"]))
+
     assert_that(length(new_vals_idx) == length(new.Yvals))
     assert_that(new_vals_idx[1] > length(fitted.Yvals))
 
     fpredict <- getFromNamespace("predict.face.sparse", "face")
     predict.res <- fpredict(face.model.object, new.face.dat)
+
     # names(predict.res)
     # cbind(Yvals, predict.res$y.pred)
     all.preds <- predict.res$y.pred
     assert_that(length(all.preds)==nrow(new.face.dat))
     # cbind(all.preds, new.face.dat[,"y"])
     new.preds <- all.preds[new_vals_idx]
+    # cbind(all.preds[-(1:length(fitted.argvals))], new.preds)
 
     pAout[subset_idx] <- as.vector(new.preds)
   }
@@ -97,7 +113,7 @@ faceClass <- R6Class(classname = "faceClass",
       invisible(self)
     },
 
-    fit = function(data, outvar, predvars, subset_idx, ...) {
+    fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
       self$setdata(data, subset_idx = subset_idx, getXmat = TRUE, ...)
       self$model.fit$params <- self$params
       self$model.fit <- fit(self$fit.class, self$model.fit,
@@ -123,7 +139,7 @@ faceClass <- R6Class(classname = "faceClass",
 
     # Sets Xmat, Yvals, evaluates subset and performs correct subseting of data
     # everything is performed using data$ methods (data is of class DataStorageClass)
-    setdata = function(data, subset_idx, getoutvar = TRUE, getXmat = TRUE) {
+    setdata = function(data, subset_idx, getoutvar = TRUE, getXmat = TRUE, ...) {
       assert_that(is.DataStorageClass(data))
       nodes <- data$nodes
       IDnode <- nodes$IDnode
@@ -175,7 +191,6 @@ faceClass <- R6Class(classname = "faceClass",
     Yvals = NULL
   )
 )
-
 
 # fit_method.face <- function(dat, ...) {
 #   # dots <- list(...)
