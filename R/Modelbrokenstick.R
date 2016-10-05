@@ -55,24 +55,41 @@ predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, s
   # ----------------------------------------------------------------------------
   new.Yvals <- rep.int(NA, length(new.subject))
   if (predict.with.newYs) new.Yvals <- ParentObject$get.Y
+
   assert_that(!is.null(subset_idx))
   # Set to default missing value for A[i] degenerate/degerministic/misval:
   # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newBinDatObject$n)
   pAout <- rep.int(gvars$misval, n)
   if (sum(subset_idx) > 0) {
-    y <- c(fitted.Yvals, new.Yvals)
-    x <- c(fitted.x, new.x)
+    # x <- c(fitted.x, new.x)
+    # y <- c(fitted.Yvals, new.Yvals)
     ## get fits at new data point, while also including fitted (training data points)
-    new_vals_idx <- (1:length(x))[-(1:length(fitted.x))]
+    new.dat <- data.table(
+      subject = c(fitted.subject, new.subject),
+      x = c(fitted.x, new.x),
+      y = c(fitted.Yvals, new.Yvals),
+      new_vals_ind = c(rep.int(FALSE, length(fitted.subject)), rep.int(TRUE, length(new.subject)))
+    )
+
+    new_vals_idx <- (1:nrow(new.dat))[-(1:length(fitted.x))]
     assert_that(length(new_vals_idx) == length(new.Yvals))
     assert_that(new_vals_idx[1] > length(fitted.Yvals))
 
+    setkeyv(new.dat, cols = "subject")
     bs.predict <- getFromNamespace("predict.brokenstick", "brokenstick")
-    all.preds <- bs.predict(model.object, y = y, x = x, output = "vector")
+    # all.preds <- bs.predict(model.object, y = y, x = x, output = "vector")
+    new.dat[, yhat := bs.predict(model.object, y = y, x = x, output = "vector"), by = subject]
+    # new.dat[, yhat.old := all.preds]
+    # new.dat[1:100, ]
     # all.preds <- brokenstick::predict.brokenstick(model.object, y = y, x = x, output = "vector")
+    # browser()
+    new.preds <- new.dat[new_vals_ind == TRUE, yhat]
+    # browser()
+    # mean((new.dat[["y"]]-new.dat[["yhat"]])^2)
+    # all.preds <- new.dat[["yhat"]]
+    # assert_that(length(all.preds)==nrow(new.dat))
+    # new.preds <- all.preds[new_vals_idx]
 
-    assert_that(length(all.preds)==length(x))
-    new.preds <- all.preds[new_vals_idx]
     pAout[subset_idx] <- as.vector(new.preds)
   }
   return(pAout)

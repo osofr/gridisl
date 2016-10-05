@@ -193,9 +193,9 @@ get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL,
   # ------------------------------------------------------------------------------------------
   ## To select the non-holdout set for fitting the models:
   regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_exprs = list("!hold"), model_contrl = params)
+
   ## To select only the holdout set (for MSE evaluation):
   # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_exprs = list(OData$hold_column), model_contrl = params)
-  # browser()
   modelfit <- OutcomeModel$new(reg = regobj)
 
   ## Perform fitting:
@@ -203,6 +203,7 @@ get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL,
   ## Get predictions for holdout data only:
   # preds <- modelfit$predict(newdata = OData, subset_exprs = "hold == TRUE")
   # OData$dat.sVar[, holdoutPred := preds$getprobA1]
+
   # ------------------------------------------------------------------------------------------
   OData$modelfit <- modelfit
   return(OData)
