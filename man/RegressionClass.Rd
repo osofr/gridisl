@@ -68,17 +68,7 @@ This R6 class defines fields and methods that controls all the parameters for no
 \section{Methods}{
 
 \describe{
-  \item{\code{new(sep_predvars_sets = FALSE,
-                  outvar.class = gvars$sVartypes$bin,
-                  outvar, predvars, subset_vars, subset_exprs, intrvls,
-                  ReplMisVal0 = TRUE,
-                  useglm = getopt("useglm"),
-                  parfit = getopt("parfit"),
-                  nbins = getopt("nbins"),
-                  bin_bymass = getopt("bin.method")%in%"equal.mass",
-                  bin_bydhist = getopt("bin.method")%in%"dhist",
-                  max_nperbin = getopt("maxNperBin"),
-                  pool_cont = getopt("poolContinVar")}}{Uses the arguments to instantiate an object of R6 class and define the future regression model.}
+  \item{\code{new(...)}}{Uses the arguments to instantiate an object of R6 class and define the future regression model.}
   \item{\code{ChangeManyToOneRegresssion(k_i, reg)}}{ Take a clone of a parent \code{RegressionClass} (\code{reg}) for \code{length(self$outvar)} regressions
    and set self to a single univariate \code{k_i} regression for outcome \code{self$outvar[[k_i]]}.}
   \item{\code{ChangeOneToManyRegresssions(regs_list)}}{ Take the clone of a parent \code{RegressionClass} for univariate (continuous outvar) regression

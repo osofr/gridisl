@@ -11,6 +11,9 @@ gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$toler
 gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
+allowed.fit.package <- c("face", "brokenstick", "speedglm", "glm", "h2o")
+allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner", "GridLearner")
+allowed.bin.method = c("equal.mass", "equal.len", "dhist")
 
 #' Querying/setting a single \code{growthcurveSL} option
 #'
@@ -75,73 +78,24 @@ print_growthcurveSL_opts <- function() {
 #' To reset all options to their defaults simply run \code{set_all_growthcurveSL_options()} without any parameters/arguments.
 #' @param fit.package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")
 #' @param fit.algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "SuperLearner")
-#' @param bin.method The method for choosing bins when discretizing and fitting the conditional continuous summary
-#'  exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
-#'  into equal length \code{nbins} intervals. Method \code{"equal.mass"} results in a data-adaptive selection of the bins
-#'  based on equal mass (equal number of observations), i.e., each bin is defined so that it contains an approximately
-#'  the same number of observations across all bins. The maximum number of observations in each bin is controlled
-#'  by parameter \code{maxNperBin}. Method \code{"dhist"} uses a mix of the above two approaches,
-#'  see Denby and Mallows "Variations on the Histogram" (2009) for more detail.
-#' @param parfit Default is \code{FALSE}. Set to \code{TRUE} to use \code{foreach} package and its functions
-#'  \code{foreach} and \code{dopar} to perform
-#'  parallel logistic regression fits and predictions for discretized continuous outcomes. This functionality
-#'  requires registering a parallel backend prior to running \code{growthcurveSL} function, e.g.,
-#'  using \code{doParallel} R package and running \code{registerDoParallel(cores = ncores)} for integer
-#'  \code{ncores} parallel jobs. For an example, see a test in "./tests/RUnit/RUnit_tests_04_netcont_sA_tests.R".
-#' @param nbins Set the default number of bins when discretizing a continous outcome variable under setting
-#'  \code{bin.method = "equal.len"}.
-#'  If left as \code{NA} the total number of equal intervals (bins) is determined by the nearest integer of
-#'  \code{nobs}/\code{maxNperBin}, where \code{nobs} is the total number of observations in the input data.
-#' @param maxncats Max number of unique categories a categorical variable \code{sA[j]} can have.
-#' If \code{sA[j]} has more it is automatically considered continuous.
-#' @param poolContinVar Set to \code{TRUE} for fitting a pooled regression which pools bin indicators across all bins.
-#' When fitting a model for binirized continuous outcome, set to \code{TRUE}
-#' for pooling bin indicators across several bins into one outcome regression?
-#' @param maxNperBin Max number of observations per 1 bin for a continuous outcome (applies directly when
-#'  \code{bin.method="equal.mass"} and indirectly when \code{bin.method="equal.len"}, but \code{nbins = NA}).
-#' @param lower_bound_zero_Q Set to \code{TRUE} to bound the observation-specific Qs during the TMLE update step away from zero (with minimum value set at 10^-4).
-#' Can help numerically stabilize the TMLE intercept estimates in some small-sample cases. Has no effect when \code{TMLE} = \code{FALSE}.
-#' @param skip_update_zero_Q Set to \code{FALSE} to perform TMLE update with glm even when all of the Q's are zero.
-#' When set to \code{TRUE} the TMLE update step is skipped if the predicted Q's are either all 0 or near 0, with TMLE intercept being set to 0.
+#' @param maxncats Max number of unique categories a categorical variable can have. More than these number and it is deemed continuous.
 #' @return Invisibly returns a list with old option settings.
 #' @seealso \code{\link{growthcurveSLOptions}}, \code{\link{print_growthcurveSL_opts}}
 #' @export
-set_all_growthcurveSL_options <- function( fit.package = c("speedglm", "glm", "h2o"),
-                            fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"),
-                            bin.method = c("equal.len", "equal.mass", "dhist"),
-                            parfit = FALSE,
-                            nbins = NA,
-                            maxncats = 20,
-                            poolContinVar = FALSE,
-                            maxNperBin = 1000,
-                            lower_bound_zero_Q = TRUE,
-                            skip_update_zero_Q = TRUE
-                            ) {
+set_all_growthcurveSL_options <- function( fit.package = c("face", "brokenstick", "speedglm", "glm", "h2o"),
+                                           fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner", "GridLearner"),
+                                           maxncats = 20) {
 
   old.opts <- gvars$opts
-  bin.method <- bin.method[1L]
-
   fit.package <- fit.package[1L]
-  assert_that(fit.package %in% c("speedglm", "glm", "h2o"))
-
   fit.algorithm <- fit.algorithm[1L]
-  if (!(fit.algorithm %in% c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner", "GridLearner"))) stop("fit.algorithm must be one of: 'glm', 'gbm', 'randomForest', 'deeplearning', 'SuperLearner', 'GridLearner'")
-
-  if (!(bin.method %in% c("equal.len", "equal.mass", "dhist"))) {
-    stop("bin.method argument must be either 'equal.len', 'equal.mass' or 'dhist'")
-  }
+  if (!(fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
+  if (!(fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
 
   opts <- list(
     fit.package = fit.package,
     fit.algorithm = fit.algorithm,
-    bin.method = bin.method,
-    parfit = parfit,
-    nbins = nbins,
-    maxncats = maxncats,
-    poolContinVar = poolContinVar,
-    maxNperBin = maxNperBin,
-    lower_bound_zero_Q = lower_bound_zero_Q,
-    skip_update_zero_Q = skip_update_zero_Q
+    maxncats = maxncats
   )
   gvars$opts <- opts
   options(growthcurveSL = opts)

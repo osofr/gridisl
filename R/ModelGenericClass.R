@@ -51,8 +51,8 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
     is.fitted = FALSE,
 
     binomialModelObj = NULL, # object of class binomialModelObj that is used in fitting / prediction, never saved (need to be initialized with $new())
-    fit.package = c("speedglm", "glm", "h2o", "face"),
-    fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner"),
+    fit.package = character(),
+    fit.algorithm = character(),
     model_contrl = list(),
 
     n = NA_integer_,        # number of rows in the input data
@@ -72,8 +72,7 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
       } else {
         self$fit.package <- reg$fit.package[1]
       }
-      if (!(self$fit.package %in% c("speedglm", "glm", "h2o", "face")))
-        stop("fit.package must be one of: 'speedglm', 'glm', 'h2o', 'face'")
+      if (!(self$fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
 
       if ("fit.algorithm" %in% names(self$model_contrl)) {
         self$fit.algorithm <- self$model_contrl[['fit.algorithm']]
@@ -81,8 +80,7 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
       } else {
         self$fit.algorithm <- reg$fit.algorithm[1]
       }
-      if (!(self$fit.algorithm %in% c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner", "GridLearner")))
-        stop("fit.algorithm must be one of: 'glm', 'gbm', 'randomForest', 'deeplearning', 'SuperLearner', 'GridLearner'")
+      if (!(self$fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
@@ -108,6 +106,8 @@ OutcomeModel  <- R6Class(classname = "OutcomeModel",
         self$binomialModelObj <- BinomialH2O$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
       } else if (self$fit.package %in% c("face")) {
         self$binomialModelObj <- faceClass$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
+      } else if (self$fit.package %in% c("brokenstick")) {
+        self$binomialModelObj <- brokenstickClass$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
       } else {
         self$binomialModelObj <- BinomialGLM$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, ParentModel = self, ...)
       }

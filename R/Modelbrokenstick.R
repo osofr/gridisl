@@ -1,80 +1,77 @@
-fit.face <- function(fit.class, fit, subj, argvals, Yvals, knots = NULL, ...) {
-  if (gvars$verbose) print("calling face::face.sparse...")
-  if (length(subj) == 0L) {
+fit.brokenstick <- function(fit.class, fit, subject, x, Yvals, knots = NULL, mn = NULL, mx = NULL, ...) {
+  if (gvars$verbose) print("calling brokenstick::brokenstick...")
+  if (length(subject) == 0L) {
     model.fit <- list()
-    model.fit$coef = rep.int(NA_real_, ncol(Xmat))
-    names(model.fit$coef) <- colnames(Xmat)
+    model.fit$coef = rep.int(NA_real_, 1)
+    names(model.fit$coef) <- "NA"
   } else {
-    facedat <- data.frame(
-      argvals = argvals,
-      subj = subj,
-      y = Yvals)
-    # facedat <- facedat[complete.cases(facedat), ]
-    if (is.null(knots)) knots <- face::select.knots(facedat$argvals, knots = knots)
-    model.fit <- suppressMessages(face::face.sparse(facedat, knots = knots))
+    # unique number of ages after missing data removal
+    nx <- length(unique(stats::na.omit(data.frame(x = x, y = Yvals))$x))
+    if (is.null(knots)) knots <- min(6, nx)
+    if (is.null(mn)) mn <- min(x, na.rm = TRUE)
+    if (is.null(mx)) mx <- max(x, na.rm = TRUE)
+    if (length(knots) == 1) knots <- seq(mn, mx, length = knots)[-knots]
+
+    model.fit <- suppressMessages(brokenstick::brokenstick(
+                  x = x,
+                  y = Yvals,
+                  subject = subject,
+                  knots = knots,
+                  Boundary.knots = c(mn, mx))
+              )
   }
 
   fit$model.object <- model.fit
   # need to save the fitting data,
   # because face needs training data (including trained outcomes) to predict for new data points:
+  fit$fitted.subject <- subject
+  fit$fitted.x <- x
   fit$fitted.Yvals <- Yvals
-  fit$fitted.argvals <- argvals
-  fit$fitted.subj <- subj
 
-  fit$modelnames <- "face.model"
-  fit$fitfunname <- "face.sparse";
+  fit$modelnames <- "brokenstick.model"
+  fit$fitfunname <- "brokenstick";
   fit$nobs <- length(Yvals)
-  class(fit)[2] <- "facemodel"
+  class(fit)[2] <- "brokenstickmodel"
   return(fit)
 }
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
-predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, predict.with.newYs = FALSE, knots  = NULL, ...) {
+predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, predict.with.newYs = FALSE, ...) {
   if (!missing(DataStorageObject)) {
     # Will also obtain the outcomes of the prediction set:
     ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
-    # ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
   }
-
   model.object <- m.fit$model.object
-  fitted.argvals <- m.fit$fitted.argvals
-  fitted.subj <- m.fit$fitted.subj
+  fitted.subject <- m.fit$fitted.subject
+  fitted.x <- m.fit$fitted.x
   fitted.Yvals <- m.fit$fitted.Yvals
 
-  new.argvals <- ParentObject$get.argvals
-  new.subj <- ParentObject$get.subj
+  # get new values (for prediction):
+  new.x <- ParentObject$get.x
+  new.subject <- ParentObject$get.subject
 
   # ----------------------------------------------------------------------------
   # Either include the new outcomes when predicting for new observations or not
   # ----------------------------------------------------------------------------
-  new.Yvals <- rep.int(NA, length(new.subj))
+  new.Yvals <- rep.int(NA, length(new.subject))
   if (predict.with.newYs) new.Yvals <- ParentObject$get.Y
-  # new.Yvals2 <- rep.int(NA, length(new.subj))
-
   assert_that(!is.null(subset_idx))
-
   # Set to default missing value for A[i] degenerate/degerministic/misval:
   # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newBinDatObject$n)
   pAout <- rep.int(gvars$misval, n)
   if (sum(subset_idx) > 0) {
+    y <- c(fitted.Yvals, new.Yvals)
+    x <- c(fitted.x, new.x)
     ## get fits at new data point, while also including fitted (training data points)
-
-    new.face.dat <- data.frame(
-      argvals = c(fitted.argvals, new.argvals),
-      subj = c(fitted.subj, new.subj),
-      y = c(fitted.Yvals, new.Yvals)
-    )
-
-    # new_vals_idx <- which(is.na(new.face.dat[,"y"]))
-    new_vals_idx <- (1:nrow(new.face.dat))[-(1:length(fitted.argvals))]
-
+    new_vals_idx <- (1:length(x))[-(1:length(fitted.x))]
     assert_that(length(new_vals_idx) == length(new.Yvals))
     assert_that(new_vals_idx[1] > length(fitted.Yvals))
 
-    fpredict <- getFromNamespace("predict.face.sparse", "face")
-    predict.res <- fpredict(model.object, new.face.dat)
-    all.preds <- predict.res$y.pred
-    assert_that(length(all.preds)==nrow(new.face.dat))
+    bs.predict <- getFromNamespace("predict.brokenstick", "brokenstick")
+    all.preds <- bs.predict(model.object, y = y, x = x, output = "vector")
+    # all.preds <- brokenstick::predict.brokenstick(model.object, y = y, x = x, output = "vector")
+
+    assert_that(length(all.preds)==length(x))
     new.preds <- all.preds[new_vals_idx]
     pAout[subset_idx] <- as.vector(new.preds)
   }
@@ -83,7 +80,7 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
 
 #' @importFrom assertthat assert_that is.count is.string is.flag
 #' @export
-faceClass <- R6Class(classname = "faceClass",
+brokenstickClass <- R6Class(classname = "brokenstickClass",
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,
@@ -91,13 +88,13 @@ faceClass <- R6Class(classname = "faceClass",
     ParentModel = NULL,
     model_contrl = list(),
     params = list(),
-    fit.class = c("face"),
+    fit.class = c("brokenstick"),
     model.fit = list(fitfunname = NA, nobs = NA, params = NA),
 
     initialize = function(fit.algorithm, fit.package, ParentModel, ...) {
       self$ParentModel <- ParentModel
       self$model_contrl <- ParentModel$model_contrl
-      assert_that(any(c("face") %in% fit.package))
+      assert_that(any(c("brokenstick") %in% fit.package))
       self$fit.class <- fit.package
       class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
       invisible(self)
@@ -107,10 +104,12 @@ faceClass <- R6Class(classname = "faceClass",
       self$setdata(data, subset_idx = subset_idx, getXmat = TRUE, ...)
       self$model.fit$params <- self$params
       self$model.fit <- fit(self$fit.class, self$model.fit,
-                               subj = private$subj,
-                               argvals = private$argvals,
+                               subject = private$subject,
+                               x = private$x,
                                Yvals = private$Yvals,
                                knots = self$model_contrl$knots,
+                               mn = self$model_contrl$mn,
+                               mx = self$model_contrl$mx,
                                ...)
       return(self$model.fit)
     },
@@ -141,8 +140,9 @@ faceClass <- R6Class(classname = "faceClass",
       tnode <- nodes$tnode
       if (getoutvar) private$Yvals <- data$get.outvar(subset_idx, self$ParentModel$outvar) # Always a vector
       if (getXmat) {
-        private$subj <- data$get.outvar(subset_idx, IDnode)
-        private$argvals <- data$get.outvar(subset_idx, tnode) # Always a vector
+        # self$define.Xmat(data, subset_idx) # design matrix in normal sense is not used in face
+        private$subject <- data$get.outvar(subset_idx, IDnode)
+        private$x <- data$get.outvar(subset_idx, tnode) # Always a vector
       }
       return(invisible(self))
     }
@@ -152,14 +152,14 @@ faceClass <- R6Class(classname = "faceClass",
     # emptydata = function() { private$Xmat <- NULL },
     emptydata = function() { NULL },
     emptyY = function() { private$Yvals <- NULL },
-    get.Y = function() { private$Yvals },
-    get.argvals = function() { private$argvals },
-    get.subj = function() { private$subj }
+    get.subject = function() { private$subject },
+    get.x = function() { private$x },
+    get.Y = function() { private$Yvals }
   ),
 
   private = list(
-    subj = NULL,
-    argvals = NULL,
+    subject = NULL,
+    x = NULL,
     Yvals = NULL
   )
 )

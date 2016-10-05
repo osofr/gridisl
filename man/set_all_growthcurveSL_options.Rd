@@ -4,52 +4,16 @@
 \alias{set_all_growthcurveSL_options}
 \title{Setting \code{growthcurveSL} Options}
 \usage{
-set_all_growthcurveSL_options(fit.package = c("speedglm", "glm", "h2o"),
-  fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning",
-  "SuperLearner"), bin.method = c("equal.len", "equal.mass", "dhist"),
-  parfit = FALSE, nbins = NA, maxncats = 20, poolContinVar = FALSE,
-  maxNperBin = 1000, lower_bound_zero_Q = TRUE, skip_update_zero_Q = TRUE)
+set_all_growthcurveSL_options(fit.package = c("face", "brokenstick",
+  "speedglm", "glm", "h2o"), fit.algorithm = c("glm", "gbm", "randomForest",
+  "deeplearning", "SuperLearner", "GridLearner"), maxncats = 20)
 }
 \arguments{
 \item{fit.package}{Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")}
 
 \item{fit.algorithm}{Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "SuperLearner")}
 
-\item{bin.method}{The method for choosing bins when discretizing and fitting the conditional continuous summary
-exposure variable \code{sA}. The default method is \code{"equal.len"}, which partitions the range of \code{sA}
-into equal length \code{nbins} intervals. Method \code{"equal.mass"} results in a data-adaptive selection of the bins
-based on equal mass (equal number of observations), i.e., each bin is defined so that it contains an approximately
-the same number of observations across all bins. The maximum number of observations in each bin is controlled
-by parameter \code{maxNperBin}. Method \code{"dhist"} uses a mix of the above two approaches,
-see Denby and Mallows "Variations on the Histogram" (2009) for more detail.}
-
-\item{parfit}{Default is \code{FALSE}. Set to \code{TRUE} to use \code{foreach} package and its functions
-\code{foreach} and \code{dopar} to perform
-parallel logistic regression fits and predictions for discretized continuous outcomes. This functionality
-requires registering a parallel backend prior to running \code{growthcurveSL} function, e.g.,
-using \code{doParallel} R package and running \code{registerDoParallel(cores = ncores)} for integer
-\code{ncores} parallel jobs. For an example, see a test in "./tests/RUnit/RUnit_tests_04_netcont_sA_tests.R".}
-
-\item{nbins}{Set the default number of bins when discretizing a continous outcome variable under setting
-\code{bin.method = "equal.len"}.
-If left as \code{NA} the total number of equal intervals (bins) is determined by the nearest integer of
-\code{nobs}/\code{maxNperBin}, where \code{nobs} is the total number of observations in the input data.}
-
-\item{maxncats}{Max number of unique categories a categorical variable \code{sA[j]} can have.
-If \code{sA[j]} has more it is automatically considered continuous.}
-
-\item{poolContinVar}{Set to \code{TRUE} for fitting a pooled regression which pools bin indicators across all bins.
-When fitting a model for binirized continuous outcome, set to \code{TRUE}
-for pooling bin indicators across several bins into one outcome regression?}
-
-\item{maxNperBin}{Max number of observations per 1 bin for a continuous outcome (applies directly when
-\code{bin.method="equal.mass"} and indirectly when \code{bin.method="equal.len"}, but \code{nbins = NA}).}
-
-\item{lower_bound_zero_Q}{Set to \code{TRUE} to bound the observation-specific Qs during the TMLE update step away from zero (with minimum value set at 10^-4).
-Can help numerically stabilize the TMLE intercept estimates in some small-sample cases. Has no effect when \code{TMLE} = \code{FALSE}.}
-
-\item{skip_update_zero_Q}{Set to \code{FALSE} to perform TMLE update with glm even when all of the Q's are zero.
-When set to \code{TRUE} the TMLE update step is skipped if the predicted Q's are either all 0 or near 0, with TMLE intercept being set to 0.}
+\item{maxncats}{Max number of unique categories a categorical variable can have. More than these number and it is deemed continuous.}
 }
 \value{
 Invisibly returns a list with old option settings.

@@ -28,6 +28,6 @@ Suggests:
     magrittr,
     RUnit,
     simcausal
-License: GPL-2
+License: GPL (>= 2)
 LazyData: true
 RoxygenNote: 5.0.1
