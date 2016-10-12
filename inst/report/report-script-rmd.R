@@ -7,7 +7,8 @@
 #+ setup, include=FALSE
 require("knitr")
 require("pander")
-opts_chunk$set(fig.path = figure.dir)
+opts_chunk$set(fig.path = figure.dir, comment = NA)
+
 panderOptions("table.split.table", Inf)
 
 #+ echo=FALSE, include=FALSE
@@ -35,17 +36,22 @@ f_plot_survest <- function(surv_list, t, t_int_sel, y_lab, x_lab, miny, x_legend
 #'
 #' Number of person-time observations in the input data:
 {{prettyNum(OData$nobs, big.mark = ",", scientific = FALSE)}}
-#'
-#' # Model fits
-#'
-#' ## Model(s) for censoring variable(s):
 
-#+ echo=FALSE, results='asis'
-# panderOptions('knitr.auto.asis', FALSE)
-set.alignment('left', row.names = 'right')
-# if (!skip.modelfits) {
-  # for (reg.model in fitted.coefs.gC) {
-    print(fitted.model, only.coefs = only.coefs)
+#'
+#' ## Detailed Model Specifications
+#'
+
+#+ echo=FALSE
+if (!skip.modelfits) {
+  print(modelfit, model_stats = TRUE, all_fits = print_all_fits)
+  # print(modelfit, model_stats = TRUE)
+  # models <- modelfit$getfit
+  # single_models <- models$fitted_models_all[[1]]
+  # for (single_model in models$fitted_models_all) {
+  #   # print(models, only.coefs = only.coefs)
+  #   print(single_model)
+  #   # res <- capture.output(single_models)
+  #   # pander(print(paste(res, collapse = '\n')))
   # }
 }
 # panderOptions('knitr.auto.asis', TRUE)

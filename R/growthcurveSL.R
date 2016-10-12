@@ -3,7 +3,7 @@
 #' @importFrom Rcpp sourceCpp
 #' @importFrom graphics axis barplot hist par text  legend plot
 #' @importFrom methods is
-#' @importFrom stats approx binomial coef glm.control glm.fit plogis predict qlogis qnorm quantile rnorm terms var predict glm.control
+#' @importFrom stats approx binomial gaussian coef glm.control glm.fit plogis predict qlogis qnorm quantile rnorm terms var predict glm.control
 #' @importFrom utils data head str
 #' @importFrom stats as.formula glm na.exclude rbinom terms.formula
 NULL
@@ -12,7 +12,7 @@ NULL
 # Class Membership Tests
 #-----------------------------------------------------------------------------
 is.DataStorageClass <- function(DataStorageClass) "DataStorageClass"%in%class(DataStorageClass)
-
+is.PredictionModel <- function(PredictionModel) "PredictionModel"%in%class(PredictionModel)
 #-----------------------------------------------------------------------------
 # General utilities / Global Vars
 #-----------------------------------------------------------------------------

@@ -4,13 +4,13 @@
 \alias{make_report_rmd}
 \title{Generate report(s) with modeling stats using pandoc.}
 \usage{
-make_report_rmd(OData, format = c("html", "pdf", "word"),
+make_report_rmd(modelfit, format = c("html", "pdf", "word"),
   file.name = getOption("growthcurveSL.file.name"),
   file.path = getOption("growthcurveSL.file.path"), openFile = TRUE,
   keep_md = FALSE, keep_tex = FALSE, ...)
 }
 \arguments{
-\item{OData}{Input data object returned by the function \code{\link{importData}}.}
+\item{modelfit}{Model fit object returned by the function \code{\link{get_fit}}.}
 
 \item{format}{Choose the Pandoc output format for the report file (html, pdf or word).
 Note that the html report file is always produced in addition to any other selected format.}

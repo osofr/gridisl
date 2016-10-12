@@ -196,7 +196,7 @@ get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL,
 
   ## To select only the holdout set (for MSE evaluation):
   # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_exprs = list(OData$hold_column), model_contrl = params)
-  modelfit <- OutcomeModel$new(reg = regobj)
+  modelfit <- PredictionModel$new(reg = regobj)
 
   ## Perform fitting:
   modelfit$fit(data = OData_train, validation_data = OData_valid)
@@ -205,28 +205,29 @@ get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL,
   # OData$dat.sVar[, holdoutPred := preds$getprobA1]
 
   # ------------------------------------------------------------------------------------------
-  OData$modelfit <- modelfit
-  return(OData)
+  # OData$modelfit <- modelfit
+  return(modelfit)
 }
 
 # ---------------------------------------------------------------------------------------
 #' Predict for a holdout set
 #'
 #' @param OData Input data object created by \code{importData} function.
+#' @param modelfit Model fit object returned by \code{\link{get_fit}} function.
+#' @param modelIDs ... Not implemented ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-#' @param modelIDs ...
 #' @return ...
 #' @export
 ## @param all_obs Predict values for all observations (including holdout) or just the holdout observations?
 ## all_obs = FALSE,
-predictHoldout <- function(OData, modelIDs, verbose = getOption("growthcurveSL.verbose")) {
+predictHoldout <- function(OData, modelfit, modelIDs, verbose = getOption("growthcurveSL.verbose")) {
+  assert_that(is.DataStorageClass(OData))
+  assert_that(is.PredictionModel(modelfit))
+
   gvars$verbose <- verbose
   nodes <- OData$nodes
-  modelfit <- OData$modelfit
   new.factor.names <- OData$new.factor.names
-
   sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(new.factor.names), nodes$Ynode, OData$hold_column)
-
   dataDT <- OData$dat.sVar[, sel_vars, with = FALSE]
 
   dataDTvalid <- define_predictors(dataDT, nodes, train_set = FALSE, hold_column = OData$hold_column)
@@ -248,8 +249,8 @@ predictHoldout <- function(OData, modelIDs, verbose = getOption("growthcurveSL.v
 
   holdoutDT[, (colnames(preds$getprobA1)) := as.data.table(preds$getprobA1)]
   # browser()
-  MSE <- modelfit$evalMSE(OData_valid)
-  # print("MSE: "); print(unlist(MSE))
+  # MSE <- modelfit$evalMSE(OData_valid)
+  print("MSE: "); print(unlist(preds$getMSE))
   return(holdoutDT)
 }
 

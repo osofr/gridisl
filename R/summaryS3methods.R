@@ -73,52 +73,6 @@ pander.H2ORegressionMetrics <- function(H2ORegressionMetricsObject) {
   return(NULL)
 }
 
-#' S3 methods for printing model fit summary for brokenstickmodel class object
-#'
-#' Prints the modeling summary for the glm fit (\code{stats::glm.fit} or \code{speedglm::speedglm.wfit})
-#' @param model.fit The model fit object produced by functions stremr:::fit.glm or stremr:::fit.speedglm
-#' @param ... Additional options passed on to \code{summary.GLMmodel}.
-#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary.GLMmodel}.
-#' @export
-print.brokenstickmodel <- function(model.fit, ...) {
-  model.summary <- summary(model.fit, ...)
-  cat(paste(model.summary, collapse = '\n'))
-}
-#' S3 methods for getting model fit summary for glmfit class object
-#'
-#' Prints the modeling summary for the GLM fit (\code{stats::glm.fit} or \code{speedglm::speedglm.wfit})
-#' @param model.fit The model fit object produced by functions stremr:::glmfit.glm or stremr:::glmfit.speedglm
-#' @param format_table Format the coefficients into a data.frame table?
-#' @param ... Additional options (not used)
-#' @return The markdown-formated model summary returned by \code{pander::pander_return}.
-#' @export
-summary.brokenstickmodel <- function(model.fit, format_table = TRUE, ...) {
-  makeModelCaption <- function(model.fit) {
-    return(
-      "Model: " %+% model.fit$params$outvar %+% " ~ " %+% paste0(model.fit$params$predvars, collapse = " + ") %+% "; \\
-       Stratify: " %+% model.fit$params$stratify %+% "; \\
-       N: " %+% prettyNum(model.fit$nobs, big.mark = ",", scientific = FALSE) %+% "; \\
-       Fit function: " %+% model.fit$fitfunname
-    )
-  }
-  nobs <- model.fit$nobs
-  coef_out <- model.fit$coef
-  if (format_table) {
-    if (is.null(coef_out)) {
-      coef_out <- "---"; names(coef_out) <- coef_out
-    }
-    coef_out <- data.frame(Terms = names(coef_out), Coefficients = as.vector(coef_out))
-    # coef_out <- data.frame(Terms = model.fit$params$predvars, Coefficients = as.vector(coef_out))
-    rownames(coef_out) <- NULL
-  }
-  pander::set.caption(makeModelCaption(model.fit))
-  # S4 class:
-  # model.fit$model.object
-  out <- pander::pander_return(coef_out, justify = c('right', 'left'))
-  out
-}
-
-
 #' S3 methods for printing model fit summary for glmfit class object
 #'
 #' Prints the modeling summary for the glm fit (\code{stats::glm.fit} or \code{speedglm::speedglm.wfit})
@@ -295,7 +249,6 @@ CVsummary_H2Obasemodel <- function(basemodelfit) {
 #' @return The markdown-formated model summary returned by \code{pander::pander_return}.
 #' @export
 summary.H2Oensemblemodel <- function(model.fit, only.coefs = FALSE, format_table = TRUE, ...) {
-  # browser()
   h2o.ensemble.fit <- model.fit$H2O.model.object
   out <- NULL
   x <- h2o.ensemble.fit$x
@@ -372,6 +325,19 @@ summary.H2Oensemblemodel <- function(model.fit, only.coefs = FALSE, format_table
     # out <- c(out, var_imp_out)
   }
   return(out)
+}
+
+#' S3 methods for printing model fit summary for H2Omodel class object
+#'
+#' Prints the modeling summary for the h2o model fit (see \code{h2o} R package).
+#' @param model.fit The model fit object produced by any stremr S3 function starting with \code{stremr:::H2Omodel.}
+#' @param only.coefs Skip all of the h2o-specific model stats, only print the coefficients table (when running \code{fit.algorithm = "GLM"}).
+#' @param ... Additional options passed on to \code{summary.H2Omodel}.
+#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary.H2Omodel}.
+#' @export
+print.H2Oensemblemodel <- function(model.fit, only.coefs = FALSE, ...) {
+  model.summary <- summary(model.fit, only.coefs, ...)
+  cat(paste(model.summary, collapse = '\n'))
 }
 
 #' S3 methods for printing model fit summary for H2Omodel class object

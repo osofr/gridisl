@@ -19,7 +19,7 @@ fit.glm <- function(fit.class, fit, Xmat, Yvals, ...) {
     SuppressGivenWarnings({
       model.fit <- stats::glm.fit(x = Xmat,
                                   y = Yvals,
-                                  family = binomial() ,
+                                  family = gaussian() ,
                                   control = ctrl)
     }, GetWarningsToSuppress())
   }
@@ -52,7 +52,7 @@ fit.speedglm <- function(fit.class, fit, Xmat, Yvals, ...) {
     model.fit <- try(speedglm::speedglm.wfit(X = Xmat,
                                              y = Yvals,
                                              method = 'Cholesky',
-                                             family = binomial(),
+                                             family = gaussian(),
                                              trace = FALSE),
                     silent = TRUE)
     }, GetWarningsToSuppress())
@@ -78,7 +78,7 @@ fit.speedglm <- function(fit.class, fit, Xmat, Yvals, ...) {
 }
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
-predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
+predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
   if (!missing(DataStorageObject)) {
     ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE, getXmat = TRUE)
   }
@@ -86,7 +86,7 @@ predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
   assert_that(!is.null(Xmat)); assert_that(!is.null(subset_idx))
   # Set to default missing value for A[i] degenerate/degerministic/misval:
   # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newBinDatObject$n)
-  pAout <- rep.int(gvars$misval, n)
+  pAout <- rep.int(gvars$misval, length(subset_idx))
   if (sum(subset_idx) > 0) {
     if (!all(is.na(m.fit$coef))) {
       eta <- Xmat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
@@ -134,22 +134,25 @@ predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
 #' }
 #' @importFrom assertthat assert_that is.count is.string is.flag
 #' @export
-BinomialGLM <- R6Class(classname = "BinomialGLM",
+glmModelClass <- R6Class(classname = "glmModelClass",
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,
   public = list(
-    ParentModel = NULL,
+    outvar = character(),
+    predvars = character(),
     model_contrl = list(),
+    ReplMisVal0 = logical(),
     params = list(),
-    classify = NULL,
     fit.class = c("glm", "speedglm"),
     model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA),
 
-    initialize = function(fit.algorithm, fit.package, ParentModel, ...) {
-      self$ParentModel <- ParentModel
-      self$classify <- ParentModel$classify
-      self$model_contrl <- ParentModel$model_contrl
+    initialize = function(fit.algorithm, fit.package, reg, ...) {
+      self$outvar <- reg$outvar
+      self$predvars <- reg$predvars
+      self$model_contrl <- reg$model_contrl
+      self$ReplMisVal0 <- reg$ReplMisVal0
+
       if (!("glm" %in% fit.algorithm)) warning("over-riding fit.algorithm option with 'glm', since fit.package was set to 'speedglm' or 'glm'")
       assert_that(any(c("glm", "speedglm") %in% fit.package))
       self$fit.class <- fit.package
@@ -175,8 +178,8 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
       P1 <- predictP1(self$model.fit,
                       ParentObject = self,
                       DataStorageObject = data,
-                      subset_idx = subset_idx,
-                      n = self$ParentModel$n)
+                      subset_idx = subset_idx
+                      )
       # if (!is.matrix(P1)) P1 <- matrix(P1, nrow = length(P1), ncol = 1)
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)
@@ -189,13 +192,13 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
     # everything is performed using data$ methods (data is of class DataStorageClass)
     setdata = function(data, subset_idx, getoutvar = TRUE, getXmat = TRUE) {
       assert_that(is.DataStorageClass(data))
-      if (getoutvar) private$Yvals <- data$get.outvar(subset_idx, self$ParentModel$outvar) # Always a vector
+      if (getoutvar) private$Yvals <- data$get.outvar(subset_idx, self$outvar) # Always a vector
       if (getXmat) self$define.Xmat(data, subset_idx)
       return(invisible(self))
     },
 
     define.Xmat = function(data, subset_idx) {
-      predvars <- self$ParentModel$predvars
+      predvars <- self$predvars
       if (sum(subset_idx) == 0L) {  # When nrow(Xmat) == 0L avoids exception (when nrow == 0L => prob(A=a) = 1)
         Xmat <- matrix(, nrow = 0L, ncol = (length(predvars) + 1))
         colnames(Xmat) <- c("Intercept", predvars)
@@ -208,10 +211,14 @@ BinomialGLM <- R6Class(classname = "BinomialGLM",
         }
         colnames(Xmat)[1] <- "Intercept"
         # To find and replace misvals in Xmat:
-        if (self$ParentModel$ReplMisVal0) Xmat[gvars$misfun(Xmat)] <- gvars$misXreplace
+        if (self$ReplMisVal0) Xmat[gvars$misfun(Xmat)] <- gvars$misXreplace
       }
       private$Xmat <- Xmat
       return(invisible(self))
+    },
+    show = function(all_fits = FALSE, ...) {
+      print(self$model.fit)
+      return(invisible(NULL))
     }
   ),
 

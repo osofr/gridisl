@@ -5,7 +5,7 @@ h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negati
 #' @export
 SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial", fold_column, model_contrl, validationH2Oframe, ...) {
   # if (is.numeric(seed)) set.seed(seed)  #If seed given, set seed prior to next step
-  h2o.no_progress()
+  # h2o.no_progress()
 
   if (("x" %in% names(formals(learner))) && (as.character(formals(learner)$x)[1] != "")) {
     # Special case where we pass a subset of the colnames, x, in a custom learner function wrapper
@@ -29,7 +29,7 @@ SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial",
 # use "bernoulli" when doing classification and use "gaussian" when doing regression
 #' @export
 SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomial", fold_column, model_contrl, validationH2Oframe  = NULL, ...) {
-  h2o.no_progress()
+  # h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                   intercept = TRUE,
                   seed = 1,
@@ -73,24 +73,38 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
   if(length(common_hyper_args) > 0) mainArgs <- mainArgs[!(names(mainArgs) %in% common_hyper_args)]
 
   if (gvars$verbose) {
-    print("running h2o.grid grid.algorithm: "); print(grid.algorithm)
+    print("running h2o.grid grid.algorithm: " %+% grid.algorithm);
   }
 
   model.fit <- do.call(h2o::h2o.grid, mainArgs)
-
-  # browser()
-  # sortedGrid <- h2o.getGrid(model.fit@grid_id, sort_by = "mse", decreasing = FALSE)
-  # top.model <- h2o.getModel(sortedGrid@model_ids[[1]])
-  # h2o.performance(top.model)
-  # h2o.performance(top.model, valid = TRUE)
-
+  # sort the grid by increasing MSE:
+  model.fit <- h2o::h2o.getGrid(model.fit@grid_id, sort_by = "mse", decreasing = FALSE)
 
   fit <- vector(mode = "list")
   fit$fitfunname <- "h2o.h2ogrid";
-  if (gvars$verbose) {
-    print("grid search fitted models:"); print(model.fit)
-  }
   fit$H2O.model.object <- model.fit
+  fit$top.model <- h2o::h2o.getModel(model.fit@model_ids[[1]])
+  # h2o.performance(top.model)
+  # h2o.performance(top.model, valid = TRUE)
+
+  if (gvars$verbose) {
+    # print("grid search fitted models:"); print(model.fit)
+    print("grid search: " %+% model.fit@grid_id)
+    print("grid search top performing model:"); print(fit$top.model)
+    # print(h2o::h2o.performance(fit$top.model))
+    # print(h2o::h2o.performance(fit$top.model, valid = TRUE))
+    # print("grid search top model summary:")
+    # getParms(fit$top.model)
+    # str(fit$top.model)
+    # .model.parts(fit$top.model@model)
+    # if( !is.null(m$coefficients_table) ) print(m$coefficients_table)
+    # fit$top.model@model$model_summary
+    # fit$top.model$model_summary
+    # fit$top.model@summary
+    # str(fit$top.model)
+    # fit$top.model@model$model_summary
+    # str(fit$top.model@model$model_summary)
+  }
   class(fit) <- c(class(fit)[1], c("H2Omodel"))
   return(fit)
 }

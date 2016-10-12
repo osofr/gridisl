@@ -59,7 +59,7 @@ This R6 class defines fields and methods that controls all the parameters for no
 \item{\code{intrvls.width}} - Named numeric vector of bin-widths (\code{bw_j : j=1,...,M}) for each each bin in \code{self$intrvls}.
    When \code{sA} is not continuous, \code{intrvls.width} IS SET TO 1. When sA is continuous and this variable \code{intrvls.width}
    is not here, the intervals are determined inside \code{ContinModel$new()} and are assigned to this variable as a list,
-   with \code{names(intrvls.width) <- reg$bin_nms}. Can be queried by \code{BinaryOutcomeModel$predictAeqa()} as: \code{intrvls.width[outvar]}.
+   with \code{names(intrvls.width) <- reg$bin_nms}. Can be queried by \code{PredictionModel$predictAeqa()} as: \code{intrvls.width[outvar]}.
 \item{\code{intrvls}} - Numeric vector of cutoffs defining the bins or a named list of numeric intervals for \code{length(self$outvar) > 1}.
 \item{\code{cat.levels}} - Numeric vector of all unique values in categorical outcome variable.
    Set by \code{\link{CategorModel}} constructor.

@@ -197,7 +197,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     },
 
     # ---------------------------------------------------------------------
-    # Functions for subsetting/returning covariate design mat for BinaryOutcomeModel Class or outcome variable
+    # Functions for subsetting/returning covariate design mat for PredictionModel Class or outcome variable
     # ---------------------------------------------------------------------
     get.dat.sVar = function(rowsubset = TRUE, covars) {
       if (!missing(covars)) {

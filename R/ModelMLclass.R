@@ -147,7 +147,7 @@ fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_cont
 # ----------------------------------------------------------------
 # Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
 # ----------------------------------------------------------------
-predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
+predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
   subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
   # assert_that(!is.null(subset_idx))
   # if (!missing(DataStorageObject)) {
@@ -163,7 +163,7 @@ predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
   # } else {
   #   subsetH2Oframe <- ParentObject$getsubsetH2Oframe
   # }
-  pAout <- rep.int(gvars$misval, n)
+  pAout <- rep.int(gvars$misval, length(subset_idx))
   if (sum(subset_idx) > 0) {
     predictFrame <- h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)
     if ("p1" %in% colnames(predictFrame)) {
@@ -178,7 +178,7 @@ predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
 # ----------------------------------------------------------------
 # Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
 # ----------------------------------------------------------------
-predictP1.H2Oensemblemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
+predictP1.H2Oensemblemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
   subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
   # assert_that(!is.null(subset_idx))
   # if (!missing(DataStorageObject)) {
@@ -193,7 +193,7 @@ predictP1.H2Oensemblemodel <- function(m.fit, ParentObject, DataStorageObject, s
   # } else {
   #   subsetH2Oframe <- ParentObject$getsubsetH2Oframe
   # }
-  pAout <- rep.int(gvars$misval, n)
+  pAout <- rep.int(gvars$misval, length(subset_idx))
   if (sum(subset_idx) > 0) {
     predictObject <- predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)
     predictFrame <- predictObject$pred
@@ -223,9 +223,9 @@ getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_id
 }
 
 # TO DO: Add prediction only based on the subset of models (rather than predicting for all models)
-predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, ...) {
+predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
   subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
-  pAoutMat <- matrix(gvars$misval, nrow = n, ncol = length(m.fit$fitted_models_all))
+  pAoutMat <- matrix(gvars$misval, nrow = length(subset_idx), ncol = length(m.fit$fitted_models_all))
   colnames(pAoutMat) <- "PredModel" %+% (1:length(m.fit$fitted_models_all))
 
   if (sum(subset_idx) > 0) {
@@ -238,23 +238,92 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   return(pAoutMat)
 }
 
-# IMPLEMENTING NEW CLASS FOR BINARY REGRESSION THAT USES h2o
-# NEEDS TO be able to pass on THE REGRESSION SETTINGS FOR h2o-specific functions
-BinomialH2O  <- R6Class(classname = "BinomialH2O",
-  inherit = BinomialGLM,
+h2oGridModelClass  <- R6Class(classname = "h2oModelClass",
+  inherit = h2oModelClass,
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,
   public = list(
+    fit.class = c("GridLearner"),
+
+    initialize = function(...) {
+      super$initialize(...)
+      invisible(self)
+    },
+
+    fit = function(...) {
+      return(super$fit(...))
+    },
+
+    predictP1 = function(...) {
+      return(super$predictP1(...))
+    },
+    # Output info on the general type of regression being fitted:
+    show = function(all_fits = FALSE, ...) {
+      model.fit <- self$model.fit
+      grid_objects <- self$model.fit$grid_objects
+      top_grid_models <- self$model.fit$top_grid_models
+
+      cat(" TOTAL NO. OF GRIDS: " %+% length(model.fit$grid_objects) %+% "\n")
+      cat(" ======================= \n")
+
+      for (grid_nm in names(grid_objects)) {
+        print(grid_objects[[grid_nm]])
+        cat("\n TOP MODEL FOR THIS GRID: \n")
+        cat(" ======================= \n")
+        print(top_grid_models[[grid_nm]])
+      }
+
+      if (all_fits) {
+        cat("\n...Printing the summary fits of all models contained in this ensemble...\n")
+        cat("==========================================================================\n")
+        for (idx in seq_along(model.fit$fitted_models_all)) {
+          cat("Model No. " %+% idx %+% "; ")
+          print(model.fit$fitted_models_all[[idx]])
+        }
+      }
+      return(invisible(NULL))
+    },
+
+    summary = function(all_fits = FALSE) {
+      # model.fit <- self$model.fit
+      # grid_objects <- self$model.fit$grid_objects
+      # top_grid_models <- self$model.fit$top_grid_models
+      # no.grids <- "Total No. of Grids: " %+% length(model.fit$grid_objects)
+      # cat(no.grids)
+      # for (grid_nm in names(grid_objects)) {
+      #   print(grid_objects[[grid_nm]])
+      #   cat("top model for this grid: \n")
+      #   print(top_grid_models[[grid_nm]])
+      # }
+      print("...")
+      return(invisible(self))
+    }
+  )
+)
+
+# IMPLEMENTING NEW CLASS FOR BINARY REGRESSION THAT USES h2o
+# NEEDS TO be able to pass on THE REGRESSION SETTINGS FOR h2o-specific functions
+h2oModelClass  <- R6Class(classname = "h2oModelClass",
+  cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
+  portable = TRUE,
+  class = TRUE,
+  public = list(
+    outvar = character(),
+    predvars = character(),
+    model_contrl = list(),
+    params = list(),
+    classify = FALSE,
     fit.class = c("glm", "randomForest", "gbm", "deeplearning", "SuperLearner", "GridLearner"),
     model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA),
     outfactors = NA,
     nfolds = 5,
 
-    initialize = function(fit.algorithm, fit.package, ParentModel, ...) {
-      self$ParentModel <- ParentModel
-      self$classify <- ParentModel$classify
-      self$model_contrl <- ParentModel$model_contrl
+    initialize = function(fit.algorithm, fit.package, reg, ...) {
+      self$outvar <- reg$outvar
+      self$predvars <- reg$predvars
+      self$model_contrl <- reg$model_contrl
+
       assert_that("h2o" %in% fit.package)
       if (fit.algorithm %in% "SuperLearner") {
         if (!"package:h2oEnsemble" %in% search()) stop("must load 'h2oEnsemble' package prior to using the SuperLearner: require('h2oEnsemble') or library('h2oEnsemble')")
@@ -282,13 +351,10 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         validationH2Oframe = NULL
       }
 
-
       self$model.fit$params <- self$params
-
-      self$model.fit <- try(
-                    fit(self$fit.class, self$model.fit, training_frame = subsetH2Oframe, y = outvar, x = predvars,
-                        model_contrl = self$model_contrl, fold_column = data$fold_column, validationH2Oframe = validationH2Oframe, ...),
-                    silent = FALSE)
+      self$model.fit <- try(fit(self$fit.class, self$model.fit, training_frame = subsetH2Oframe, y = outvar, x = predvars,
+                            model_contrl = self$model_contrl, fold_column = data$fold_column, validationH2Oframe = validationH2Oframe, ...),
+                        silent = FALSE)
 
       if (inherits(self$model.fit, "try-error")) {
         self$emptydata
@@ -298,9 +364,18 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
       return(self$model.fit)
     },
 
+    predictP1 = function(data, subset_idx) {
+      P1 <- predictP1(self$model.fit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx)
+      if (!is.matrix(P1)) {
+        P1 <- matrix(P1, byrow = TRUE)
+        colnames(P1) <- "PredModel"
+      }
+      return(P1)
+    },
+
     setdata = function(data, subset_idx, classify = FALSE, destination_frame = "newH2Osubset", ...) {
-      outvar <- self$ParentModel$outvar
-      predvars <- self$ParentModel$predvars
+      outvar <- self$outvar
+      predvars <- self$predvars
       if (!missing(subset_idx)) {
         rows_subset <- which(subset_idx)
       } else {
@@ -340,9 +415,11 @@ BinomialH2O  <- R6Class(classname = "BinomialH2O",
         if (length(self$outfactors) > 2L) stop("cannot run binary regression/classification for outcome with more than 2 categories")
         subsetH2Oframe[, outvar] <- h2o::as.factor(subsetH2Oframe[, outvar])
       }
-      # private$subsetH2Oframe <- subsetH2Oframe
-      # return(invisible(self))
       return(subsetH2Oframe)
+    },
+    show = function(all_fits = FALSE, ...) {
+      print(self$model.fit)
+      return(invisible(NULL))
     }
   ),
 

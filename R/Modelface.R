@@ -10,7 +10,7 @@ fit.face <- function(fit.class, fit, subj, argvals, Yvals, knots = NULL, ...) {
       subj = subj,
       y = Yvals)
     # facedat <- facedat[complete.cases(facedat), ]
-    if (is.null(knots)) knots <- face::select.knots(facedat$argvals, knots = knots)
+    if (is.null(knots)) knots <- face::select.knots(facedat$argvals, knots = 10)
     model.fit <- suppressMessages(face::face.sparse(facedat, knots = knots))
   }
 
@@ -29,11 +29,10 @@ fit.face <- function(fit.class, fit, subj, argvals, Yvals, knots = NULL, ...) {
 }
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
-predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, n, predict.with.newYs = FALSE, knots  = NULL, ...) {
+predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict.with.newYs = FALSE, knots  = NULL, ...) {
   if (!missing(DataStorageObject)) {
     # Will also obtain the outcomes of the prediction set:
     ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
-    # ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
   }
 
   model.object <- m.fit$model.object
@@ -55,7 +54,7 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
 
   # Set to default missing value for A[i] degenerate/degerministic/misval:
   # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newBinDatObject$n)
-  pAout <- rep.int(gvars$misval, n)
+  pAout <- rep.int(gvars$misval, length(subset_idx))
   if (sum(subset_idx) > 0) {
     ## get fits at new data point, while also including fitted (training data points)
 
@@ -83,20 +82,21 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
 
 #' @importFrom assertthat assert_that is.count is.string is.flag
 #' @export
-faceClass <- R6Class(classname = "faceClass",
+faceModelClass <- R6Class(classname = "faceModelClass",
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,
   class = TRUE,
   public = list(
-    ParentModel = NULL,
+    outvar = character(),
+    nobs = integer(),
     model_contrl = list(),
     params = list(),
     fit.class = c("face"),
     model.fit = list(fitfunname = NA, nobs = NA, params = NA),
 
-    initialize = function(fit.algorithm, fit.package, ParentModel, ...) {
-      self$ParentModel <- ParentModel
-      self$model_contrl <- ParentModel$model_contrl
+    initialize = function(fit.algorithm, fit.package, reg, ...) {
+      self$model_contrl <- reg$model_contrl
+      self$outvar <- reg$outvar
       assert_that(any(c("face") %in% fit.package))
       self$fit.class <- fit.package
       class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
@@ -122,7 +122,6 @@ faceClass <- R6Class(classname = "faceClass",
                       ParentObject = self,
                       DataStorageObject = data,
                       subset_idx = subset_idx,
-                      n = self$ParentModel$n,
                       predict.with.newYs = predict.with.newYs)
 
       if (!is.matrix(P1)) {
@@ -139,12 +138,21 @@ faceClass <- R6Class(classname = "faceClass",
       nodes <- data$nodes
       IDnode <- nodes$IDnode
       tnode <- nodes$tnode
-      if (getoutvar) private$Yvals <- data$get.outvar(subset_idx, self$ParentModel$outvar) # Always a vector
+      if (getoutvar) private$Yvals <- data$get.outvar(subset_idx, self$outvar) # Always a vector
       if (getXmat) {
         private$subj <- data$get.outvar(subset_idx, IDnode)
         private$argvals <- data$get.outvar(subset_idx, tnode) # Always a vector
       }
       return(invisible(self))
+    },
+    show = function(all_fits = FALSE, ...) {
+      # print(self$model.fit)
+      model.fit <- self$model.fit
+      # "Model: " %+% model.fit$params$outvar %+% " ~ " %+% paste0(model.fit$params$predvars, collapse = " + ") %+% "; \n" %+%
+      cat("Stratify: " %+% model.fit$params$stratify %+% "; \n" %+%
+          "N: " %+% prettyNum(model.fit$nobs, big.mark = ",", scientific = FALSE) %+% "; \n" %+%
+          "Fit function: " %+% model.fit$fitfunname %+% "\n")
+      return(invisible(NULL))
     }
   ),
 
