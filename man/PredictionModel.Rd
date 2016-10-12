@@ -3,7 +3,7 @@
 \docType{class}
 \name{PredictionModel}
 \alias{PredictionModel}
-\title{R6 class for fitting and making predictions for a single outcome regression model P(Y | PredVars)}
+\title{R6 class for fitting and making predictions for a single or a grid of regression models E(outvar | predvars)}
 \format{An \code{\link{R6Class}} generator object}
 \usage{
 PredictionModel
@@ -29,18 +29,6 @@ This R6 class can request, store and manage the design matrix Xmat, as well as t
   \item{\code{predict()}}{...}
   \item{\code{copy.predict()}}{...}
   \item{\code{predictAeqa()}}{...}
-}
-}
-
-\section{Active Bindings}{
-
-\describe{
-  \item{\code{getoutvarnm}}{...}
-  \item{\code{getoutvarval}}{...}
-  \item{\code{getsubset}}{...}
-  \item{\code{getprobA1}}{...}
-  \item{\code{getfit}}{...}
-  \item{\code{wipe.alldat}}{...}
 }
 }
 \keyword{R6}

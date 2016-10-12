@@ -1,7 +1,10 @@
-#----------------------------------------------------------------------------------
-# Classes for modelling regression models with outcome Y ~ Xmat
-#----------------------------------------------------------------------------------
 
+
+
+
+#----------------------------------------------------------------------------------
+# Class that defines the same type of models for regression problem E[Y|X]
+#----------------------------------------------------------------------------------
 #' S3 methods for printing model fit summary for PredictionModel R6 class object
 #'
 #' Prints the modeling summaries
@@ -19,9 +22,8 @@ print.PredictionModel <- function(model, model_stats = FALSE, all_fits = FALSE, 
 #   return(model$summary())
 #   # return(invisible(NULL))
 # }
-
 ## ---------------------------------------------------------------------
-#' R6 class for fitting and making predictions for a single outcome regression model P(Y | PredVars)
+#' R6 class for fitting and making predictions for a single or a grid of regression models E(outvar | predvars)
 #'
 #' This R6 class can request, store and manage the design matrix Xmat, as well as the outcome Y
 #'  The class has methods that perform queries to data storage R6 class DataStorageClass to get appropriate data columns & row subsets
@@ -45,15 +47,6 @@ print.PredictionModel <- function(model, model_stats = FALSE, all_fits = FALSE, 
 #'   \item{\code{copy.predict()}}{...}
 #'   \item{\code{predictAeqa()}}{...}
 #' }
-#' @section Active Bindings:
-#' \describe{
-#'   \item{\code{getoutvarnm}}{...}
-#'   \item{\code{getoutvarval}}{...}
-#'   \item{\code{getsubset}}{...}
-#'   \item{\code{getprobA1}}{...}
-#'   \item{\code{getfit}}{...}
-#'   \item{\code{wipe.alldat}}{...}
-#' }
 #' @importFrom assertthat assert_that is.flag
 #' @export
 PredictionModel  <- R6Class(classname = "PredictionModel",
@@ -64,8 +57,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     # classify = FALSE,
     outvar = character(),   # outcome name(s)
     predvars = character(), # names of predictor vars
-    cont.sVar.flag = logical(),
-    bw.j = numeric(),
     is.fitted = FALSE,
 
     ModelFitObject = NULL, # object of class ModelFitObject that is used in fitting / prediction, never saved (need to be initialized with $new())
@@ -73,11 +64,9 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     fit.algorithm = character(),
     model_contrl = list(),
 
-    n = NA_integer_,        # number of rows in the input data
     subset_vars = NULL,     # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
     subset_exprs = NULL,     # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
     subset_idx = NULL,      # Logical vector of length n (TRUE = include the obs)
-
     ReplMisVal0 = logical(),
 
     initialize = function(reg, ...) {
@@ -156,18 +145,16 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         model.fit <- self$ModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       }
 
-      private$model.fit <- model.fit
+      self$is.fitted <- TRUE
+      # private$model.fit <- model.fit
       # str(private$model.fit)
       # names(private$model.fit)
       # private$model.fit$fitted_models_all
-
-
-      self$is.fitted <- TRUE
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       # **********************************************************************
       self$wipe.alldat
-      invisible(self)
+      return(invisible(self))
     },
 
     # Predict the response P(Bin = 1|sW = sw);
@@ -192,18 +179,24 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     evalMSE = function(test_values) {
       assert_that(self$is.fitted)
       assert_that(is.vector(test_values))
+      n <- length(self$subset_idx)
 
-      MSE_mean <- MSE_var <- vector(mode = "list", length = ncol(private$probA1));
-      names(MSE_mean) <- names(MSE_var) <- colnames(private$probA1)
+      MSE_mean <- MSE_var <- MSE_sd <- var <- vector(mode = "list", length = ncol(private$probA1));
+      names(MSE_mean) <- names(MSE_var) <- names(MSE_sd) <- names(var) <- colnames(private$probA1)
 
       for (idx in 1:ncol(private$probA1)) {
-        MSE_mean[[idx]] <- mean((private$probA1[self$subset_idx, idx] - test_values)^2, na.rm = TRUE)
-        MSE_var[[idx]] <- var((private$probA1[self$subset_idx, idx] - test_values)^2, na.rm = TRUE)
-        if (any(is.na(private$probA1[self$subset_idx, idx])))
+        predVals <- private$probA1[self$subset_idx, idx]
+
+        MSE_mean[[idx]] <- mean((predVals - test_values)^2, na.rm = TRUE)
+        MSE_var[[idx]] <- var((predVals - test_values)^2, na.rm = TRUE)
+        MSE_sd[[idx]] <- 1 / sqrt(n) * sd((predVals - test_values)^2, na.rm = TRUE)
+        var[[idx]] <- var(predVals, na.rm = TRUE)
+
+        if (any(is.na(predVals)))
           warning("Some of the predictions of the model id " %+% idx %+% " were missing (NA); these were excluded from MSE evaluation")
       }
       # private$MSE <- MSE
-      return(list(MSE_mean = MSE_mean, MSE_var = MSE_var))
+      return(list(MSE_mean = MSE_mean, MSE_var = MSE_var, MSE_sd = MSE_sd, var = var))
     },
 
     define.subset.idx = function(data) {
@@ -230,20 +223,20 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       return(invisible(self))
     },
 
-    # take fitted PredictionModel class object as an input and save the fits to itself
-    copy.fit = function(bin.out.model) {
-      assert_that("PredictionModel" %in% class(bin.out.model))
-      private$model.fit <- bin.out.model$getfit
-      self$is.fitted <- TRUE
-      invisible(self)
-    },
+    # # take fitted PredictionModel class object as an input and save the fits to itself
+    # copy.fit = function(bin.out.model) {
+    #   assert_that("PredictionModel" %in% class(bin.out.model))
+    #   private$model.fit <- bin.out.model$getfit
+    #   self$is.fitted <- TRUE
+    #   invisible(self)
+    # },
 
-    # take PredictionModel class object that contains the predictions for P(A=1|sW) and save these predictions to self$
-    copy.predict = function(bin.out.model) {
-      assert_that("PredictionModel" %in% class(bin.out.model))
-      assert_that(self$is.fitted)
-      private$probA1 <- bin.out.model$getprobA1
-    },
+    # # take PredictionModel class object that contains the predictions for P(A=1|sW) and save these predictions to self$
+    # copy.predict = function(bin.out.model) {
+    #   assert_that("PredictionModel" %in% class(bin.out.model))
+    #   assert_that(self$is.fitted)
+    #   private$probA1 <- bin.out.model$getprobA1
+    # },
 
     # Returns the object that contains the actual model fits (itself)
     # get.fits = function() {
@@ -281,17 +274,22 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       self$ModelFitObject$emptyY
       return(self)
     },
-    getfit = function() { private$model.fit },
-    getmodelnames = function() { self$getfit$modelnames },
+    getfit = function() { self$ModelFitObject$model.fit },
+    # getfit = function() { private$model.fit },
+    emptymodelfit = function() { self$ModelFitObject$emptymodelfit },
+    getmodel_ids = function() { self$getfit$model_ids },
+    getmodel_algorithms = function() { self$getfit$model_algorithms },
     getprobA1 = function() { private$probA1 },
     getsubset = function() { self$subset_idx },
     getoutvarnm = function() { self$outvar },
     getoutvarval = function() { self$ModelFitObject$getY },
     getMSE = function() { private$MSE[["MSE_mean"]] },
-    getMSEvar = function() { private$MSE[["MSE_var"]] }
+    getMSEvar = function() { private$MSE[["MSE_var"]] },
+    getMSEsd = function() { private$MSE[["MSE_sd"]] },
+    getvar = function() { private$MSE[["var"]] }
   ),
   private = list(
-    model.fit = list(),   # the model fit (either coefficients or the model fit object)
+    # model.fit = list(),   # the model fit (either coefficients or the model fit object)
     MSE = list(),
     probA1 = NULL,    # Predicted probA^s=1 conditional on Xmat
     probAeqa = NULL   # Likelihood of observing a particular value A^s=a^s conditional on Xmat

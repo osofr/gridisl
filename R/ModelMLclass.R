@@ -176,7 +176,7 @@ predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
 }
 
 # ----------------------------------------------------------------
-# Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
+# Prediction for h2ofit objects, predicts E(outvar | newXmat)
 # ----------------------------------------------------------------
 predictP1.H2Oensemblemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
   subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
@@ -234,7 +234,6 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
       pAoutMat[subset_idx, idx] <- as.vector(predictFrame[,"predict"])
     }
   }
-
   return(pAoutMat)
 }
 

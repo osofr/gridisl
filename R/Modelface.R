@@ -160,6 +160,7 @@ faceModelClass <- R6Class(classname = "faceModelClass",
     # emptydata = function() { private$Xmat <- NULL },
     emptydata = function() { NULL },
     emptyY = function() { private$Yvals <- NULL },
+    emptymodelfit = function() {self$model.fit$model.object <- NULL; return(invisible(NULL)) },
     get.Y = function() { private$Yvals },
     get.argvals = function() { private$argvals },
     get.subj = function() { private$subj }

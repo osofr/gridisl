@@ -215,6 +215,7 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
     # emptydata = function() { private$Xmat <- NULL },
     emptydata = function() { NULL },
     emptyY = function() { private$Yvals <- NULL },
+    emptymodelfit = function() {self$model.fit$model.object <- NULL; return(invisible(NULL)) },
     get.subject = function() { private$subject },
     get.x = function() { private$x },
     get.Y = function() { private$Yvals }

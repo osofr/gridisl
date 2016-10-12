@@ -63,16 +63,14 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
     # h2oEnsemble::h2o.save_ensemble(stacked.fit, path = model_contrl$ensemble.dir.path, force = TRUE, export_levelone = TRUE)
   }
 
-  # fit$fitfunname <- "h2oEnsemble::h2o.stack";
-  # fit$H2O.model.object <- stacked.fit
-
   fit$grid_objects <- grid_objects
   fit$grid_ids <- lapply(fit$grid_objects, function(grids_object) grids_object@grid_id)
   fit$top_grid_models <- top_grid_models
 
   # TO DIRECTLY SAVE ALL MODEL FITS FROM GRID SEARCH (base-learners)
   fit$fitted_models_all <- fitted_models_all
-  fit$modelnames <- lapply(fit$fitted_models_all, function(model) model@model_id)
+  fit$model_ids <- lapply(fit$fitted_models_all, function(model) model@model_id)
+  fit$model_algorithms <- lapply(fit$fitted_models_all, function(model) model@algorithm)
 
   class(fit) <- c(class(fit)[1], c("H2Ogridmodel"))
   return(fit)

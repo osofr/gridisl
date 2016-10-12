@@ -200,6 +200,7 @@ get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL,
 
   ## Perform fitting:
   modelfit$fit(data = OData_train, validation_data = OData_valid)
+
   ## Get predictions for holdout data only:
   # preds <- modelfit$predict(newdata = OData, subset_exprs = "hold == TRUE")
   # OData$dat.sVar[, holdoutPred := preds$getprobA1]
