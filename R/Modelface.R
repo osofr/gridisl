@@ -20,8 +20,8 @@ fit.face <- function(fit.class, fit, subj, argvals, Yvals, knots = NULL, ...) {
   fit$fitted.Yvals <- Yvals
   fit$fitted.argvals <- argvals
   fit$fitted.subj <- subj
+  fit$model_algorithms <- list("face")
 
-  fit$modelnames <- "face.model"
   fit$fitfunname <- "face.sparse";
   fit$nobs <- length(Yvals)
   class(fit)[2] <- "facemodel"
@@ -92,7 +92,7 @@ faceModelClass <- R6Class(classname = "faceModelClass",
     model_contrl = list(),
     params = list(),
     fit.class = c("face"),
-    model.fit = list(fitfunname = NA, nobs = NA, params = NA),
+    model.fit = list(fitfunname = NA, nobs = NA, params = NA, model_algorithms = NA),
 
     initialize = function(fit.algorithm, fit.package, reg, ...) {
       self$model_contrl <- reg$model_contrl
@@ -112,6 +112,15 @@ faceModelClass <- R6Class(classname = "faceModelClass",
                                Yvals = private$Yvals,
                                knots = self$model_contrl$knots,
                                ...)
+
+
+      if (is.null(self$model.fit$model_ids)) {
+        self$model.fit$model_ids <- self$model.fit$H2O.model.object@model_id
+        new_names <- self$model.fit$model_algorithms[[1]]
+        if (!is.null(self$model_contrl$name)) new_names <- new_names %+% "." %+% self$model_contrl$name
+        names(fit$model_ids) <- names(fit$model_algorithms) <- new_names
+      }
+
       return(self$model.fit)
     },
 
@@ -126,9 +135,15 @@ faceModelClass <- R6Class(classname = "faceModelClass",
 
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)
-        colnames(P1) <- "PredModel"
+        colnames(P1) <- names(self$getmodel_ids)
       }
       return(P1)
+    },
+
+    getmodel_byname = function(model_names, model_IDs) {
+      res <- list(self$model.fit$model.object)
+      names(res) <- model_names
+      return(res)
     },
 
     # Sets Xmat, Yvals, evaluates subset and performs correct subseting of data
@@ -161,9 +176,12 @@ faceModelClass <- R6Class(classname = "faceModelClass",
     emptydata = function() { NULL },
     emptyY = function() { private$Yvals <- NULL },
     emptymodelfit = function() {self$model.fit$model.object <- NULL; return(invisible(NULL)) },
-    get.Y = function() { private$Yvals },
+    get.subj = function() { private$subj },
     get.argvals = function() { private$argvals },
-    get.subj = function() { private$subj }
+    get.Y = function() { private$Yvals },
+
+    getmodel_ids = function() { return(make_model_ID_name(self$model.fit$model_algorithms, self$model_contrl$name)) },
+    getmodel_algorithms = function() { self$model.fit$model_algorithms }
   ),
 
   private = list(

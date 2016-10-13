@@ -1,6 +1,14 @@
 #' @import data.table
 NULL
 
+make_model_ID_name <- function(algorithm, user_name = NULL) {
+  model_ids <- list(algorithm)
+  new_names <- algorithm
+  if (!is.null(user_name)) new_names <- new_names %+% "." %+% user_name
+  names(model_ids) <- new_names
+  return(model_ids)
+}
+
 # Generic for fitting the logistic (binomial family) GLM model
 fit <- function(fit, ...) UseMethod("fit")
 
@@ -25,7 +33,9 @@ fit.glm <- function(fit.class, fit, Xmat, Yvals, ...) {
   }
 
   fit$coef <- model.fit$coef;
-  fit$modelnames <- "GLM.model"
+  fit$model_algorithms <- list("glm")
+  names(fit$model_algorithms) <- fit$model_algorithms[[1]]
+
   fit$fitfunname <- "glm";
   fit$linkfun <- "logit_linkinv";
   fit$nobs <- nrow(Xmat)
@@ -64,7 +74,9 @@ fit.speedglm <- function(fit.class, fit, Xmat, Yvals, ...) {
   }
 
   fit$coef <- model.fit$coef;
-  fit$modelnames <- "GLM.model"
+  fit$model_algorithms <- list("glm")
+  names(fit$model_algorithms) <- fit$model_algorithms[[1]]
+
   fit$fitfunname <- "speedglm";
   fit$linkfun <- "logit_linkinv";
   fit$nobs <- nrow(Xmat)
@@ -145,7 +157,7 @@ glmModelClass <- R6Class(classname = "glmModelClass",
     ReplMisVal0 = logical(),
     params = list(),
     fit.class = c("glm", "speedglm"),
-    model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA),
+    model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, model_algorithms = NA),
 
     initialize = function(fit.algorithm, fit.package, reg, ...) {
       self$outvar <- reg$outvar
@@ -183,9 +195,15 @@ glmModelClass <- R6Class(classname = "glmModelClass",
       # if (!is.matrix(P1)) P1 <- matrix(P1, nrow = length(P1), ncol = 1)
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)
-        colnames(P1) <- "PredModel"
+        colnames(P1) <- names(self$getmodel_ids)
       }
       return(P1)
+    },
+
+    getmodel_byname = function(model_names, model_IDs) {
+      res <- list(self$model.fit)
+      names(res) <- model_names
+      return(res)
     },
 
     # Sets Xmat, Yvals, evaluates subset and performs correct subseting of data
@@ -226,7 +244,10 @@ glmModelClass <- R6Class(classname = "glmModelClass",
     emptydata = function() { private$Xmat <- NULL},
     emptyY = function() { private$Yvals <- NULL},
     getXmat = function() {private$Xmat},
-    getY = function() {private$Yvals}
+    getY = function() {private$Yvals},
+
+    getmodel_ids = function() { return(make_model_ID_name(self$model.fit$model_algorithms, self$model_contrl$name)) },
+    getmodel_algorithms = function() { self$model.fit$model_algorithms }
   ),
 
   private = list(

@@ -114,9 +114,11 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       } else if (self$fit.package %in% c("face")) {
         self$ModelFitObject <- faceModelClass$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, reg = reg, ...)
         self$fit.algorithm <- NULL
+        # self$fit.algorithm <- self$fit.package
       } else if (self$fit.package %in% c("brokenstick")) {
         self$ModelFitObject <- brokenstickModelClass$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, reg = reg, ...)
         self$fit.algorithm <- NULL
+        # self$fit.algorithm <- self$fit.package
       } else {
         self$ModelFitObject <- glmModelClass$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, reg = reg, ...)
       }
@@ -146,10 +148,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       }
 
       self$is.fitted <- TRUE
-      # private$model.fit <- model.fit
-      # str(private$model.fit)
-      # names(private$model.fit)
-      # private$model.fit$fitted_models_all
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       # **********************************************************************
@@ -157,10 +155,10 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       return(invisible(self))
     },
 
-    # Predict the response P(Bin = 1|sW = sw);
-    # uses private$model.fit to generate predictions for data:
+    # Predict the response E[Y|newdata];
     predict = function(newdata, subset_vars, subset_exprs, MSE = TRUE, ...) {
-      assert_that(self$is.fitted)
+      if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
+
       if (missing(newdata) && is.null(private$probA1)) {
         private$probA1 <- self$ModelFitObject$predictP1(subset_idx = self$subset_idx)
       } else {
@@ -177,8 +175,9 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     evalMSE = function(test_values) {
-      assert_that(self$is.fitted)
-      assert_that(is.vector(test_values))
+      if (!self$is.fitted) stop("Please fit the model prior to evaluating MSE.")
+      if (!is.vector(test_values)) stop("test_values must be a vector of outcomes.")
+
       n <- length(self$subset_idx)
 
       MSE_mean <- MSE_var <- MSE_sd <- var <- vector(mode = "list", length = ncol(private$probA1));
@@ -186,17 +185,69 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       for (idx in 1:ncol(private$probA1)) {
         predVals <- private$probA1[self$subset_idx, idx]
-
         MSE_mean[[idx]] <- mean((predVals - test_values)^2, na.rm = TRUE)
         MSE_var[[idx]] <- var((predVals - test_values)^2, na.rm = TRUE)
         MSE_sd[[idx]] <- 1 / sqrt(n) * sd((predVals - test_values)^2, na.rm = TRUE)
         var[[idx]] <- var(predVals, na.rm = TRUE)
-
         if (any(is.na(predVals)))
           warning("Some of the predictions of the model id " %+% idx %+% " were missing (NA); these were excluded from MSE evaluation")
       }
-      # private$MSE <- MSE
       return(list(MSE_mean = MSE_mean, MSE_var = MSE_var, MSE_sd = MSE_sd, var = var))
+    },
+
+    # ------------------------------------------------------------------------------
+    # return a model object by name / ID
+    # ------------------------------------------------------------------------------
+    getmodel_byname = function(model_names, model_IDs) {
+      return(self$ModelFitObject$getmodel_byname(model_names, model_IDs))
+    },
+
+    # ------------------------------------------------------------------------------
+    # return top K models based on smallest validation / test MSE
+    # ------------------------------------------------------------------------------
+    get_best_MSEs = function(K = 1) {
+      if (!self$is.fitted) stop("Please fit the model prior to calling get_best_models()")
+      if (!is.integerish(K)) stop("K argument must be an integer <= the total number of models")
+      if (K > length(self$getmodel_ids)) {
+        message("K value exceeds the total number of models; K is being truncated to " %+% length(self$getmodel_ids))
+        K <- length(self$getmodel_ids)
+      }
+      if (is.null(self$getMSE)) stop("The validation / holdout MSE has not been evaluated, making model model ranking impossible.
+  Please call evalMSE() and provide a vector of validation / test values.")
+      return(sort(unlist(self$getMSE))[1:K])
+    },
+
+    # ------------------------------------------------------------------------------
+    # return top K model objects ranked by prediction MSE on a holdout (CV) fold
+    # ------------------------------------------------------------------------------
+    get_best_models = function(K = 1) {
+      top_MSE_CV <- self$get_best_MSEs(K)
+      top_model_names <- names(top_MSE_CV)
+      message("fetching top " %+% K %+% " models ranked by the smallest holdout / validation MSE")
+      return(self$getmodel_byname(top_model_names))
+    },
+
+    # ------------------------------------------------------------------------------
+    # return a data.frame with best mean MSEs, including SDs & corresponding model names
+    # ------------------------------------------------------------------------------
+    get_best_MSE_table = function(K = 1) {
+      top_MSE_CV <- self$get_best_MSEs(K)
+      top_model_names <- names(top_MSE_CV)
+      top_model_ids <- self$getmodel_ids[top_model_names]
+      top_model_pos <- unlist(lapply(top_model_names, function(model_n) which(names(self$getmodel_ids) %in% model_n)))
+
+      datMSE <- data.frame(model = names(self$getmodel_ids[top_model_pos]),
+                           algorithm = unlist(self$getmodel_algorithms[top_model_pos]),
+                           model.id = unlist(top_model_ids),
+                           model.pos = top_model_pos,
+                           MSE.CV = unlist(self$getMSE[top_model_pos]),
+                           MSE.sd = unlist(self$getMSEsd[top_model_pos]))
+
+      datMSE$CIlow <- datMSE$MSE.CV - 1.96*datMSE$MSE.sd
+      datMSE$CIhi <- datMSE$MSE.CV + 1.96*datMSE$MSE.sd
+      datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV)])
+
+      return(datMSE)
     },
 
     define.subset.idx = function(data) {
@@ -222,27 +273,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       self$subset_idx <- subset_idx
       return(invisible(self))
     },
-
-    # # take fitted PredictionModel class object as an input and save the fits to itself
-    # copy.fit = function(bin.out.model) {
-    #   assert_that("PredictionModel" %in% class(bin.out.model))
-    #   private$model.fit <- bin.out.model$getfit
-    #   self$is.fitted <- TRUE
-    #   invisible(self)
-    # },
-
-    # # take PredictionModel class object that contains the predictions for P(A=1|sW) and save these predictions to self$
-    # copy.predict = function(bin.out.model) {
-    #   assert_that("PredictionModel" %in% class(bin.out.model))
-    #   assert_that(self$is.fitted)
-    #   private$probA1 <- bin.out.model$getprobA1
-    # },
-
-    # Returns the object that contains the actual model fits (itself)
-    # get.fits = function() {
-    #   model.fit <- self$getfit
-    #   return(list(model.fit))
-    # },
 
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE, model_stats = FALSE, all_fits = FALSE) {
@@ -274,11 +304,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       self$ModelFitObject$emptyY
       return(self)
     },
-    getfit = function() { self$ModelFitObject$model.fit },
-    # getfit = function() { private$model.fit },
     emptymodelfit = function() { self$ModelFitObject$emptymodelfit },
-    getmodel_ids = function() { self$getfit$model_ids },
-    getmodel_algorithms = function() { self$getfit$model_algorithms },
     getprobA1 = function() { private$probA1 },
     getsubset = function() { self$subset_idx },
     getoutvarnm = function() { self$outvar },
@@ -286,7 +312,10 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     getMSE = function() { private$MSE[["MSE_mean"]] },
     getMSEvar = function() { private$MSE[["MSE_var"]] },
     getMSEsd = function() { private$MSE[["MSE_sd"]] },
-    getvar = function() { private$MSE[["var"]] }
+    getvar = function() { private$MSE[["var"]] },
+    getfit = function() { self$ModelFitObject$model.fit },
+    getmodel_ids = function() { self$ModelFitObject$getmodel_ids },
+    getmodel_algorithms = function() { self$ModelFitObject$getmodel_algorithms }
   ),
   private = list(
     # model.fit = list(),   # the model fit (either coefficients or the model fit object)

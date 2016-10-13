@@ -7,6 +7,7 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
 
   # Will put all fitted models in a single list for stacking:
   fitted_models_all <- NULL
+  ngridmodels <- 0
   nfolds <- model_contrl$nfolds
   model_contrl$nfolds <- NULL
 
@@ -31,6 +32,7 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
       fitted_models_all <- c(fitted_models_all, fitted_models[[grid.algorithm]])
     }
   }
+  ngridmodels <- length(fitted_models_all)
 
   if (!is.null(learners)) {
     if (!is.character(learners)) stop("'learner' must be a vector of strings naming specific wrappers/learners")
@@ -66,11 +68,19 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
   fit$grid_objects <- grid_objects
   fit$grid_ids <- lapply(fit$grid_objects, function(grids_object) grids_object@grid_id)
   fit$top_grid_models <- top_grid_models
-
   # TO DIRECTLY SAVE ALL MODEL FITS FROM GRID SEARCH (base-learners)
   fit$fitted_models_all <- fitted_models_all
-  fit$model_ids <- lapply(fit$fitted_models_all, function(model) model@model_id)
+  fit$ngridmodels <- ngridmodels
+
   fit$model_algorithms <- lapply(fit$fitted_models_all, function(model) model@algorithm)
+  fit$model_ids <- lapply(fit$fitted_models_all, function(model) model@model_id)
+
+  # Assign names to each grid model, keep individual learner names intact (unless a $name arg was passed by the user):
+  GRIDmodel_names <- "grid." %+% unlist(fit$model_algorithms[1:ngridmodels]) %+% "." %+% (1:ngridmodels)
+  learner_names <- names(fit$fitted_models_all)[-(1:ngridmodels)]
+  model_names <- c(GRIDmodel_names, learner_names)
+  if (!is.null(model_contrl$name))  model_names <- model_names %+% "." %+% model_contrl$name
+  names(fit$fitted_models_all) <- names(fit$model_algorithms) <- names(fit$model_ids) <- model_names
 
   class(fit) <- c(class(fit)[1], c("H2Ogridmodel"))
   return(fit)

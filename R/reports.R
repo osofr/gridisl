@@ -38,6 +38,8 @@ openFileInOS <- function(f) {
 #' Generate report(s) with modeling stats using pandoc.
 #'
 #' @param modelfit Model fit object returned by the function \code{\link{get_fit}}.
+#' @param K The number of top performing models for which to provide performance measures. Defaults to 5 or the total number of models
+#' fit, whichever is smaller.
 #' @param format Choose the Pandoc output format for the report file (html, pdf or word).
 #' Note that the html report file is always produced in addition to any other selected format.
 #' @param file.name File name for the report file without extension. Default file name is assigned based on the current date.
@@ -51,7 +53,7 @@ openFileInOS <- function(f) {
 # \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
 #' @return String specifying the path to the main report file.
 #' @export
-make_report_rmd <- function(modelfit, format = c("html", "pdf", "word"),
+make_report_rmd <- function(modelfit, K = 5, format = c("html", "pdf", "word"),
                             file.name = getOption('growthcurveSL.file.name'), file.path = getOption('growthcurveSL.file.path'),
                             openFile = TRUE, keep_md = FALSE, keep_tex = FALSE, ...) {
   optArgReport <- list(...)

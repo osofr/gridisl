@@ -72,9 +72,8 @@ fit.brokenstick <- function(fit.class, fit, subject, x, Yvals, knots = NULL, mn 
   fit$fitted.subject <- subject
   fit$fitted.x <- x
   fit$fitted.Yvals <- Yvals
-
-  fit$modelnames <- "brokenstick.model"
-  fit$fitfunname <- "brokenstick";
+  fit$model_algorithms <- list("brokenstick")
+  fit$fitfunname <- "brokenstick"
   fit$nobs <- length(Yvals)
   class(fit)[2] <- "brokenstickmodel"
   return(fit)
@@ -140,7 +139,7 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
     model_contrl = list(),
     params = list(),
     fit.class = c("brokenstick"),
-    model.fit = list(fitfunname = NA, nobs = NA, params = NA),
+    model.fit = list(fitfunname = NA, nobs = NA, params = NA, model_algorithms = NA),
 
     initialize = function(fit.algorithm, fit.package, reg, ...) {
       self$model_contrl <- reg$model_contrl
@@ -176,9 +175,15 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
 
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)
-        colnames(P1) <- "PredModel"
+        colnames(P1) <- names(self$getmodel_ids)
       }
       return(P1)
+    },
+
+    getmodel_byname = function(model_names, model_IDs) {
+      res <- list(self$model.fit$model.object)
+      names(res) <- model_names
+      return(res)
     },
 
     # Sets Xmat, Yvals, evaluates subset and performs correct subseting of data
@@ -196,6 +201,7 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
       }
       return(invisible(self))
     },
+
     show = function(all_fits = FALSE, ...) {
       # version A (uses pander and requires setting knit.asis=TRUE), but makes nice tables as a result:
       # print(self$model.fit)
@@ -218,7 +224,10 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
     emptymodelfit = function() {self$model.fit$model.object <- NULL; return(invisible(NULL)) },
     get.subject = function() { private$subject },
     get.x = function() { private$x },
-    get.Y = function() { private$Yvals }
+    get.Y = function() { private$Yvals },
+
+    getmodel_ids = function() { return(make_model_ID_name(self$model.fit$model_algorithms, self$model_contrl$name)) },
+    getmodel_algorithms = function() { self$model.fit$model_algorithms }
   ),
 
   private = list(

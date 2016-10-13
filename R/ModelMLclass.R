@@ -1,3 +1,8 @@
+# ---------------------------------------------------------------------------
+# TO DO: reformat single h2o model fit object so that its the same with H2O.grid model fit, i.e.,
+#        1. Put model.fit into a named list entry called "fitted_models_all"
+#        2. Then remove 'H2O.model.object'
+# ---------------------------------------------------------------------------
 
 # take a list of args, take a function body and return only the args that belong to function signature
 keep_only_fun_args <- function(Args, fun) {
@@ -48,7 +53,6 @@ fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
                   missing_values_handling = "Skip")
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.glm)
-  # browser()
   # h2o::h2o.glm(x = x, y = y, training_frame = training_frame, lambda = 0L, family = "gaussian")
 
   model.fit <- do.call(h2o::h2o.glm, mainArgs)
@@ -58,10 +62,10 @@ fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
   names(out_coef) <- c("Intercept", x)
   out_coef[names(model.fit@model$coefficients)] <- model.fit@model$coefficients
   fit$coef <- out_coef;
-  fit$linkfun <- "logit_linkinv";
 
-  fit$modelnames <- "GLM.model"
+  fit$linkfun <- "logit_linkinv";
   fit$fitfunname <- "h2o.glm";
+  fit$model_algorithms <- list("glm")
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
   fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
   fit$H2O.model.object <- model.fit
@@ -71,7 +75,6 @@ fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
     print(fit$coef)
   }
 
-  # class(fit) <- c(class(fit)[1], c("glmfit"))
   class(fit) <- c(class(fit)[1], c("H2Omodel"))
   return(fit)
 }
@@ -88,11 +91,12 @@ fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_cont
   model.fit <- do.call(h2o::h2o.randomForest, mainArgs)
   fit$coef <- NULL;
 
-  fit$modelnames <- "RF.model"
   fit$fitfunname <- "h2o.randomForest";
+  fit$model_algorithms <- list("randomForest")
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
   fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
   fit$H2O.model.object <- model.fit
+
   class(fit) <- c(class(fit)[1], c("H2Omodel"))
   return(fit)
 }
@@ -112,11 +116,12 @@ fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
   model.fit <- do.call(h2o::h2o.gbm, mainArgs)
   fit$coef <- NULL;
 
-  fit$modelnames <- "GBM.model"
   fit$fitfunname <- "h2o.gbm";
+  fit$model_algorithms <- list("gbm")
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
   fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
   fit$H2O.model.object <- model.fit
+
   class(fit) <- c(class(fit)[1], c("H2Omodel"))
   return(fit)
 }
@@ -135,11 +140,12 @@ fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_cont
   model.fit <- do.call(h2o::h2o.deeplearning, mainArgs)
   fit$coef <- NULL;
 
-  fit$modelnames <- "DNN.model"
   fit$fitfunname <- "h2o.deeplearning";
+  fit$model_algorithms <- list("deeplearning")
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
   fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
   fit$H2O.model.object <- model.fit
+
   class(fit) <- c(class(fit)[1], c("H2Omodel"))
   return(fit)
 }
@@ -149,20 +155,6 @@ fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_cont
 # ----------------------------------------------------------------
 predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
   subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
-  # assert_that(!is.null(subset_idx))
-  # if (!missing(DataStorageObject)) {
-  #   rows_subset <- which(subset_idx)
-  #   data <- DataStorageObject
-  #   outvar <- m.fit$params$outvar
-  #   predvars <- m.fit$params$predvars
-
-  #   # 1. works on a single core, but fails in parallel:
-  #   subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
-  #                                           saveH2O = FALSE,
-  #                                           destination_frame = "subsetH2Oframe")
-  # } else {
-  #   subsetH2Oframe <- ParentObject$getsubsetH2Oframe
-  # }
   pAout <- rep.int(gvars$misval, length(subset_idx))
   if (sum(subset_idx) > 0) {
     predictFrame <- h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)
@@ -180,19 +172,6 @@ predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
 # ----------------------------------------------------------------
 predictP1.H2Oensemblemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
   subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
-  # assert_that(!is.null(subset_idx))
-  # if (!missing(DataStorageObject)) {
-  #   rows_subset <- which(subset_idx)
-  #   data <- DataStorageObject
-  #   outvar <- m.fit$params$outvar
-  #   predvars <- m.fit$params$predvars
-  #   # 1. works on a single core, but fails in parallel:
-  #   subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
-  #                                           saveH2O = FALSE,
-  #                                           destination_frame = "subsetH2Oframe")
-  # } else {
-  #   subsetH2Oframe <- ParentObject$getsubsetH2Oframe
-  # }
   pAout <- rep.int(gvars$misval, length(subset_idx))
   if (sum(subset_idx) > 0) {
     predictObject <- predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)
@@ -204,6 +183,21 @@ predictP1.H2Oensemblemodel <- function(m.fit, ParentObject, DataStorageObject, s
     }
   }
   return(pAout)
+}
+
+# TO DO: Add prediction only based on the subset of models (rather than predicting for all models)
+predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
+  subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
+  pAoutMat <- matrix(gvars$misval, nrow = length(subset_idx), ncol = length(m.fit$fitted_models_all))
+  colnames(pAoutMat) <- names(ParentObject$getmodel_ids)
+  # "PredModel" %+% (1:length(m.fit$fitted_models_all))
+  if (sum(subset_idx) > 0) {
+    for (idx in seq_along(m.fit$fitted_models_all)) {
+      predictFrame <- predict(m.fit$fitted_models_all[[idx]], newdata = subsetH2Oframe)
+      pAoutMat[subset_idx, idx] <- as.vector(predictFrame[,"predict"])
+    }
+  }
+  return(pAoutMat)
 }
 
 getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_idx) {
@@ -220,21 +214,6 @@ getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_id
     subsetH2Oframe <- ParentObject$getsubsetH2Oframe
   }
   return(subsetH2Oframe)
-}
-
-# TO DO: Add prediction only based on the subset of models (rather than predicting for all models)
-predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
-  subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
-  pAoutMat <- matrix(gvars$misval, nrow = length(subset_idx), ncol = length(m.fit$fitted_models_all))
-  colnames(pAoutMat) <- "PredModel" %+% (1:length(m.fit$fitted_models_all))
-
-  if (sum(subset_idx) > 0) {
-    for (idx in seq_along(m.fit$fitted_models_all)) {
-      predictFrame <- predict(m.fit$fitted_models_all[[idx]], newdata = subsetH2Oframe)
-      pAoutMat[subset_idx, idx] <- as.vector(predictFrame[,"predict"])
-    }
-  }
-  return(pAoutMat)
 }
 
 h2oGridModelClass  <- R6Class(classname = "h2oModelClass",
@@ -257,6 +236,16 @@ h2oGridModelClass  <- R6Class(classname = "h2oModelClass",
     predictP1 = function(...) {
       return(super$predictP1(...))
     },
+
+    getmodel_byname = function(model_names, model_IDs) {
+      if (!missing(model_names)) {
+        return(self$model.fit$fitted_models_all[model_names])
+      } else {
+        if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
+        return(lapply(model_IDs, h2o::h2o.getModel))
+      }
+    },
+
     # Output info on the general type of regression being fitted:
     show = function(all_fits = FALSE, ...) {
       model.fit <- self$model.fit
@@ -314,7 +303,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     params = list(),
     classify = FALSE,
     fit.class = c("glm", "randomForest", "gbm", "deeplearning", "SuperLearner", "GridLearner"),
-    model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA),
+    model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA, model_algorithms = NA),
     outfactors = NA,
     nfolds = 5,
 
@@ -367,9 +356,19 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       P1 <- predictP1(self$model.fit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx)
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)
-        colnames(P1) <- "PredModel"
       }
+      colnames(P1) <- names(self$getmodel_ids)
       return(P1)
+    },
+
+    getmodel_byname = function(model_names, model_IDs) {
+      if (!missing(model_names)) {
+        return(list(self$model.fit$H2O.model.object))
+        # return(self$model.fit$fitted_models_all[model_names])
+      } else {
+        if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
+        return(lapply(model_IDs, h2o::h2o.getModel))
+      }
     },
 
     setdata = function(data, subset_idx, classify = FALSE, destination_frame = "newH2Osubset", ...) {
@@ -424,7 +423,19 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
   active = list( # 2 types of active bindings (w and wout args)
     emptydata = function() { private$subsetH2Oframe <- NULL},
-    getsubsetH2Oframe = function() {private$subsetH2Oframe}
+    getsubsetH2Oframe = function() {private$subsetH2Oframe},
+    getmodel_ids = function() {
+      if (is.null(self$model.fit$model_ids)) {
+        model_ids <- list(self$model.fit$H2O.model.object@model_id)
+        new_names <- self$model.fit$model_algorithms[[1]]
+        if (!is.null(self$model_contrl$name)) new_names <- new_names %+% "." %+% self$model_contrl$name
+        names(model_ids) <- new_names
+        return(model_ids)
+      } else {
+        return(self$model.fit$model_ids)
+      }
+    },
+    getmodel_algorithms = function() { self$model.fit$model_algorithms }
   ),
 
   private = list(

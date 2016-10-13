@@ -2,6 +2,52 @@
 NULL
 
 # ---------------------------------------------------------------------------------------
+#' Plot the top K smallest MSEs for a given model ensemble object.
+#'
+#' @param PredictionModel Must be an R6 object returned by \code{get_fit} function.
+#' Must also contain validation /test set predictions and corresponding MSEs.
+#' @param K How many top (smallest) MSEs should be plotted? Default is 5.
+#' @export
+plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
+  # require("ggplot2")
+  require("ggiraph")
+  assert_that(is.PredictionModel(PredictionModel))
+  assert_that(is.integerish(K))
+
+  datMSE <- PredictionModel$get_best_MSE_table(K = K)
+  # datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV)]) # order when not flipping coords
+  datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV, decreasing = TRUE)]) # order when flipping coords
+
+  require("ggiraph")
+  p <- ggplot(datMSE, aes(x = model, y = MSE.CV, ymin=CIlow, ymax=CIhi)) # will use model name (algorithm)
+  if (interactive) {
+    p <- p + geom_point_interactive(aes(color = algorithm, tooltip = model.id), size = 1.5, position = position_dodge(0.01)) # alpha = 0.8
+  } else {
+    p <- p + geom_point(aes(color = algorithm), size = 1.5, position = position_dodge(0.01)) # alpha = 0.8
+  }
+  p <- p + geom_errorbar(aes(color = algorithm), width = 0.2, position = position_dodge(0.01))
+  p <- p + theme_bw() + coord_flip()
+
+  if (interactive){
+    ggiraph(code = print(p), width = .7)
+  } else {
+    print(p)
+  }
+
+  # return(invisible(p))
+  # ggiraph(code = {print(p)})
+  # , tooltip_offx = 20, tooltip_offy = -10
+  # p <- p + facet_grid(N ~ ., labeller = label_both) + xlab('Scenario')
+  # # p <- p + facet_grid(. ~ N, labeller = label_both) + xlab('Scenario')
+  # p <- p + ylab('Mean estimate \\& 95\\% CI length')
+  # p <- p + theme(axis.title.y = element_blank(),
+  #                axis.title.x = element_text(size = 8),
+  #                plot.margin = unit(c(1, 0, 1, 1), "lines"),
+  #                legend.position="top")
+}
+
+
+# ---------------------------------------------------------------------------------------
 #' Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
 #'
 #' @param data Input dataset, can be a data.frame or a data.table
