@@ -4,7 +4,7 @@
 \alias{pander.H2ORegressionMetrics}
 \title{Pander method for H2ORegressionMetrics class}
 \usage{
-\method{pander}{H2ORegressionMetrics}(H2ORegressionMetricsObject)
+\method{pander}{H2ORegressionMetrics}(H2ORegressionMetricsObject, type)
 }
 \arguments{
 \item{H2ORegressionMetricsObject}{H2ORegressionMetrics object}

@@ -245,7 +245,6 @@ glmModelClass <- R6Class(classname = "glmModelClass",
     emptyY = function() { private$Yvals <- NULL},
     getXmat = function() {private$Xmat},
     getY = function() {private$Yvals},
-
     getmodel_ids = function() { return(make_model_ID_name(self$model.fit$model_algorithms, self$model_contrl$name)) },
     getmodel_algorithms = function() { self$model.fit$model_algorithms }
   ),

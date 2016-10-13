@@ -238,15 +238,16 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       datMSE <- data.frame(model = names(self$getmodel_ids[top_model_pos]),
                            algorithm = unlist(self$getmodel_algorithms[top_model_pos]),
-                           model.id = unlist(top_model_ids),
-                           model.pos = top_model_pos,
                            MSE.CV = unlist(self$getMSE[top_model_pos]),
-                           MSE.sd = unlist(self$getMSEsd[top_model_pos]))
+                           MSE.sd = unlist(self$getMSEsd[top_model_pos]),
+                           model.id = unlist(top_model_ids),
+                           model.pos = top_model_pos
+                           )
 
       datMSE$CIlow <- datMSE$MSE.CV - 1.96*datMSE$MSE.sd
       datMSE$CIhi <- datMSE$MSE.CV + 1.96*datMSE$MSE.sd
       datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV)])
-
+      rownames(datMSE) <- NULL
       return(datMSE)
     },
 

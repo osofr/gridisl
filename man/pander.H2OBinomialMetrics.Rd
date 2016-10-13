@@ -4,7 +4,7 @@
 \alias{pander.H2OBinomialMetrics}
 \title{Pander method for H2OBinomialMetrics class}
 \usage{
-\method{pander}{H2OBinomialMetrics}(H2OBinomialMetricsObject)
+\method{pander}{H2OBinomialMetrics}(H2OBinomialMetricsObject, type)
 }
 \arguments{
 \item{H2OBinomialMetricsObject}{H2OBinomialMetrics object}

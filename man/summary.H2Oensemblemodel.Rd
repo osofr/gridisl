@@ -4,11 +4,11 @@
 \alias{summary.H2Oensemblemodel}
 \title{S3 methods for getting model fit summary for H2Oensemblemodel class object}
 \usage{
-\method{summary}{H2Oensemblemodel}(model.fit, only.coefs = FALSE,
+\method{summary}{H2Oensemblemodel}(h2o.ensemble, only.coefs = FALSE,
   format_table = TRUE, ...)
 }
 \arguments{
-\item{model.fit}{The model fit object produced by any stremr S3 function based on h2o}
+\item{h2o.ensemble}{The model fit object produced by h2oEnsemble package}
 
 \item{only.coefs}{Skip all of the h2o-specific model stats, only print the coefficients table (when running \code{fit.algorithm = "glm"}).}
 
