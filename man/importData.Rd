@@ -8,22 +8,20 @@ importData(data, ID = "Subject_ID", t_name = "time_period", covars,
   OUTCOME = "Y", verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
-\item{data}{Input dataset, can be a data.frame or a data.table}
+\item{data}{Input dataset, can be a data.frame or a data.table.}
 
-\item{ID}{...}
+\item{ID}{Character name of the column containing subject identifiers.}
 
-\item{t_name}{...}
+\item{t_name}{Character name of the column containing measurement time-points.}
 
-\item{covars}{...}
+\item{covars}{Names of predictors (covariates) in the data.}
 
-\item{OUTCOME}{...}
+\item{OUTCOME}{Character name of the column containing outcomes.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
-
-\item{MONITOR}{...}
 }
 \value{
-...
+An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
 }
 \description{
 Import data, define nodes (columns), define dummies for factor columns and define input data R6 object

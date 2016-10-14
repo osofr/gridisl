@@ -80,7 +80,7 @@ fit.brokenstick <- function(fit.class, fit, subject, x, Yvals, knots = NULL, mn 
 }
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
-predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict.with.newYs = FALSE, ...) {
+predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict.w.Y = FALSE, ...) {
   if (!missing(DataStorageObject)) {
     # Will also obtain the outcomes of the prediction set:
     ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
@@ -98,7 +98,7 @@ predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, s
   # Either include the new outcomes when predicting for new observations or not
   # ----------------------------------------------------------------------------
   new.Yvals <- rep.int(NA, length(new.subject))
-  if (predict.with.newYs) new.Yvals <- ParentObject$get.Y
+  if (predict.w.Y) new.Yvals <- ParentObject$get.Y
 
   assert_that(!is.null(subset_idx))
   # Set to default missing value for A[i] degenerate/degerministic/misval:
@@ -165,13 +165,13 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
     },
 
     predictP1 = function(data, subset_idx) {
-      predict.with.newYs <- self$model_contrl$predict.with.newYs
-      if (is.null(predict.with.newYs)) predict.with.newYs <- FALSE
+      predict.w.Y <- self$model_contrl$predict.w.Y
+      if (is.null(predict.w.Y)) predict.w.Y <- FALSE
       P1 <- predictP1(self$model.fit,
                       ParentObject = self,
                       DataStorageObject = data,
                       subset_idx = subset_idx,
-                      predict.with.newYs = predict.with.newYs)
+                      predict.w.Y = predict.w.Y)
 
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)

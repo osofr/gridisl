@@ -6,12 +6,12 @@
 ## ---------------------------------------------------------------------------------
 ## S3 constructors for the modeling classes:
 ## ---------------------------------------------------------------------------------
-newFitModel <- function(fit.algorithm, fit.package, reg, ...) { UseMethod("newFitModel") }
-newFitModel.face <- function(fit.algorithm, fit.package, reg, ...) faceModelClass$new(fit.algorithm, fit.package, reg, ...)
-newFitModel.brokenstick <- function(fit.algorithm, fit.package, reg, ...) brokenstickModelClass$new(fit.algorithm, fit.package, reg, ...)
-newFitModel.xgboost <- function(fit.algorithm, fit.package, reg, ...) xgboostModelClass$new(fit.algorithm, fit.package, reg, ...)
-newFitModel.glm <- function(fit.algorithm, fit.package, reg, ...) glmModelClass$new(fit.algorithm, fit.package, reg, ...)
-newFitModel.h2o <- function(fit.algorithm, fit.package, reg, ...) h2oModelClass$new(fit.algorithm, fit.package, reg, ...)
+# newFitModel <- function(fit.algorithm, fit.package, reg, ...) { UseMethod("newFitModel") }
+# newFitModel.face <- function(fit.algorithm, fit.package, reg, ...) faceModelClass$new(fit.algorithm, fit.package, reg, ...)
+# newFitModel.brokenstick <- function(fit.algorithm, fit.package, reg, ...) brokenstickModelClass$new(fit.algorithm, fit.package, reg, ...)
+# newFitModel.xgboost <- function(fit.algorithm, fit.package, reg, ...) xgboostModelClass$new(fit.algorithm, fit.package, reg, ...)
+# newFitModel.glm <- function(fit.algorithm, fit.package, reg, ...) glmModelClass$new(fit.algorithm, fit.package, reg, ...)
+# newFitModel.h2o <- function(fit.algorithm, fit.package, reg, ...) h2oModelClass$new(fit.algorithm, fit.package, reg, ...)
 
 # # Summary model constructor for continuous outcome sA[j]:
 # newsummarymodel.contin <- function(regClass, reg, DataStorageClass.g0, ...) ContinModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)

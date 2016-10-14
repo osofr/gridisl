@@ -1,6 +1,6 @@
 Package: growthcurveSL
 Title: SuperLearner for Imputing Growth Curves
-Version: 0.0.2.9000
+Version: 0.0.3.9000
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"))
 Description: SuperLearner for Imputing Growth Curves.
@@ -10,6 +10,7 @@ Imports:
     assertthat,
     data.table,
     ggplot2,
+    ggiraph,
     methods,
     R6,
     Rcpp,

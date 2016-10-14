@@ -1,4 +1,7 @@
 #' @importFrom assertthat assert_that
+#' @importFrom ggplot2 ggplot geom_point geom_errorbar theme_bw coord_flip aes position_dodge alpha
+#' @import ggiraph
+# @importFrom ggiraph geom_point_interactive ggiraph
 NULL
 
 # ---------------------------------------------------------------------------------------
@@ -25,7 +28,6 @@ plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
   # datMSE$onclick <- "window.location.hash(\"jump1\")"
   # datMSE$onclick <- "window.location.href = \"#jump\"; window.location.href = \"#jump\";"
 
-  require("ggiraph")
   p <- ggplot(datMSE, aes(x = model, y = MSE.CV, ymin=CIlow, ymax=CIhi)) # will use model name (algorithm)
   if (interactive) {
     p <- p + geom_point_interactive(aes(color = algorithm, tooltip = model.id, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
@@ -45,8 +47,7 @@ plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
   } else {
     print(p)
   }
-
-  # return(invisible(p))
+  # return(invisible(NULL))
   # ggiraph(code = {print(p)})
   # , tooltip_offx = 20, tooltip_offy = -10
   # p <- p + facet_grid(N ~ ., labeller = label_both) + xlab('Scenario')
@@ -62,19 +63,16 @@ plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
 # ---------------------------------------------------------------------------------------
 #' Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
 #'
-#' @param data Input dataset, can be a data.frame or a data.table
-#' @param ID ...
-#' @param t_name ...
-#' @param covars ...
-#' @param MONITOR ...
-#' @param OUTCOME ...
+#' @param data Input dataset, can be a data.frame or a data.table.
+#' @param ID Character name of the column containing subject identifiers.
+#' @param t_name Character name of the column containing measurement time-points.
+#' @param covars Names of predictors (covariates) in the data.
+#' @param OUTCOME Character name of the column containing outcomes.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-#' @return ...
-# @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
+#' @return An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
 importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("growthcurveSL.verbose")) {
-  # MONITOR = "N",
   gvars$verbose <- verbose
   if (verbose) {
     current.options <- capture.output(str(gvars$opts))

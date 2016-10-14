@@ -30,16 +30,16 @@ plotMSEs(modelfit, K = K, interactive = TRUE)
 #' &nbsp;
 #'
 
-#+ echo=FALSE, results='asis'
+#+ echo=FALSE, warning=FALSE, message=FALSE, results='asis'
 pander::set.caption("Top MSEs (Holdout / Validation MSE).")
-pander::pander(modelfit_obj$get_best_MSEs(K = 5))
+pander::pander(modelfit$get_best_MSEs(K = K))
 
 #' &nbsp;
 #'
 #' &nbsp;
 #'
 
-#+ echo=FALSE, results='asis'
+#+ echo=FALSE, warning=FALSE, message=FALSE, results='asis'
 tab <- modelfit$get_best_MSE_table(K = K)
 tabMSE <- tab[, names(tab)[!names(tab) %in% "model.id"]]
 pander::set.caption("Best Performing Models (Based on Holdout / Validation MSE).")
@@ -54,8 +54,8 @@ pander::pander(tabMSE)
 #' ## Top Performing Models
 #'
 
-#+ echo=FALSE, results='asis'
-tab <- modelfit_obj$get_best_MSE_table(K = 5)
+#+ echo=FALSE, warning=FALSE, message=FALSE, results='asis'
+tab <- modelfit$get_best_MSE_table(K = K)
 tabIDs <- tab[, names(tab)[names(tab) %in% c("model.id", "model")]]
 pander::set.caption("Model ID and name for top performing models.")
 pander::pander(tabIDs)
@@ -72,9 +72,13 @@ if (!skip.modelfits) {
   for (model_idx in seq_along(models.object)) {
     cat("\n\n");
     cat("###")
-    cat('<a name=',paste0("jump",model_idx),'>Summary for model</a> ' %+% models.object[[model_idx]]@model_id)
+    cat('<a name=',paste0("jump",model_idx),'>', "Summaries for Model " %+% names(models.object)[model_idx], '</a> ')
     cat("\n\n");
-    new_print.H2ORegressionModel(models.object[[model_idx]])
+    if (!is.null(models.object[[model_idx]])) {
+      print_tables(models.object[[model_idx]])
+    } else {
+      cat("*No modeling objects found.*")
+    }
     cat("\n\n"); cat("&nbsp;")
   }
 }

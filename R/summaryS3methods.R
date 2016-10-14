@@ -173,17 +173,58 @@ summary.H2ORegressionModel <- function(h2o.model, only.coefs = FALSE, ...) {
   return(out)
 }
 
-#' S3 methods for printing model fit summary for H2Omodel class object
+#' S3 methods for printing model fit summaries as pander tables
 #'
-#' Prints the modeling summary for the h2o model fit (see \code{h2o} R package).
-#' @param model.fit The model fit object produced by any stremr S3 function starting with \code{stremr:::H2Omodel.}
-#' @param only.coefs Skip all of the h2o-specific model stats, only print the coefficients table (when running \code{fit.algorithm = "GLM"}).
-#' @param ... Additional options passed on to \code{summary.H2Omodel}.
-#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary.H2Omodel}.
+#' Used internally to prints the modeling summary stats for reporting (see \code{\link{make_report_rmd}}).
+#' @param model The model fit object produced by \code{get_fit} function.
+#' @param only.coefs Set to \code{TRUE} to only print the table of coefficients (when using \code{fit.algorithm = "glm"}) and
+#' omit all other model-related output statistics.
+#' @param ... Additional options passed on to \code{summary(...)}.
+#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary(...)}.
 #' @export
-new_print.H2ORegressionModel <- function(h2o.model, only.coefs = FALSE, ...) {
-  cat(paste(summary(h2o.model, only.coefs, ...), collapse = '\n'))
+print_tables <- function(model, only.coefs = FALSE, ...) { UseMethod("print_tables") }
+
+
+print_tables.face.sparse <- function(model, only.coefs = FALSE, ...) {
+  cat("face OBJECTS DO NOT PROVIDE ANY MODEL SUMMARY OUTPUT")
 }
+
+#' S3 methods for printing model fit summaries for brokenstick class
+print_tables.brokenstick <- function(model, only.coefs = FALSE, ...) {
+  old.opt <- pander::panderOptions('knitr.auto.asis')
+  pander::panderOptions('knitr.auto.asis', TRUE)
+  print(model)
+  pander::panderOptions('knitr.auto.asis', old.opt)
+  return(invisible(NULL))
+}
+
+#' S3 methods for printing model fit summaries for H2OBinomialModel class
+#'
+#' Used internally to prints the modeling summary stats for reporting (see \code{\link{make_report_rmd}}).
+#' @param model The model fit object produced by \code{get_fit} function.
+#' @param only.coefs Set to \code{TRUE} to only print the table of coefficients (when using \code{fit.algorithm = "glm"}) and
+#' omit all other model-related output statistics.
+#' @param ... Additional options passed on to \code{summary(...)}.
+#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary(...)}.
+#' @export
+print_tables.H2OBinomialModel <- function(model, only.coefs = FALSE, ...) {
+  cat(paste(summary(model, only.coefs, ...), collapse = '\n'))
+}
+
+#' S3 methods for printing model fit summaries for H2ORegressionModel class
+#'
+#' Used internally to prints the modeling summary stats for reporting (see \code{\link{make_report_rmd}}).
+#' @param model The model fit object produced by \code{get_fit} function.
+#' @param only.coefs Set to \code{TRUE} to only print the table of coefficients (when using \code{fit.algorithm = "glm"}) and
+#' omit all other model-related output statistics.
+#' @param ... Additional options passed on to \code{summary(...)}.
+#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary(...)}.
+#' @export
+print_tables.H2ORegressionModel <- function(model, only.coefs = FALSE, ...) {
+  cat(paste(summary(model, only.coefs, ...), collapse = '\n'))
+}
+
+
 
 CVmetrics_H2Obasemodel <- function(basemodelfit) {
   # out <- NULL

@@ -29,7 +29,7 @@ fit.face <- function(fit.class, fit, subj, argvals, Yvals, knots = NULL, ...) {
 }
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
-predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict.with.newYs = FALSE, knots  = NULL, ...) {
+predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict.w.Y = FALSE, knots  = NULL, ...) {
   if (!missing(DataStorageObject)) {
     # Will also obtain the outcomes of the prediction set:
     ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
@@ -47,7 +47,7 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
   # Either include the new outcomes when predicting for new observations or not
   # ----------------------------------------------------------------------------
   new.Yvals <- rep.int(NA, length(new.subj))
-  if (predict.with.newYs) new.Yvals <- ParentObject$get.Y
+  if (predict.w.Y) new.Yvals <- ParentObject$get.Y
   # new.Yvals2 <- rep.int(NA, length(new.subj))
 
   assert_that(!is.null(subset_idx))
@@ -113,25 +113,17 @@ faceModelClass <- R6Class(classname = "faceModelClass",
                                knots = self$model_contrl$knots,
                                ...)
 
-
-      if (is.null(self$model.fit$model_ids)) {
-        self$model.fit$model_ids <- self$model.fit$H2O.model.object@model_id
-        new_names <- self$model.fit$model_algorithms[[1]]
-        if (!is.null(self$model_contrl$name)) new_names <- new_names %+% "." %+% self$model_contrl$name
-        names(fit$model_ids) <- names(fit$model_algorithms) <- new_names
-      }
-
       return(self$model.fit)
     },
 
     predictP1 = function(data, subset_idx) {
-      predict.with.newYs <- self$model_contrl$predict.with.newYs
-      if (is.null(predict.with.newYs)) predict.with.newYs <- FALSE
+      predict.w.Y <- self$model_contrl$predict.w.Y
+      if (is.null(predict.w.Y)) predict.w.Y <- FALSE
       P1 <- predictP1(self$model.fit,
                       ParentObject = self,
                       DataStorageObject = data,
                       subset_idx = subset_idx,
-                      predict.with.newYs = predict.with.newYs)
+                      predict.w.Y = predict.w.Y)
 
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)
