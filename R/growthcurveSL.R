@@ -13,6 +13,7 @@ NULL
 #-----------------------------------------------------------------------------
 is.DataStorageClass <- function(DataStorageClass) "DataStorageClass"%in%class(DataStorageClass)
 is.PredictionModel <- function(PredictionModel) "PredictionModel"%in%class(PredictionModel)
+is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(PredictionStack)
 #-----------------------------------------------------------------------------
 # General utilities / Global Vars
 #-----------------------------------------------------------------------------

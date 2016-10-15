@@ -7,7 +7,8 @@
 plotMSEs(PredictionModel, K = 1, interactive = FALSE)
 }
 \arguments{
-\item{PredictionModel}{Must be an R6 object returned by \code{get_fit} function.
+\item{PredictionModel}{Must be an R6 object of class \code{PredictionModel} (returned by \code{get_fit} function)
+or an object of class \code{PredictionStack} (returned by \code{make_PredictionStack} function).
 Must also contain validation /test set predictions and corresponding MSEs.}
 
 \item{K}{How many top (smallest) MSEs should be plotted? Default is 5.}

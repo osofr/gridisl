@@ -7,14 +7,15 @@ NULL
 # ---------------------------------------------------------------------------------------
 #' Plot the top K smallest MSEs for a given model ensemble object.
 #'
-#' @param PredictionModel Must be an R6 object returned by \code{get_fit} function.
+#' @param PredictionModel Must be an R6 object of class \code{PredictionModel} (returned by \code{get_fit} function)
+#' or an object of class \code{PredictionStack} (returned by \code{make_PredictionStack} function).
 #' Must also contain validation /test set predictions and corresponding MSEs.
 #' @param K How many top (smallest) MSEs should be plotted? Default is 5.
 #' @export
 plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
   # require("ggplot2")
   require("ggiraph")
-  assert_that(is.PredictionModel(PredictionModel))
+  assert_that(is.PredictionModel(PredictionModel) || is.PredictionStack(PredictionModel))
   assert_that(is.integerish(K))
 
   datMSE <- PredictionModel$get_best_MSE_table(K = K)

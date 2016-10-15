@@ -60,30 +60,32 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     # return top K models based on smallest validation / test MSE for each PredictionModel in a stack
     # ------------------------------------------------------------------------------
     get_best_MSEs = function(K = 1) {
-      return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_MSEs(K = K)))
+      return(sort(unlist(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_MSEs(K = K)))))
     },
     # ------------------------------------------------------------------------------
     # return top K model objects ranked by prediction MSE on a holdout (CV) fold for each PredictionModel in a stack
     # ------------------------------------------------------------------------------
     get_best_models = function(K = 1) {
-      return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_models(K = K)))
+      best_models <- unlist(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_models(K = K)))
+      best_models <- best_models[names(self$get_best_MSEs(K))]
+      return(best_models)
     },
     # ------------------------------------------------------------------------------
     # return a data.frame with best mean MSEs, including SDs & corresponding model names
     # ------------------------------------------------------------------------------
     get_best_MSE_table = function(K = 1) {
-      return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_MSE_table(K = K)))
+      res_tab_list <- lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_MSE_table(K = K))
+      res_tab <- do.call("rbind", res_tab_list)
+      res_tab <- res_tab[order(res_tab$MSE.CV, decreasing = FALSE), ]
+      return(res_tab)
     },
-
     define.subset.idx = function(data) {
       stop("not applicable to this class")
     },
-
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE, model_stats = FALSE, all_fits = FALSE) {
       return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$show(print_format = TRUE, model_stats = FALSE, all_fits = FALSE)))
     },
-
     summary = function(all_fits = FALSE) {
       return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$summary(all_fits = FALSE)))
     }
