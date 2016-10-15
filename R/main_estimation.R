@@ -234,13 +234,14 @@ define_predictors <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, h
 #' @param hold_column ..
 #' @param random ...
 #' @param seed ...
+#' @param exclude_from_train
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 # @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
 # stratify = NULL, reg,
-get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL, random = FALSE, seed = NULL, verbose = getOption("growthcurveSL.verbose")) {
+get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   OData$nodes$predvars <- predvars
   nodes <- OData$nodes
@@ -260,6 +261,11 @@ get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL,
   dataDTtrain <- define_predictors(dataDT, nodes, train_set = TRUE, holdout = holdout, hold_column = OData$hold_column)
   OData_train <- OData$clone()
   OData_train$dat.sVar <- dataDTtrain[!dataDTtrain[[OData_train$hold_column]], ]
+
+  if (!is.null(expr_to_train)) {
+    # expr_to_train <- "nY > 1"
+    OData_train$dat.sVar <- OData_train$dat.sVar[eval(parse(text=expr_to_train)), ]
+  }
 
   # ------------------------------------------------------------------------------------------
   # Define validation data (includes the holdout only, summaries are created without the holdout observations):

@@ -5,7 +5,7 @@
 \title{Define and fit growth models.}
 \usage{
 get_fit(OData, predvars, params, holdout = TRUE, hold_column = NULL,
-  random = FALSE, seed = NULL,
+  random = FALSE, seed = NULL, expr_to_train = NULL,
   verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
