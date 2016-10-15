@@ -19,7 +19,7 @@ panderOptions("table.split.table", Inf)
 {{prettyNum(OData$nobs, big.mark = ",", scientific = FALSE)}}
 
 #'
-#' ## Model Performance Based on Holdout / Validation MSE
+#' ## Model Performance Based on MSE for Holdout / Validation Data
 #'
 
 #+ echo=FALSE, warning=FALSE, message=FALSE
@@ -31,8 +31,10 @@ plotMSEs(modelfit, K = K, interactive = TRUE)
 #'
 
 #+ echo=FALSE, warning=FALSE, message=FALSE, results='asis'
-pander::set.caption("Top MSEs (Holdout / Validation MSE).")
-pander::pander(modelfit$get_best_MSEs(K = K))
+pander::set.caption("Top MSEs (for Holdout / Validation Data).")
+tabMSEonly <- modelfit$get_best_MSEs(K = K)
+pander::pander(data.frame(model = names(tabMSEonly), MSEs = tabMSEonly, row.names = NULL))
+
 
 #' &nbsp;
 #'
@@ -42,7 +44,7 @@ pander::pander(modelfit$get_best_MSEs(K = K))
 #+ echo=FALSE, warning=FALSE, message=FALSE, results='asis'
 tab <- modelfit$get_best_MSE_table(K = K)
 tabMSE <- tab[, names(tab)[!names(tab) %in% "model.id"]]
-pander::set.caption("Best Performing Models (Based on Holdout / Validation MSE).")
+pander::set.caption("Best Performing Models (Based on MSE for Holdout / Validation Data).")
 pander::pander(tabMSE)
 
 #' &nbsp;
