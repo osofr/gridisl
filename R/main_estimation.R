@@ -255,15 +255,19 @@ get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL,
   }
 
   # ------------------------------------------------------------------------------------------
-  # Define training data (excludes holdouts, summaries are created without the holdout observations):
+  # Define training data (excludes holdouts):
   # ------------------------------------------------------------------------------------------
   dataDT <- OData$dat.sVar[,c(nodes$IDnode, nodes$tnode, nodes$Ynode, nodes$Lnodes, OData$hold_column, unlist(new.factor.names)), with = FALSE]
-  dataDTtrain <- define_predictors(dataDT, nodes, train_set = TRUE, holdout = holdout, hold_column = OData$hold_column)
   OData_train <- OData$clone()
-  OData_train$dat.sVar <- dataDTtrain[!dataDTtrain[[OData_train$hold_column]], ]
+  OData_train$dat.sVar <- dataDT[!dataDT[[OData_train$hold_column]], ]
 
+  # ------------------------------------------------------------------------------------------
+  # Define training data summaries (excludes holdouts, summaries are created without the holdout observations):
+  # ------------------------------------------------------------------------------------------
+  dataDTtrain <- define_predictors(dataDT, nodes, train_set = TRUE, holdout = holdout, hold_column = OData$hold_column)
+  # OData_train <- OData$clone()
+  OData_train$dat.sVar <- dataDTtrain[!dataDTtrain[[OData_train$hold_column]], ]
   if (!is.null(expr_to_train)) {
-    # expr_to_train <- "nY > 1"
     OData_train$dat.sVar <- OData_train$dat.sVar[eval(parse(text=expr_to_train)), ]
   }
 
