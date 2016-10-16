@@ -4,12 +4,16 @@
 \alias{get_fit}
 \title{Define and fit growth models.}
 \usage{
-get_fit(OData, predvars, params, holdout = TRUE, hold_column = NULL,
-  random = FALSE, seed = NULL, expr_to_train = NULL,
+get_fit(OData, OData_train, OData_valid, predvars, params, holdout = TRUE,
+  hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL,
   verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
+
+\item{OData_train}{...}
+
+\item{OData_valid}{...}
 
 \item{predvars}{...}
 

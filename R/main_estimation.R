@@ -228,6 +228,8 @@ define_predictors <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, h
 #' Define and fit growth models.
 #'
 #' @param OData Input data object created by \code{importData} function.
+#' @param OData_train ...
+#' @param OData_valid ...
 #' @param predvars ...
 #' @param params ...
 #' @param holdout ...
@@ -241,32 +243,34 @@ define_predictors <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, h
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
 # stratify = NULL, reg,
-get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, verbose = getOption("growthcurveSL.verbose")) {
+get_fit <- function(OData, OData_train, OData_valid, predvars, params, holdout = TRUE, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
-  OData$nodes$predvars <- predvars
-  nodes <- OData$nodes
-  new.factor.names <- OData$new.factor.names
+  # OData$nodes$predvars <- predvars
+  # nodes <- OData$nodes
 
   if (holdout && is.null(hold_column)) {
     OData$add_holdout_ind(hold_column = "hold", random = random, seed = seed)
   } else if (holdout && !is.null(hold_column)) {
-    assert_that(hold_column %in% names(OData$dat.sVar))
-    OData$hold_column <- hold_column
+    # assert_that(hold_column %in% names(OData$dat.sVar))
+    # OData$hold_column <- hold_column
   }
 
   # ------------------------------------------------------------------------------------------
   # Define training data (excludes holdouts):
   # ------------------------------------------------------------------------------------------
-  dataDT <- OData$dat.sVar[,c(nodes$IDnode, nodes$tnode, nodes$Ynode, nodes$Lnodes, OData$hold_column, unlist(new.factor.names)), with = FALSE]
-  OData_train <- OData$clone()
-  OData_train$dat.sVar <- dataDT[!dataDT[[OData_train$hold_column]], ]
-
-  # ------------------------------------------------------------------------------------------
-  # Define training data summaries (excludes holdouts, summaries are created without the holdout observations):
-  # ------------------------------------------------------------------------------------------
-  dataDTtrain <- define_predictors(dataDT, nodes, train_set = TRUE, holdout = holdout, hold_column = OData$hold_column)
-  # OData_train <- OData$clone()
-  OData_train$dat.sVar <- dataDTtrain[!dataDTtrain[[OData_train$hold_column]], ]
+  if (missing(OData_train)) {
+    OData_train <- OData$clone()
+    OData$nodes$predvars <- predvars
+    nodes <- OData$nodes
+    dataDT <- OData$dat.sVar[,c(nodes$IDnode, nodes$tnode, nodes$Ynode, nodes$Lnodes, OData$hold_column, unlist(OData$new.factor.names)), with = FALSE]
+    # OData_train$dat.sVar <- dataDT[!dataDT[[OData_train$hold_column]], ]
+    dataDTtrain <- dataDT[!dataDT[[OData_train$hold_column]], ]
+    # ------------------------------------------------------------------------------------------
+    # Define training data summaries (excludes holdouts, summaries are created without the holdout observations):
+    # ------------------------------------------------------------------------------------------
+    dataDTtrain <- define_predictors(dataDTtrain, nodes, train_set = TRUE, holdout = holdout, hold_column = OData$hold_column)
+    OData_train$dat.sVar <- dataDTtrain[!dataDTtrain[[OData_train$hold_column]], ]
+  }
   if (!is.null(expr_to_train)) {
     OData_train$dat.sVar <- OData_train$dat.sVar[eval(parse(text=expr_to_train)), ]
   }
@@ -274,9 +278,15 @@ get_fit <- function(OData, predvars, params, holdout = TRUE, hold_column = NULL,
   # ------------------------------------------------------------------------------------------
   # Define validation data (includes the holdout only, summaries are created without the holdout observations):
   # ------------------------------------------------------------------------------------------
-  dataDTvalid <- define_predictors(dataDT, nodes, train_set = FALSE, hold_column = OData$hold_column)
-  OData_valid <- OData$clone()
-  OData_valid$dat.sVar <- dataDTvalid[dataDTvalid[[OData_valid$hold_column]], ]
+  if (missing(OData_valid)) {
+    OData_valid <- OData$clone()
+    nodes <- OData$nodes
+    dataDT <- OData$dat.sVar[,c(nodes$IDnode, nodes$tnode, nodes$Ynode, nodes$Lnodes, OData$hold_column, unlist(OData$new.factor.names)), with = FALSE]
+    dataDTvalid <- define_predictors(dataDT, nodes, train_set = FALSE, hold_column = OData$hold_column)
+    OData_valid$dat.sVar <- dataDTvalid[dataDTvalid[[OData_valid$hold_column]], ]
+  }
+
+  nodes <- OData_train$nodes
 
   # ------------------------------------------------------------------------------------------
   ## DEFINE a single regression class
