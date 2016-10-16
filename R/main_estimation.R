@@ -150,7 +150,8 @@ define_predictors <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, h
 
   # Define which observations are in the hold-out set (and thus should be ignored when creating predictors for training set)
   if (train_set && holdout) {
-    non_hold_idx <- !OData$dat.sVar[[hold_column]]
+    # non_hold_idx <- !OData$dat.sVar[[hold_column]]
+    non_hold_idx <- !dataDT[[hold_column]]
   } else {
     # to define (Y.lt, Y.rt, lt, rt, l.obs, mid.obs, r.obs) for validation data points we use the entire observed data
     non_hold_idx <- rep.int(TRUE, nrow(dataDT))
