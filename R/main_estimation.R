@@ -314,6 +314,7 @@ get_fit <- function(OData, OData_train, OData_valid, predvars, params, holdout =
 #' Predict for a holdout set
 #'
 #' @param OData Input data object created by \code{importData} function.
+#' @param OData_valid ...
 #' @param modelfit Model fit object returned by \code{\link{get_fit}} function.
 #' @param modelIDs ... Not implemented ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
@@ -321,20 +322,22 @@ get_fit <- function(OData, OData_train, OData_valid, predvars, params, holdout =
 #' @export
 ## @param all_obs Predict values for all observations (including holdout) or just the holdout observations?
 ## all_obs = FALSE,
-predictHoldout <- function(OData, modelfit, modelIDs, verbose = getOption("growthcurveSL.verbose")) {
-  assert_that(is.DataStorageClass(OData))
+predictHoldout <- function(OData, OData_valid, modelfit, modelIDs, verbose = getOption("growthcurveSL.verbose")) {
   assert_that(is.PredictionModel(modelfit))
-
   gvars$verbose <- verbose
-  nodes <- OData$nodes
-  new.factor.names <- OData$new.factor.names
-  sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(new.factor.names), nodes$Ynode, OData$hold_column)
-  dataDT <- OData$dat.sVar[, sel_vars, with = FALSE]
 
-  dataDTvalid <- define_predictors(dataDT, nodes, train_set = FALSE, hold_column = OData$hold_column)
-  OData_valid <- OData$clone()
-  OData_valid$dat.sVar <- dataDTvalid[dataDTvalid[[OData_valid$hold_column]], ]
-  # # OData$dat.sVar
+  if (missing(OData_valid)) {
+    assert_that(is.DataStorageClass(OData))
+    OData_valid <- OData$clone()
+    nodes <- OData$nodes
+    sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode, OData$hold_column)
+    dataDT <- OData$dat.sVar[, sel_vars, with = FALSE]
+    dataDTvalid <- define_predictors(dataDT, nodes, train_set = FALSE, hold_column = OData$hold_column)
+    OData_valid$dat.sVar <- dataDTvalid[dataDTvalid[[OData_valid$hold_column]], ]
+  }
+
+  assert_that(is.DataStorageClass(OData_valid))
+  nodes <- OData_valid$nodes
 
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
   # if (all_obs) {
@@ -346,8 +349,7 @@ predictHoldout <- function(OData, modelfit, modelIDs, verbose = getOption("growt
   # Get predictions for holdout data only when the actual outcome was also not missing:
   preds <- modelfit$predict(newdata = OData_valid, subset_exprs = subset_exprs)
   # preds <- modelfit$predict(newdata = OData, subset_exprs = subset_exprs)
-  holdoutDT <- OData_valid$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode, OData$hold_column), with = FALSE]
-
+  holdoutDT <- OData_valid$dat.sVar[, c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData_valid$new.factor.names), nodes$Ynode, OData_valid$hold_column), with = FALSE]
   holdoutDT[, (colnames(preds$getprobA1)) := as.data.table(preds$getprobA1)]
   # browser()
   # MSE <- modelfit$evalMSE(OData_valid)

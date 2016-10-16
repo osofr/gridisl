@@ -4,11 +4,13 @@
 \alias{predictHoldout}
 \title{Predict for a holdout set}
 \usage{
-predictHoldout(OData, modelfit, modelIDs,
+predictHoldout(OData, OData_valid, modelfit, modelIDs,
   verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
+
+\item{OData_valid}{...}
 
 \item{modelfit}{Model fit object returned by \code{\link{get_fit}} function.}
 
