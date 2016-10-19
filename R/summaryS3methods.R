@@ -138,6 +138,21 @@ summary.H2ORegressionModel <- function(h2o.model, only.coefs = FALSE, ...) {
     out <- c(out, model_summary_out)
 
     # -----------------------------------------------------------------
+    # model parameters:
+    # -----------------------------------------------------------------
+    covars <- paste0(h2o.model@parameters$x, collapse = ",")
+    predictors <- pander::pander_return(data.frame(predictors = covars))
+    out <- c(out, predictors)
+
+    params <- h2o.model@parameters[!names(h2o.model@parameters) %in% c("x", "model_id")]
+    params <- lapply(params, function(arg) if (length(arg) > 1) {paste0(arg, collapse = ",")} else {arg})
+    all_params <- t(data.frame(params))
+    all_params <- data.frame(parameter = rownames(all_params), value = all_params[,1], stringsAsFactors = FALSE, row.names = NULL)
+    # all_params <- data.frame(param = names(params), value = unlist(params), row.names = NULL)
+    all_params_pander <- pander::pander_return(all_params, caption  = "Detailed Model Parameters", justify = c('left', 'center'))
+    out <- c(out, all_params_pander)
+
+    # -----------------------------------------------------------------
     # training data metrics:
     # -----------------------------------------------------------------
     train_model_metrics_out <- pander::pander_return(h2o.model@model$training_metrics, type = "Training")
@@ -146,7 +161,7 @@ summary.H2ORegressionModel <- function(h2o.model, only.coefs = FALSE, ...) {
     # -----------------------------------------------------------------
     # validation data metrics:
     # -----------------------------------------------------------------
-    H2OBinomialMetrics_val <- h2o.model@model$cross_validation_metrics
+    H2OBinomialMetrics_val <- h2o.model@model$validation_metrics
       if (!is.null(H2OBinomialMetrics_val@metrics)) {
       valid_model_metrics_out <- pander::pander_return(H2OBinomialMetrics_val, type = "Validation")
       out <- c(out, valid_model_metrics_out)
