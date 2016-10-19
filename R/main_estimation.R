@@ -229,15 +229,18 @@ define_predictors <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, h
 #' Define and fit growth models.
 #'
 #' @param OData Input data object created by \code{importData} function.
-#' @param OData_train ...
-#' @param OData_valid ...
-#' @param predvars ...
-#' @param params ...
-#' @param holdout ...
-#' @param hold_column ..
-#' @param random ...
-#' @param seed ...
-#' @param exclude_from_train
+#' @param OData_train Optional R6 object containing the training data.
+#' @param OData_valid Optional R6 object containing the validation data.
+#' @param predvars The character vector of predictors to be used during modeling.
+#' @param params Parameters specifying the type of modeling procedure to be used.
+#' @param holdout Set to TRUE to train the model fit on non-holdout observations only. Set to FALSE to train the model on the entire input dataset.
+#' @param hold_column The name of the column that contains the holdout observation indicators (TRUE/FALSE) in the input data.
+#' This holdout column must be defined and added to the input data prior to calling this function.
+#' @param random Logical, specifying if the holdout observations should be selected at random.
+#' If FALSE then the last observation for each subject is selected as a holdout.
+#' @param seed Random number seed for selecting a random holdout.
+#' @param expr_to_train Additional logical expression which will further subset observations (rows) for training data.
+#' Use this to restrict the model fitting to a specific subsample of the training datset.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 # @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
@@ -307,7 +310,6 @@ get_fit <- function(OData, OData_train, OData_valid, predvars, params, holdout =
   # OData$dat.sVar[, holdoutPred := preds$getprobA1]
 
   # ------------------------------------------------------------------------------------------
-  # OData$modelfit <- modelfit
   return(modelfit)
 }
 

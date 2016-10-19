@@ -11,21 +11,26 @@ get_fit(OData, OData_train, OData_valid, predvars, params, holdout = TRUE,
 \arguments{
 \item{OData}{Input data object created by \code{importData} function.}
 
-\item{OData_train}{...}
+\item{OData_train}{Optional R6 object containing the training data.}
 
-\item{OData_valid}{...}
+\item{OData_valid}{Optional R6 object containing the validation data.}
 
-\item{predvars}{...}
+\item{predvars}{The character vector of predictors to be used during modeling.}
 
-\item{params}{...}
+\item{params}{Parameters specifying the type of modeling procedure to be used.}
 
-\item{holdout}{...}
+\item{holdout}{Set to TRUE to train the model fit on non-holdout observations only. Set to FALSE to train the model on the entire input dataset.}
 
-\item{hold_column}{..}
+\item{hold_column}{The name of the column that contains the holdout observation indicators (TRUE/FALSE) in the input data.
+This holdout column must be defined and added to the input data prior to calling this function.}
 
-\item{random}{...}
+\item{random}{Logical, specifying if the holdout observations should be selected at random.
+If FALSE then the last observation for each subject is selected as a holdout.}
 
-\item{seed}{...}
+\item{seed}{Random number seed for selecting a random holdout.}
+
+\item{expr_to_train}{Additional logical expression which will further subset observations (rows) for training data.
+Use this to restrict the model fitting to a specific subsample of the training datset.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
 }

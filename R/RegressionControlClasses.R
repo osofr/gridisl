@@ -99,66 +99,21 @@ SingleRegressionFormClass <- R6Class("SingleRegressionFormClass",
 # --------------------------------------------------------
 
 ## ---------------------------------------------------------------------
-#' R6 class that defines regression models evaluating P(sA|sW), for summary measures (sW,sA)
+#' R6 class that defines a learner / model for fitting E(Y|W)
 #'
-#' This R6 class defines fields and methods that controls all the parameters for non-parametric
-#'  modeling and estimation of multivariate joint conditional probability model \code{P(sA|sW)} for summary measures \code{(sA,sW)}.
-#'  Note that \code{sA} can be multivariate and any component of \code{sA[j]} can be either binary, categorical or continuous.
-#'  The joint probability for \code{P(sA|sA)} = \code{P(sA[1],...,sA[k]|sA)} is first factorized as
-#'  \code{P(sA[1]|sA)} * \code{P(sA[2]|sA, sA[1])} * ... * \code{P(sA[k]|sA, sA[1],...,sA[k-1])},
-#'  where each of these conditional probability models is defined by a new instance of a \code{\link{GenericModel}} class
-#'  (and a corresponding instance of the \code{RegressionClass} class).
-#'  If \code{sA[j]} is binary, the conditional probability \code{P(sA[j]|sW,sA[1],...,sA[j-1])} is evaluated via logistic regression model.
-#'  When \code{sA[j]} is continuous (or categorical), its estimation will be controlled by a new instance of
-#'  the \code{\link{ContinModel}} class (or the \code{\link{CategorModel}} class), as well as the accompanying new instance of the
-#'  \code{RegressionClass} class. The range of continuous \code{sA[j]} will be fist partitioned into \code{K} bins and the corresponding \code{K}
-#'  bin indicators (\code{B_1,...,B_K}), with \code{K} new instances of \code{\link{GenericModel}} class, each instance defining a
-#'  single logistic regression model for one binary bin indicator outcome \code{B_j} and predictors (\code{sW, sA[1],...,sA[k-1]}).
-#'  Thus, the first instance of \code{RegressionClass} and \code{GenericModel} classes will automatically
-#'  spawn recursive calls to new instances of these classes until the entire tree of binary logistic regressions that defines
-#'  the joint probability \code{P(sA|sW)} is build.
+#' This R6 class defines fields and methods that controls all the parameters of a regression model / machine learning algorithm.
 #'
 #' @docType class
 #' @format An \code{\link{R6Class}} generator object
 #' @keywords R6 class
 #' @details
 #' \itemize{
-#' \item{\code{sep_predvars_sets}} - Logical indicating the type of regression to run,
-#'    if \code{TRUE} fit the joint P(\code{outvar}|\code{predvars}) (default),
-# '   if \code{FALSE}, fit P(\code{outvar[1]}|\code{predvars[[1]]})*...*P(\code{outvar[K]}|\code{predvars[[K]}].
-#'    More specifically, if \code{FALSE} (default), use the same predictors in \code{predvars} (vector of names) for all nodes in \code{outvar};
-#'    when \code{TRUE} uses separate sets in \code{predvars} (must be a named list of character vectors) for fitting each node in \code{outvar}.
 #' \item{\code{outvar.class}} - Character vector indicating a class of each outcome var: \code{bin} / \code{cont} / \code{cat}.
 #' \item{\code{outvar}} - Character vector of regression outcome variable names.
-#' \item{\code{predvars}} - Either a pooled character vector of all predictors (\code{sW}) or a vector of regression-specific predictor names.
-#'      When \code{sep_predvars_sets=TRUE}, this must be a named list of predictor names, the list names corresponding to each node name in \code{outvar},
-#'      and each list item being a vector specifying the regression predictors for a specific outcome in \code{outvar}.
-#' \item{{reg_hazard}} - Logical, if TRUE, the joint probability model P(outvar | predvars) is factorized as
-#'    \\prod_{j}{P(outvar[j] | predvars)} for each j outvar (for fitting hazard).
+#' \item{\code{predvars}} - Predictors (names).
 #' \item{\code{subset_vars}} - Subset variables (later evaluated to logical vector based on non-missing (!is.na()) values of these variables).
 #' \item{\code{subset_exprs}} - Subset expressions (later evaluated to logical vector in the envir of the data).
 #' \item{\code{ReplMisVal0}} - Logical, if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0).
-#' \item{\code{nbins}} - Integer number of bins used for a continuous outvar, the intervals are defined inside
-#'  \code{ContinModel$new()} and then saved in this field.
-#' \item{\code{bin_nms}} - Character vector of column names for bin indicators.
-#' \item{\code{useglm}} - Logical, if TRUE then fit the logistic regression model using \code{\link{glm.fit}},
-#'    if FALSE use \code{\link{speedglm.wfit}}..
-#' \item{\code{parfit}} - Logical, if TRUE then use parallel \code{foreach::foreach} loop to fit and predict binary logistic
-#'    regressions (requires registering back-end cluster prior to calling the fit/predict functions)..
-#' \item{\code{bin_bymass}} - Logical, for continuous outvar, create bin cutoffs based on equal mass distribution.
-#' \item{\code{bin_bydhist}} - Logical, if TRUE, use dhist approach for bin definitions.  See Denby and Mallows "Variations on the
-#'    Histogram" (2009)) for more..
-#' \item{\code{max_nperbin}} - Integer, maximum number of observations allowed per one bin.
-#' \item{\code{pool_cont}} - Logical, pool binned continuous outvar observations across bins and only fit only regression model
-#'    across all bins (adding bin_ID as an extra covaraite)..
-#' \item{\code{outvars_to_pool}} - Character vector of names of the binned continuous outvars, should match \code{bin_nms}.
-#' \item{\code{intrvls.width}} - Named numeric vector of bin-widths (\code{bw_j : j=1,...,M}) for each each bin in \code{self$intrvls}.
-#'    When \code{sA} is not continuous, \code{intrvls.width} IS SET TO 1. When sA is continuous and this variable \code{intrvls.width}
-#'    is not here, the intervals are determined inside \code{ContinModel$new()} and are assigned to this variable as a list,
-#'    with \code{names(intrvls.width) <- reg$bin_nms}. Can be queried by \code{PredictionModel$predictAeqa()} as: \code{intrvls.width[outvar]}.
-#' \item{\code{intrvls}} - Numeric vector of cutoffs defining the bins or a named list of numeric intervals for \code{length(self$outvar) > 1}.
-#' \item{\code{cat.levels}} - Numeric vector of all unique values in categorical outcome variable.
-#'    Set by \code{\link{CategorModel}} constructor.
 #' }
 #' @section Methods:
 #' \describe{
@@ -184,7 +139,6 @@ RegressionClass <- R6Class("RegressionClass",
     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
     fit.package = c("speedglm", "glm", "h2o"),
     fit.algorithm = c("glm", "gbm", "randomForest", "SL"),
-    # parfit = logical(),            # TRUE for fitting binary regressions in parallel
     # Needed to add ReplMisVal0 = TRUE for case sA = (netA, sA[j]) with sA[j] continuous, was causing an error otherwise:
     initialize = function(ReplMisVal0 = TRUE,
                           fit.package = getopt("fit.package"),
@@ -192,7 +146,6 @@ RegressionClass <- R6Class("RegressionClass",
       self$ReplMisVal0 <- ReplMisVal0
       self$fit.package <- fit.package
       self$fit.algorithm <- fit.algorithm
-      # self$parfit <- parfit
       super$initialize(...)
     },
 
