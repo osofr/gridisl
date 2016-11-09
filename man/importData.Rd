@@ -8,11 +8,11 @@ importData(data, ID = "Subject_ID", t_name = "time_period", covars,
   OUTCOME = "Y", verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
-\item{data}{Input dataset, can be a data.frame or a data.table.}
+\item{data}{Input dataset, can be a \code{data.frame} or a \code{data.table}.}
 
-\item{ID}{Character name of the column containing subject identifiers.}
+\item{ID}{A character string name of the column that contains the unique subject identifiers.}
 
-\item{t_name}{Character name of the column containing measurement time-points.}
+\item{t_name}{A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).}
 
 \item{covars}{Names of predictors (covariates) in the data.}
 

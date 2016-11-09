@@ -35,7 +35,7 @@ replace_add_user_args <- function(mainArgs, userArgs, fun) {
 # ---------------------------------------------------------------------------
 # S3 method for fitting h2o GLM with binomial() family (logistic regression):
 # use solver="L_BFGS" when doing classification and use "IRLSM" when not
-fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
+fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, validationH2Oframe  = NULL, ...) {
 # fit.h2oglm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
@@ -53,8 +53,11 @@ fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
                   missing_values_handling = "Skip")
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.glm)
-  # h2o::h2o.glm(x = x, y = y, training_frame = training_frame, lambda = 0L, family = "gaussian")
+  if (!is.null(validationH2Oframe)) {
+    mainArgs$validation_frame <- validationH2Oframe
+  }
 
+  # h2o::h2o.glm(x = x, y = y, training_frame = training_frame, lambda = 0L, family = "gaussian")
   model.fit <- do.call(h2o::h2o.glm, mainArgs)
   # assign the fitted coefficients in correct order (same as predictor order in x)
   out_coef <- vector(mode = "numeric", length = length(x)+1)
@@ -80,7 +83,7 @@ fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
 }
 
 # S3 method for h2o randomForest fit (Random Forest):
-fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
+fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_contrl, validationH2Oframe  = NULL, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    ntrees = 100,
@@ -88,6 +91,10 @@ fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_cont
                    ignore_const_cols = FALSE)
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.randomForest)
+  if (!is.null(validationH2Oframe)) {
+    mainArgs$validation_frame <- validationH2Oframe
+  }
+
   model.fit <- do.call(h2o::h2o.randomForest, mainArgs)
   fit$coef <- NULL;
 
@@ -103,7 +110,7 @@ fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_cont
 
 # S3 method for h2o gbm fit, takes BinDat data object:
 # use "bernoulli" when doing classification and use "gaussian" when not
-fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
+fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, validationH2Oframe  = NULL, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    distribution = "bernoulli",
@@ -113,6 +120,10 @@ fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
                    ignore_const_cols = FALSE)
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
+  if (!is.null(validationH2Oframe)) {
+    mainArgs$validation_frame <- validationH2Oframe
+  }
+
   model.fit <- do.call(h2o::h2o.gbm, mainArgs)
   fit$coef <- NULL;
 
@@ -128,7 +139,7 @@ fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) 
 
 # S3 method for h2o deeplearning fit, takes BinDat data object:
 # use "bernoulli" when doing classification and use "gaussian" when doing regression
-fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_contrl, ...) {
+fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_contrl, validationH2Oframe  = NULL, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    distribution = "bernoulli",
@@ -137,6 +148,10 @@ fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_cont
                    ignore_const_cols = FALSE)
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
+  if (!is.null(validationH2Oframe)) {
+    mainArgs$validation_frame <- validationH2Oframe
+  }
+
   model.fit <- do.call(h2o::h2o.deeplearning, mainArgs)
   fit$coef <- NULL;
 

@@ -77,3 +77,62 @@ CheckVarNameExists <- function(data, varname) {
                             paste0(names(data)[idvar], collapse=","))
   return(invisible(NULL))
 }
+
+# ---------------------------------------------------------------------------------------
+#' Plot the top K smallest MSEs for a given model ensemble object.
+#'
+#' @param PredictionModel Must be an R6 object of class \code{PredictionModel} (returned by \code{get_fit} function)
+#' or an object of class \code{PredictionStack} (returned by \code{make_PredictionStack} function).
+#' Must also contain validation /test set predictions and corresponding MSEs.
+#' @param K How many top (smallest) MSEs should be plotted? Default is 5.
+#' @export
+plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
+  # require("ggplot2")
+  require("ggiraph")
+  assert_that(is.PredictionModel(PredictionModel) || is.PredictionStack(PredictionModel))
+  assert_that(is.integerish(K))
+
+  datMSE <- PredictionModel$get_best_MSE_table(K = K)
+  # datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV)]) # order when not flipping coords
+  datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV, decreasing = TRUE)]) # order when flipping coords
+
+  # datMSE$tooltip <- "MSE.CV = " %+% round(datMSE$MSE.CV, 2) %+% "; 95% CI: [" %+% round(datMSE$CIlow,2) %+% "-" %+% round(datMSE$CIhi,2)  %+%"]"
+  # datMSE$tooltip <- "MSE.CV = " %+% format(datMSE$MSE.CV, digits = 3, nsmall=2) %+% "; 95% CI: [" %+% format(datMSE$CIlow, digits = 3, nsmall=2) %+% "-" %+% format(datMSE$CIhi, digits = 3, nsmall=2)  %+% "]"
+  datMSE$tooltip <- "MSE.CV = " %+% format(datMSE$MSE.CV, digits = 3, nsmall=2) %+% " [" %+% format(datMSE$CIlow, digits = 3, nsmall=2) %+% "-" %+% format(datMSE$CIhi, digits = 3, nsmall=2)  %+% "]"
+
+  datMSE$onclick <- "window.location.hash = \"#jump" %+% 1:nrow(datMSE) %+% "\""
+  # open a new browser window:
+  # datMSE$onclick <- sprintf("window.open(\"%s%s\")", "http://en.wikipedia.org/wiki/", "Florida")  # pop-up box:
+  # datMSE$onclick = paste0("alert(\"",datMSE$model.id, "\")")
+
+  p <- ggplot(datMSE, aes(x = model, y = MSE.CV, ymin=CIlow, ymax=CIhi)) # will use model name (algorithm)
+  if (interactive) {
+    p <- p + geom_point_interactive(aes(color = algorithm, tooltip = tooltip, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
+    # p <- p + geom_point_interactive(aes(color = algorithm, tooltip = model.id, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
+  } else {
+    p <- p + geom_point(aes(color = algorithm), size = 2, position = position_dodge(0.01)) # alpha = 0.8
+  }
+  p <- p + geom_errorbar(aes(color = algorithm), width = 0.2, position = position_dodge(0.01))
+  p <- p + theme_bw() + coord_flip()
+
+  if (interactive){
+    ggiraph(code = print(p), width = .6,
+            tooltip_extra_css = "padding:2px;background:rgba(70,70,70,0.1);color:black;border-radius:2px 2px 2px 2px;",
+            hover_css = "fill:#1279BF;stroke:#1279BF;cursor:pointer;"
+            )
+    # to active zoom on a plot:
+    # zoom_max = 2
+  } else {
+    print(p)
+  }
+  # return(invisible(NULL))
+  # ggiraph(code = {print(p)})
+  # , tooltip_offx = 20, tooltip_offy = -10
+  # p <- p + facet_grid(N ~ ., labeller = label_both) + xlab('Scenario')
+  # # p <- p + facet_grid(. ~ N, labeller = label_both) + xlab('Scenario')
+  # p <- p + ylab('Mean estimate \\& 95\\% CI length')
+  # p <- p + theme(axis.title.y = element_blank(),
+  #                axis.title.x = element_text(size = 8),
+  #                plot.margin = unit(c(1, 0, 1, 1), "lines"),
+  #                legend.position="top")
+}

@@ -5,71 +5,77 @@
 NULL
 
 # ---------------------------------------------------------------------------------------
-#' Plot the top K smallest MSEs for a given model ensemble object.
+# **** ALLOW data to be an R6 object of class DataStorageClass. This will enable calling h2o SL from other pkgs *****
+# **** CONSIDER brining the nfold / fold_column / fold_assignment as args of this function
+# 1. Making this work with random/last holdout schemes?
+# 2. Making this work with h2o-internal C.V., but using either manually defined or automatic folds?
+# 3. Working C.V. when predictors on validation set have to be defined differently from predictors in training set?
+# 4. Is it at all possible to make 4. work with h2o-internal CV?
+# 5. [LONG-TERM] Need wrappers for various h2o modeling functions
+# ---------------------------------------------------------------------------------------
+#' Generic modeling function for any longitudinal data.
 #'
-#' @param PredictionModel Must be an R6 object of class \code{PredictionModel} (returned by \code{get_fit} function)
-#' or an object of class \code{PredictionStack} (returned by \code{make_PredictionStack} function).
-#' Must also contain validation /test set predictions and corresponding MSEs.
-#' @param K How many top (smallest) MSEs should be plotted? Default is 5.
+#' @param ID A character string name of the column that contains the unique subject identifiers.
+#' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
+#' @param x A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.
+#' @param y A character string name of the column that represent the response variable in the model.
+#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+#' @param data_validation Optional \code{data.frame} or \code{data.table} with validation data. When provided, this dataset will be used for scoring the model fit(s).
+#' @param params Parameters specifying the type of modeling procedure to be used.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @return ...
+# @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
+# @example tests/examples/1_growthcurveSL_example.R
 #' @export
-plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
-  # require("ggplot2")
-  require("ggiraph")
-  assert_that(is.PredictionModel(PredictionModel) || is.PredictionStack(PredictionModel))
-  assert_that(is.integerish(K))
+# stratify = NULL, reg,
+fit_model <- function(ID, t_name, x, y, data, data_validation, params, verbose = getOption("growthcurveSL.verbose")) {
+  gvars$verbose <- verbose
+  if (missing(x)) x <- setdiff(colnames(data), c(ID, y))
 
-  datMSE <- PredictionModel$get_best_MSE_table(K = K)
-  # datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV)]) # order when not flipping coords
-  datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV, decreasing = TRUE)]) # order when flipping coords
+  ## 1. Import input data into R6 object, define nodes (and export them)
+  OData_train <- importData(data = data, ID = ID, t_name = t_name, covars = x, OUTCOME = y)
+  nodes <- OData_train$nodes
 
-  # datMSE$tooltip <- "MSE.CV = " %+% round(datMSE$MSE.CV, 2) %+% "; 95% CI: [" %+% round(datMSE$CIlow,2) %+% "-" %+% round(datMSE$CIhi,2)  %+%"]"
-  # datMSE$tooltip <- "MSE.CV = " %+% format(datMSE$MSE.CV, digits = 3, nsmall=2) %+% "; 95% CI: [" %+% format(datMSE$CIlow, digits = 3, nsmall=2) %+% "-" %+% format(datMSE$CIhi, digits = 3, nsmall=2)  %+% "]"
-  datMSE$tooltip <- "MSE.CV = " %+% format(datMSE$MSE.CV, digits = 3, nsmall=2) %+% " [" %+% format(datMSE$CIlow, digits = 3, nsmall=2) %+% "-" %+% format(datMSE$CIhi, digits = 3, nsmall=2)  %+% "]"
+  # **** If we wanted to define folds manually, this would be one way to do it:****
+  # OData_train$define_CVfolds(nfolds = 3, fold_column = "fold_id", seed = 12345)
 
-  datMSE$onclick <- "window.location.hash = \"#jump" %+% 1:nrow(datMSE) %+% "\""
-  # open a new browser window:
-  # datMSE$onclick <- sprintf("window.open(\"%s%s\")", "http://en.wikipedia.org/wiki/", "Florida")  # pop-up box:
-  # datMSE$onclick = paste0("alert(\"",datMSE$model.id, "\")")
+  ## 3. Optionally define holdout / CV indicator column and subset the input data into training / validation samples?
+  # ...
 
-  p <- ggplot(datMSE, aes(x = model, y = MSE.CV, ymin=CIlow, ymax=CIhi)) # will use model name (algorithm)
-  if (interactive) {
-    p <- p + geom_point_interactive(aes(color = algorithm, tooltip = tooltip, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
-    # p <- p + geom_point_interactive(aes(color = algorithm, tooltip = model.id, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
+
+  ## Define R6 object with validation data:
+  if (!missing(data_validation)) {
+    OData_valid <- importData(data = data_validation, ID = ID, t_name = t_name, covars = x, OUTCOME = y)
   } else {
-    p <- p + geom_point(aes(color = algorithm), size = 2, position = position_dodge(0.01)) # alpha = 0.8
+    OData_valid <- NULL
   }
-  p <- p + geom_errorbar(aes(color = algorithm), width = 0.2, position = position_dodge(0.01))
-  p <- p + theme_bw() + coord_flip()
 
-  if (interactive){
-    ggiraph(code = print(p), width = .6,
-            tooltip_extra_css = "padding:2px;background:rgba(70,70,70,0.1);color:black;border-radius:2px 2px 2px 2px;",
-            hover_css = "fill:#1279BF;stroke:#1279BF;cursor:pointer;"
-            )
-    # to active zoom on a plot:
-    # zoom_max = 2
-  } else {
-    print(p)
-  }
-  # return(invisible(NULL))
-  # ggiraph(code = {print(p)})
-  # , tooltip_offx = 20, tooltip_offy = -10
-  # p <- p + facet_grid(N ~ ., labeller = label_both) + xlab('Scenario')
-  # # p <- p + facet_grid(. ~ N, labeller = label_both) + xlab('Scenario')
-  # p <- p + ylab('Mean estimate \\& 95\\% CI length')
-  # p <- p + theme(axis.title.y = element_blank(),
-  #                axis.title.x = element_text(size = 8),
-  #                plot.margin = unit(c(1, 0, 1, 1), "lines"),
-  #                legend.position="top")
+
+
+  ## Define R6 regression class (specify subset_exprs to select only specific obs during fitting, e.g., only non-holdouts)
+  regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, outvar.class = list("binary"), model_contrl = params)
+  # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, outvar.class = list("binary"), subset_exprs = list("!hold"), model_contrl = params)
+
+
+
+  ## Define a modeling object, perform fitting (real data is being passed for the first time here):
+  modelfit <- PredictionModel$new(reg = regobj)$fit(data = OData_train, validation_data = OData_valid)
+
+
+  ## Get predictions for holdout data only:
+  # preds <- modelfit$predict(newdata = OData, subset_exprs = "hold == TRUE")
+  # OData$dat.sVar[, holdoutPred := preds$getprobA1]
+
+  # ------------------------------------------------------------------------------------------
+  return(modelfit)
 }
-
 
 # ---------------------------------------------------------------------------------------
 #' Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
 #'
-#' @param data Input dataset, can be a data.frame or a data.table.
-#' @param ID Character name of the column containing subject identifiers.
-#' @param t_name Character name of the column containing measurement time-points.
+#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+#' @param ID A character string name of the column that contains the unique subject identifiers.
+#' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
 #' @param covars Names of predictors (covariates) in the data.
 #' @param OUTCOME Character name of the column containing outcomes.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
@@ -85,11 +91,9 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
     cat(paste0(current.options, collapse = '\n'), '\n')
   }
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
-    # covars <- setdiff(colnames(data), c(ID, t_name, MONITOR, OUTCOME))
-    covars <- setdiff(colnames(data), c(ID, t_name, OUTCOME))
+    covars <- setdiff(colnames(data), c(ID, OUTCOME))
   }
   # The ordering of variables in this list is the assumed temporal order!
-  # nodes <- list(Lnodes = covars, Nnodes = MONITOR, Ynode = OUTCOME, IDnode = ID, tnode = t_name)
   nodes <- list(Lnodes = covars, Ynode = OUTCOME, IDnode = ID, tnode = t_name)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes)
 
@@ -247,7 +251,7 @@ define_predictors <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, h
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
 # stratify = NULL, reg,
-get_fit <- function(OData, OData_train, OData_valid, predvars, params, holdout = TRUE, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, verbose = getOption("growthcurveSL.verbose")) {
+fit_model_holdout <- function(OData, OData_train, OData_valid, predvars, params, holdout = TRUE, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   # OData$nodes$predvars <- predvars
   # nodes <- OData$nodes
@@ -292,9 +296,9 @@ get_fit <- function(OData, OData_train, OData_valid, predvars, params, holdout =
 
   nodes <- OData_train$nodes
 
-  # ------------------------------------------------------------------------------------------
+  ## ------------------------------------------------------------------------------------------
   ## DEFINE a single regression class
-  # ------------------------------------------------------------------------------------------
+  ## ------------------------------------------------------------------------------------------
   ## To select the non-holdout set for fitting the models:
   regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = predvars, outvar.class = list("binary"), subset_exprs = list("!hold"), model_contrl = params)
 

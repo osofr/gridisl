@@ -4,9 +4,9 @@
 \alias{set_all_growthcurveSL_options}
 \title{Setting \code{growthcurveSL} Options}
 \usage{
-set_all_growthcurveSL_options(fit.package = c("face", "brokenstick",
-  "speedglm", "glm", "h2o"), fit.algorithm = c("glm", "gbm", "randomForest",
-  "deeplearning", "SuperLearner", "GridLearner"), maxncats = 20)
+set_all_growthcurveSL_options(fit.package = c("h2o", "speedglm", "glm",
+  "brokenstick", "face"), fit.algorithm = c("glm", "gbm", "randomForest",
+  "deeplearning", "GridLearner", "SuperLearner"), maxncats = 20)
 }
 \arguments{
 \item{fit.package}{Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")}

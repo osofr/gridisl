@@ -82,8 +82,8 @@ print_growthcurveSL_opts <- function() {
 #' @return Invisibly returns a list with old option settings.
 #' @seealso \code{\link{growthcurveSLOptions}}, \code{\link{print_growthcurveSL_opts}}
 #' @export
-set_all_growthcurveSL_options <- function( fit.package = c("face", "brokenstick", "speedglm", "glm", "h2o"),
-                                           fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner", "GridLearner"),
+set_all_growthcurveSL_options <- function( fit.package = c("h2o", "speedglm", "glm", "brokenstick", "face"),
+                                           fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "GridLearner", "SuperLearner"),
                                            maxncats = 20) {
 
   old.opts <- gvars$opts
