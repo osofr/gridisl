@@ -395,7 +395,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
         rows_subset <- 1:data$nobs
       }
 
-      load_var_names <- c(outvar, predvars, data$fold_column)
+      load_var_names <- c(outvar, predvars)
 
       if (self$fit.class %in% "SuperLearner") {
         if (!is.null(self$model_contrl$nfolds)) {
@@ -404,9 +404,10 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
           self$model_contrl$nfolds <- self$nfolds
         }
         data$define_CVfolds(nfolds = self$nfolds, fold_column = "fold_id", seed = self$model_contrl$seed)
-        load_var_names <- c(load_var_names, data$fold_column)
+        # load_var_names <- c(load_var_names, data$fold_column)
       }
 
+      if (!is.null(data$fold_column)) load_var_names <- c(load_var_names, data$fold_column)
       if (!is.null(data$hold_column)) load_var_names <- c(load_var_names, data$hold_column)
 
       # 1. works on single core but fails in parallel:

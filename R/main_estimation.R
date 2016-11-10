@@ -32,15 +32,18 @@ fit_model <- function(ID, t_name, x, y, data, data_validation, params, verbose =
   gvars$verbose <- verbose
   if (missing(x)) x <- setdiff(colnames(data), c(ID, y))
 
-  ## 1. Import input data into R6 object, define nodes (and export them)
+  ## Import input data into R6 object, define nodes (and export them)
   OData_train <- importData(data = data, ID = ID, t_name = t_name, covars = x, OUTCOME = y)
   nodes <- OData_train$nodes
 
-  # **** If we wanted to define folds manually, this would be one way to do it:****
+  ## **** If we wanted to define folds manually, this would be one way to do it:****
   # OData_train$define_CVfolds(nfolds = 3, fold_column = "fold_id", seed = 12345)
+  ## If fold_column specified in the model parameters, add it to the data object:
+  if (!is.null(params$fold_column)) OData_train$fold_column <- params$fold_column
 
-  ## 3. Optionally define holdout / CV indicator column and subset the input data into training / validation samples?
+  ## Optionally define holdout / CV indicator column and subset the input data into training / validation samples?
   # ...
+
 
 
   ## Define R6 object with validation data:
@@ -263,9 +266,9 @@ fit_model_holdout <- function(OData, OData_train, OData_valid, predvars, params,
     # OData$hold_column <- hold_column
   }
 
-  # ------------------------------------------------------------------------------------------
-  # Define training data (excludes holdouts):
-  # ------------------------------------------------------------------------------------------
+  ## ------------------------------------------------------------------------------------------
+  ## Define training data (excludes holdouts):
+  ## ------------------------------------------------------------------------------------------
   if (missing(OData_train)) {
     OData_train <- OData$clone()
     OData$nodes$predvars <- predvars
@@ -283,9 +286,9 @@ fit_model_holdout <- function(OData, OData_train, OData_valid, predvars, params,
     OData_train$dat.sVar <- OData_train$dat.sVar[eval(parse(text=expr_to_train)), ]
   }
 
-  # ------------------------------------------------------------------------------------------
-  # Define validation data (includes the holdout only, summaries are created without the holdout observations):
-  # ------------------------------------------------------------------------------------------
+  ## ------------------------------------------------------------------------------------------
+  ## Define validation data (includes the holdout only, summaries are created without the holdout observations):
+  ## ------------------------------------------------------------------------------------------
   if (missing(OData_valid)) {
     OData_valid <- OData$clone()
     nodes <- OData$nodes

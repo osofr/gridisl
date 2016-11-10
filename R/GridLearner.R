@@ -7,18 +7,19 @@ SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial",
   # if (is.numeric(seed)) set.seed(seed)  #If seed given, set seed prior to next step
   # h2o.no_progress()
   learner_fun <- match.fun(learner)
+  mainArgs <- list(y = y, training_frame = training_frame, family = family, keep_cross_validation_folds = TRUE)
 
-  mainArgs <- list(y = y, training_frame = training_frame, family = family,
-                  fold_column = fold_column,
-                  keep_cross_validation_folds = TRUE,
-                  nfolds = model_contrl$folds,
-                  fold_assignment = model_contrl$fold_assignment)
+  if (!missing(fold_column)) {
+    if (!is.null(fold_column) && is.character(fold_column) && (fold_column != "")) {
+      mainArgs$fold_column <- fold_column
+    }
+  }
+  if (!is.null(model_contrl$nfolds)) mainArgs$nfolds <- model_contrl$nfolds
+  if (!is.null(model_contrl$fold_assignment)) mainArgs$fold_assignment <- model_contrl$fold_assignment
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = learner_fun)
 
-  if (!is.null(validationH2Oframe)) {
-    mainArgs$validation_frame <- validationH2Oframe
-  }
+  if (!is.null(validationH2Oframe)) mainArgs$validation_frame <- validationH2Oframe
 
   if (("x" %in% names(formals(learner))) && (as.character(formals(learner)$x)[1] != "")) {
     # Special case where we pass a subset of the colnames, x, in a custom learner function wrapper
