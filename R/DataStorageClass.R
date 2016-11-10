@@ -105,7 +105,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       }
       nuniqueIDs <- self$nuniqueIDs
       if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
-      fold_id <- sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs]  # Cross-validation folds (stratified folds not yet supported)
+      fold_id <- as.factor(sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds (stratified folds not yet supported)
       foldsDT <- data.table("ID" = unique(self$dat.sVar[[self$nodes$IDnode]]), fold_column = fold_id)
       setnames(foldsDT, old = names(foldsDT), new = c(self$nodes$IDnode, fold_column))
       setkeyv(foldsDT, cols = self$nodes$IDnode)

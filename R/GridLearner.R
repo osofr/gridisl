@@ -7,7 +7,10 @@ SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial",
   # if (is.numeric(seed)) set.seed(seed)  #If seed given, set seed prior to next step
   # h2o.no_progress()
   learner_fun <- match.fun(learner)
-  mainArgs <- list(y = y, training_frame = training_frame, family = family, keep_cross_validation_folds = TRUE)
+
+  mainArgs <- list(y = y, training_frame = training_frame, family = family,
+                   keep_cross_validation_predictions = TRUE,
+                   keep_cross_validation_fold_assignment = TRUE)
 
   if (!missing(fold_column)) {
     if (!is.null(fold_column) && is.character(fold_column) && (fold_column != "")) {
@@ -51,7 +54,8 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
                   intercept = TRUE,
                   seed = 1,
                   # fold_column = fold_column,
-                  # keep_cross_validation_predictions = TRUE,
+                  keep_cross_validation_predictions = TRUE,
+                  keep_cross_validation_fold_assignment = TRUE,
                   family = family,
                   standardize = TRUE,
                   solver = "L_BFGS",
@@ -65,9 +69,7 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
   algo_fun_name <- "h2o."%+%grid.algorithm
   if (!exists(algo_fun_name)) stop("could not locate the function %+% " %+% grid.algorithm)
 
-  if (!is.null(validationH2Oframe)) {
-    mainArgs$validation_frame <- validationH2Oframe
-  }
+  if (!is.null(validationH2Oframe)) mainArgs$validation_frame <- validationH2Oframe
 
   algo_fun <- get0(algo_fun_name, mode = "function", inherits = TRUE)
   mainArgs <- keep_only_fun_args(mainArgs, fun = algo_fun)   # Keep only the relevant args in mainArgs list:
