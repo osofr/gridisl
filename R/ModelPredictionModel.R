@@ -56,7 +56,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     predvars = character(), # names of predictor vars
     is.fitted = FALSE,
 
-    ModelFitObject = NULL, # object of class ModelFitObject that is used in fitting / prediction, never saved (need to be initialized with $new())
+    OData_train = NULL, # object of class DataStorageClass used for training the models
+    ModelFitObject = NULL, # object of class ModelFitObject that is used in fitting / prediction
     fit.package = character(),
     fit.algorithm = character(),
     model_contrl = list(),
@@ -133,6 +134,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     fit = function(overwrite = FALSE, data, predict = FALSE, validation_data = NULL, ...) { # Move overwrite to a field? ... self$overwrite
       if (gvars$verbose) print("fitting the model: "); self$show()
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
+
+      self$OData_train <- data
 
       self$define.subset.idx(data)
       model.fit <- self$ModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, validation_data = validation_data, ...)
