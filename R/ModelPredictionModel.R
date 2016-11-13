@@ -55,8 +55,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     outvar = character(),   # outcome name(s)
     predvars = character(), # names of predictor vars
     is.fitted = FALSE,
-
-    OData_train = NULL, # object of class DataStorageClass used for training the models
+    OData_train = NULL, # object of class DataStorageClass used for training
+    OData_valid = NULL, # object of class DataStorageClass used for scoring models
     ModelFitObject = NULL, # object of class ModelFitObject that is used in fitting / prediction
     fit.package = character(),
     fit.algorithm = character(),
@@ -135,7 +135,10 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (gvars$verbose) print("fitting the model: "); self$show()
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
+      ## save a pointer to training data class used for fitting
       self$OData_train <- data
+      ## save a pointer to validation data class used for scoring
+      if (!is.null(validation_data)) self$OData_valid <- validation_data
 
       self$define.subset.idx(data)
       model.fit <- self$ModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, validation_data = validation_data, ...)
@@ -156,19 +159,43 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     # Predict the response E[Y|newdata];
-    predict = function(newdata, subset_vars, subset_exprs, MSE = TRUE, ...) {
+    predict = function(newdata, subset_vars, subset_exprs, predict_model_names, MSE = TRUE, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
 
       if (missing(newdata) && is.null(private$probA1)) {
-        private$probA1 <- self$ModelFitObject$predictP1(subset_idx = self$subset_idx)
+        private$probA1 <- self$ModelFitObject$predictP1(subset_idx = self$subset_idx, predict_model_names = predict_model_names)
+
       } else {
         if (!missing(subset_vars)) self$subset_vars <- subset_vars
         if (!missing(subset_exprs)) self$subset_exprs <- subset_exprs
         self$define.subset.idx(newdata)
-        private$probA1 <- self$ModelFitObject$predictP1(data = newdata, subset_idx = self$subset_idx)
+        private$probA1 <- self$ModelFitObject$predictP1(data = newdata, subset_idx = self$subset_idx, predict_model_names = predict_model_names)
       }
       if (MSE) {
         test_values <- newdata$get.outvar(self$subset_idx, var = self$outvar)
+        private$MSE <- self$evalMSE(test_values)
+      }
+      return(invisible(self))
+    },
+
+    # Predict the response E[Y|newdata] based for CV fold models and using validation data;
+    score_CV = function(validation_data, MSE = TRUE, yvals, ...) {
+      if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
+      if (missing(validation_data)) {
+        private$probA1 <- self$ModelFitObject$score_CV()
+      } else {
+        self$define.subset.idx(validation_data)
+        self$OData_valid <- validation_data # save a pointer to last used validation data object
+        private$probA1 <- self$ModelFitObject$score_CV(validation_data = validation_data$dat.sVar)
+      }
+      if (MSE) {
+        if (!missing(yvals)) {
+          test_values <- yvals
+        } else if (!missing(validation_data)) {
+          test_values <- validation_data$get.outvar(self$subset_idx, var = self$outvar)
+        } else {
+          stop("must provide either test values (yvals) or validation data with test values when evaluating MSE")
+        }
         private$MSE <- self$evalMSE(test_values)
       }
       return(invisible(self))
@@ -218,11 +245,15 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     # ------------------------------------------------------------------------------
+    # return top K model object names
+    # ------------------------------------------------------------------------------
+    get_best_model_names = function(K = 1) { return(names(self$get_best_MSEs(K))) },
+
+    # ------------------------------------------------------------------------------
     # return top K model objects ranked by prediction MSE on a holdout (CV) fold
     # ------------------------------------------------------------------------------
     get_best_models = function(K = 1) {
-      top_MSE_CV <- self$get_best_MSEs(K)
-      top_model_names <- names(top_MSE_CV)
+      top_model_names <- get_best_model_names(K)
       message("fetching top " %+% K %+% " models ranked by the smallest holdout / validation MSE")
       return(self$getmodel_byname(top_model_names))
     },
@@ -300,7 +331,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     wipe.alldat = function() {
       # private$probA1 <- NULL
       # private$probAeqa <- NULL
-      self$subset_idx <- NULL
+      # self$subset_idx <- NULL
       self$ModelFitObject$emptydata
       self$ModelFitObject$emptyY
       return(self)

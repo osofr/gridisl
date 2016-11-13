@@ -12,7 +12,8 @@ gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
 allowed.fit.package <- c("face", "brokenstick", "speedglm", "glm", "h2o")
-allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "SuperLearner", "GridLearner")
+allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "GridLearner")
+# , "SuperLearner"
 allowed.bin.method = c("equal.mass", "equal.len", "dhist")
 
 #' Querying/setting a single \code{growthcurveSL} option
@@ -83,8 +84,9 @@ print_growthcurveSL_opts <- function() {
 #' @seealso \code{\link{growthcurveSLOptions}}, \code{\link{print_growthcurveSL_opts}}
 #' @export
 set_all_growthcurveSL_options <- function( fit.package = c("h2o", "speedglm", "glm", "brokenstick", "face"),
-                                           fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "GridLearner", "SuperLearner"),
+                                           fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "GridLearner"),
                                            maxncats = 20) {
+  # , "SuperLearner"
 
   old.opts <- gvars$opts
   fit.package <- fit.package[1L]

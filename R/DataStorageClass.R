@@ -1,3 +1,108 @@
+# ---------------------------------------------------------------------------------------
+#' Define and fit growth models evaluated on holdout observations.
+#'
+#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+#' @param ID A character string name of the column that contains the unique subject identifiers.
+#' @param nfolds Number of unique folds (same fold is always assigned to all observations that share the same ID).
+#' @param fold_column A name of the column that will contain the fold indicators
+#' @param seed Random number seed for selecting a random fold.
+#' @return An input data with added fold indicator column (as ordered factor with levels 1:nfolds).
+#' @export
+add_CVfolds_ind = function(data, ID, nfolds = 5, fold_column = "fold", seed = NULL) {
+  nuniqueIDs = function() { length(unique(data[[ID]])) }
+  data <- data.table::data.table(data)
+  data.table::setkeyv(data, cols = ID)
+  if (fold_column %in% names(data)) data[, (fold_column) := NULL]
+  nuniqueIDs <- nuniqueIDs()
+  if (!is.null(seed)) set.seed(as.numeric(seed))  #If seed is specified, set seed prior to next step
+  fold_id <- as.factor(sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds
+  foldsDT <- data.table::data.table("ID" = unique(data[[ID]]), fold_column = fold_id)
+  data.table::setnames(foldsDT, old = names(foldsDT), new = c(ID, fold_column))
+  data.table::setkeyv(foldsDT, cols = ID)
+  data <- merge(data, foldsDT, by = ID, all.x = TRUE)
+  return(data)
+}
+
+# ---------------------------------------------------------------------------------------
+#' Define and fit growth models evaluated on holdout observations.
+#'
+#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+#' @param ID A character string name of the column that contains the unique subject identifiers.
+#' @param hold_column A name of the column that will contain the the holdout indicators
+#' @param random Logical, specifying if the holdout observations should be selected at random.
+#' If FALSE then the last observation for each subject is selected as a holdout.
+#' @param seed Random number seed for selecting a random holdout.
+#' @return An input data with added holdout indicator column (TRUE for holdout observation indicator, FALSE for training observation indicator).
+add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed = NULL) {
+  data <- data.table::data.table(data)
+  data.table::setkeyv(data, cols = ID)
+  if (!is.null(seed)) set.seed(as.numeric(seed))
+  if (hold_column %in% names(data)) data[, (hold_column) := NULL]
+
+  samplemax2 <- function(x) {
+    if (x == 1L) {
+      return(FALSE)
+    } else {
+      res <- rep.int(FALSE, x)
+      res[ length(res) ] <- TRUE
+      return(res)
+    }
+  }
+
+  samplerandom2 <- function(x) {
+    if (x == 1L) {
+      return(FALSE)
+    } else {
+      res <- rep.int(FALSE, x)
+      res[ sample((1:x), 1) ] <- TRUE
+      return(res)
+    }
+  }
+
+  if (random) {
+    data[, (hold_column) := samplerandom2(.N), by = eval(ID)]
+  } else {
+    data[, (hold_column) := samplemax2(.N), by = eval(ID)]
+  }
+  # self$hold_column <- hold_column
+
+  return(data)
+}
+
+# -----------------------------------------------------------------------------
+# Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
+# -----------------------------------------------------------------------------
+fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar") {
+  tmpf <- tempfile(fileext = ".csv")
+  assertthat::assert_that(is.data.table(dat.sVar))
+
+  data.table::fwrite(dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+
+  types <- sapply(dat.sVar, class)
+  types <- gsub("integer64", "numeric", types)
+  types <- gsub("integer", "numeric", types)
+  types <- gsub("double", "numeric", types)
+  types <- gsub("complex", "numeric", types)
+  types <- gsub("logical", "enum", types)
+  types <- gsub("factor", "enum", types)
+  types <- gsub("character", "string", types)
+  types <- gsub("Date", "Time", types)
+
+  # replace all irregular characters to conform with destination_frame regular exprs format:
+  tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
+  tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
+  tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
+
+  H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
+                                      header = TRUE,
+                                      col.types = types,
+                                      na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
+                                      destination_frame = destination_frame)
+
+  file.remove(tmpf)
+  return(H2O.dat.sVar)
+}
+
 ## ---------------------------------------------------------------------
 # Detecting vector types: sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 ## ---------------------------------------------------------------------
@@ -63,95 +168,67 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       invisible(self)
     },
 
-    # taken from hbgd R package:
-    add_holdout_ind = function(hold_column = "hold", random = TRUE, seed = NULL) {
-      if (!is.null(seed)) set.seed(as.numeric(seed))
-      if (hold_column %in% names(self$dat.sVar)) {
-        self$dat.sVar[, (hold_column) := NULL]
-      }
-      samplemax2 <- function(x) {
-        if (x == 1L) {
-          return(FALSE)
-        } else {
-          res <- rep.int(FALSE, x)
-          res[ length(res) ] <- TRUE
-          return(res)
-        }
-      }
+    # # taken from hbgd R package:
+    # add_holdout_ind = function(hold_column = "hold", random = TRUE, seed = NULL) {
+    #   if (!is.null(seed)) set.seed(as.numeric(seed))
+    #   if (hold_column %in% names(self$dat.sVar)) {
+    #     self$dat.sVar[, (hold_column) := NULL]
+    #   }
+    #   samplemax2 <- function(x) {
+    #     if (x == 1L) {
+    #       return(FALSE)
+    #     } else {
+    #       res <- rep.int(FALSE, x)
+    #       res[ length(res) ] <- TRUE
+    #       return(res)
+    #     }
+    #   }
 
-      samplerandom2 <- function(x) {
-        if (x == 1L) {
-          return(FALSE)
-        } else {
-          res <- rep.int(FALSE, x)
-          res[ sample((1:x), 1) ] <- TRUE
-          return(res)
-        }
-      }
+    #   samplerandom2 <- function(x) {
+    #     if (x == 1L) {
+    #       return(FALSE)
+    #     } else {
+    #       res <- rep.int(FALSE, x)
+    #       res[ sample((1:x), 1) ] <- TRUE
+    #       return(res)
+    #     }
+    #   }
 
-      if (random) {
-        self$dat.sVar[, (hold_column) := samplerandom2(.N), by = eval(self$nodes$IDnode)]
-      } else {
-        self$dat.sVar[, (hold_column) := samplemax2(.N), by = eval(self$nodes$IDnode)]
-      }
-      self$hold_column <- hold_column
+    #   if (random) {
+    #     self$dat.sVar[, (hold_column) := samplerandom2(.N), by = eval(self$nodes$IDnode)]
+    #   } else {
+    #     self$dat.sVar[, (hold_column) := samplemax2(.N), by = eval(self$nodes$IDnode)]
+    #   }
+    #   self$hold_column <- hold_column
 
-      return(invisible(self))
-    },
+    #   return(invisible(self))
+    # },
 
-    define_CVfolds = function(nfolds = 5, fold_column = "fold_id", seed = 1) {
-      if (fold_column %in% names(self$dat.sVar)) {
-        self$dat.sVar[, (fold_column) := NULL]
-      }
-      nuniqueIDs <- self$nuniqueIDs
-      if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
-      fold_id <- as.factor(sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds (stratified folds not yet supported)
-      foldsDT <- data.table("ID" = unique(self$dat.sVar[[self$nodes$IDnode]]), fold_column = fold_id)
-      setnames(foldsDT, old = names(foldsDT), new = c(self$nodes$IDnode, fold_column))
-      setkeyv(foldsDT, cols = self$nodes$IDnode)
-      self$dat.sVar <- merge(self$dat.sVar, foldsDT, by = self$nodes$IDnode, all.x = TRUE)
-      self$fold_column <- fold_column
-      self$nfolds <- nfolds
-      return(invisible(self))
-    },
+    # define_CVfolds = function(nfolds = 5, fold_column = "fold_id", seed = 1) {
+    #   if (fold_column %in% names(self$dat.sVar)) {
+    #     self$dat.sVar[, (fold_column) := NULL]
+    #   }
+    #   nuniqueIDs <- self$nuniqueIDs
+    #   if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
+    #   fold_id <- as.factor(sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds (stratified folds not yet supported)
+    #   foldsDT <- data.table("ID" = unique(self$dat.sVar[[self$nodes$IDnode]]), fold_column = fold_id)
+    #   setnames(foldsDT, old = names(foldsDT), new = c(self$nodes$IDnode, fold_column))
+    #   setkeyv(foldsDT, cols = self$nodes$IDnode)
+    #   self$dat.sVar <- merge(self$dat.sVar, foldsDT, by = self$nodes$IDnode, all.x = TRUE)
+    #   self$fold_column <- fold_column
+    #   self$nfolds <- nfolds
+    #   return(invisible(self))
+    # },
 
     # -----------------------------------------------------------------------------
     # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
     # -----------------------------------------------------------------------------
     fast.load.to.H2O = function(dat.sVar, saveH2O = TRUE, destination_frame = "H2O.dat.sVar") {
-      if (missing(dat.sVar)) {
-        dat.sVar <- self$dat.sVar
-      }
-
-      tmpf <- tempfile(fileext = ".csv")
-      assertthat::assert_that(is.data.table(dat.sVar))
-      data.table::fwrite(dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
-
-      types <- sapply(dat.sVar, class)
-      types <- gsub("integer64", "numeric", types)
-      types <- gsub("integer", "numeric", types)
-      types <- gsub("double", "numeric", types)
-      types <- gsub("complex", "numeric", types)
-      types <- gsub("logical", "enum", types)
-      types <- gsub("factor", "enum", types)
-      types <- gsub("character", "string", types)
-      types <- gsub("Date", "Time", types)
-
-      # replace all irregular characters to conform with destination_frame regular exprs format:
-      tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
-      tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
-      tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
-
-      H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
-                                          header = TRUE,
-                                          col.types = types,
-                                          na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
-                                          destination_frame = destination_frame)
-
+      if (missing(dat.sVar)) dat.sVar <- self$dat.sVar
+      H2O.dat.sVar <- fast.load.to.H2O(dat.sVar, destination_frame = "H2O.dat.sVar")
       if (saveH2O) self$H2O.dat.sVar <- H2O.dat.sVar
       file.remove(tmpf)
-      # return(invisible(self))
-      return(invisible(H2O.dat.sVar))
+      return(H2O.dat.sVar)
     },
 
     # add protected Y nodes to private field and set to NA all determinisitc Y values for public field YnodeVals

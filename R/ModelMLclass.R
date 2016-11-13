@@ -25,6 +25,66 @@ predict_h2o_new <- function(model_id, frame_id, returnVector = TRUE) {
   }
 }
 
+score_h2o_CV_models <- function(m.fit, validation_data, ...) {
+  h2o.no_progress()
+
+  if (missing(validation_data)) {
+    # Grab the internallly stored h2o cross-validation predictions (out of sample)
+    pAoutMat <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
+    return(pAoutMat)
+
+  } else {
+    assert_that(data.table::is.data.table(validation_data))
+    pAoutMat <- matrix(gvars$misval, nrow = nrow(validation_data), ncol = length(m.fit$fitted_models_all))
+    colnames(pAoutMat) <- names(m.fit$model_ids)
+    outvar <- m.fit$params$outvar
+    predvars <- m.fit$params$predvars
+
+    ## **** LOAD ALL DATA ONLY ONCE ****
+    validH2Oframe <- fast.load.to.H2O(validation_data[, c(outvar, predvars), with = FALSE], destination_frame = "validH2Oframe")
+
+    # Assumes folds were equivalent across all models
+    h2o_model_1 <- m.fit$fitted_models_all[[1]]
+    fold <- as.data.frame(h2o.cross_validation_fold_assignment(h2o_model_1))
+    vfolds_cat <- sort(unique(fold$fold_assignment))
+
+    for (vfold_idx in seq_along(vfolds_cat)) {
+      fold_idx_cv.i <- (fold$fold_assignment %in% vfolds_cat[vfold_idx])
+      ## Define validation frame for this fold:
+      validH2Oframe_cv.i <- validH2Oframe[which(fold_idx_cv.i),]
+      cv.i_foldframeID <- h2o.getId(validH2Oframe_cv.i)
+      dest_key_LIST <- vector(mode = "list", length = length(m.fit$fitted_models_all))
+
+      for (idx in seq_along(m.fit$fitted_models_all)) {
+        # print("idx: "); print(idx); print("model: "); print(names(m.fit$model_ids)[idx])
+        h2o_model <- m.fit$fitted_models_all[[idx]]
+        cv_models_IDs <- lapply(h2o_model@model$cross_validation_models, "[[", "name")
+
+        ## Submit a job for prediction on a fold using internal REST API.
+        ## Don't pull the prediction results until all of these jobs were submitted.
+        url <- paste0('Predictions/models/', cv_models_IDs[[vfold_idx]], '/frames/',  cv.i_foldframeID)
+        res <- h2o:::.h2o.__remoteSend(url, method = "POST", h2oRestApiVersion = 4)
+        job_key <- res$key$name
+        dest_key <- res$dest$name
+        dest_key_LIST[[idx]] <- dest_key
+      }
+
+      h2o:::.h2o.__waitOnJob(job_key, pollInterval = 0.01)
+      for (idx in seq_along(dest_key_LIST)) {
+        newpreds <- h2o.getFrame(dest_key_LIST[[idx]])
+        if ("p1" %in% colnames(newpreds)) {
+          pAoutMat[fold_idx_cv.i, idx] <- as.vector(newpreds[,"p1"])
+        } else {
+          pAoutMat[fold_idx_cv.i, idx] <- as.vector(newpreds[,"predict"])
+        }
+      }
+      # remove the fold-specific frame from h2o cluster
+      # h2o.rm(cv.i_foldframeID)
+    }
+    return(pAoutMat)
+  }
+}
+
 getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_idx) {
   assert_that(!is.null(subset_idx))
   if (!missing(DataStorageObject)) {
@@ -32,8 +92,7 @@ getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_id
     data <- DataStorageObject
     outvar <- m.fit$params$outvar
     predvars <- m.fit$params$predvars
-    subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE],
-                                            saveH2O = FALSE, destination_frame = "subsetH2Oframe")
+    subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE], destination_frame = "subsetH2Oframe")
   } else {
     subsetH2Oframe <- ParentObject$getsubsetH2Oframe
   }
@@ -220,15 +279,18 @@ predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
 }
 
 ## TO DO: Add prediction only based on the subset of models (rather than predicting for all models)
-predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
+predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict_model_names, ...) {
   subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
-  pAoutMat <- matrix(gvars$misval, nrow = length(subset_idx), ncol = length(m.fit$fitted_models_all))
-  colnames(pAoutMat) <- names(ParentObject$getmodel_ids)
-  if (sum(subset_idx) > 0) {
-    for (idx in seq_along(m.fit$fitted_models_all)) {
-      pAoutMat[subset_idx, idx] <- predict_h2o_new(m.fit$fitted_models_all[[idx]]@model_id, frame_id = h2o.getId(subsetH2Oframe))
+  models_list <- m.fit$fitted_models_all
+  if (!missing(predict_model_names)) models_list <- models_list[predict_model_names]
 
-      # predictFrame <- predict(m.fit$fitted_models_all[[idx]], newdata = subsetH2Oframe)
+  pAoutMat <- matrix(gvars$misval, nrow = length(subset_idx), ncol = length(models_list))
+  colnames(pAoutMat) <- names(models_list)
+
+  if (sum(subset_idx) > 0) {
+    for (idx in seq_along(models_list)) {
+      pAoutMat[subset_idx, idx] <- predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(subsetH2Oframe))
+      # predictFrame <- predict(models_list[[idx]], newdata = subsetH2Oframe)
       # if ("p1" %in% colnames(predictFrame)) {
       #   pAoutMat[subset_idx, idx] <- as.vector(predictFrame[,"p1"])
       # } else {
@@ -258,6 +320,10 @@ h2oGridModelClass  <- R6Class(classname = "h2oModelClass",
 
     predictP1 = function(...) {
       return(super$predictP1(...))
+    },
+
+    score_CV = function(...) {
+      return(super$score_CV(...))
     },
 
     getmodel_byname = function(model_names, model_IDs) {
@@ -325,7 +391,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     model_contrl = list(),
     params = list(),
     classify = FALSE,
-    fit.class = c("glm", "randomForest", "gbm", "deeplearning", "SuperLearner", "GridLearner"),
+    fit.class = c("glm", "randomForest", "gbm", "deeplearning", "GridLearner"),
     model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA, model_algorithms = NA),
     outfactors = NA,
     nfolds = 5,
@@ -336,9 +402,9 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       self$model_contrl <- reg$model_contrl
 
       assert_that("h2o" %in% fit.package)
-      if (fit.algorithm %in% "SuperLearner") {
-        if (!"package:h2oEnsemble" %in% search()) stop("must load 'h2oEnsemble' package prior to using the SuperLearner: require('h2oEnsemble') or library('h2oEnsemble')")
-      }
+      # if (fit.algorithm %in% "SuperLearner") {
+      #   if (!"package:h2oEnsemble" %in% search()) stop("must load 'h2oEnsemble' package prior to using the SuperLearner: require('h2oEnsemble') or library('h2oEnsemble')")
+      # }
       self$fit.class <- fit.algorithm
       class(self$fit.class) <- c(class(self$fit.class), "h2o" %+% self$fit.class)
       invisible(self)
@@ -375,8 +441,21 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       return(self$model.fit)
     },
 
-    predictP1 = function(data, subset_idx) {
-      P1 <- predictP1(self$model.fit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx)
+    predictP1 = function(data, subset_idx, predict_model_names) {
+      P1 <- predictP1(self$model.fit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx, predict_model_names = predict_model_names)
+      if (!is.matrix(P1)) {
+        P1 <- matrix(P1, byrow = TRUE)
+      }
+      if (!missing(predict_model_names)) {
+        colnames(P1) <- predict_model_names
+      } else {
+        colnames(P1) <- names(self$getmodel_ids)
+      }
+      return(P1)
+    },
+
+    score_CV = function(validation_data) {
+      P1 <- score_h2o_CV_models(self$model.fit, validation_data)
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)
       }
@@ -405,24 +484,12 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
       load_var_names <- c(outvar, predvars)
 
-      if (self$fit.class %in% "SuperLearner") {
-        if (!is.null(self$model_contrl$nfolds)) {
-          self$nfolds <- as.integer(self$model_contrl$nfolds)
-        } else {
-          self$model_contrl$nfolds <- self$nfolds
-        }
-        data$define_CVfolds(nfolds = self$nfolds, fold_column = "fold_id", seed = self$model_contrl$seed)
-        # load_var_names <- c(load_var_names, data$fold_column)
-      }
-
       if (!is.null(data$fold_column)) load_var_names <- c(load_var_names, data$fold_column)
       if (!is.null(data$hold_column)) load_var_names <- c(load_var_names, data$hold_column)
 
       # 1. works on single core but fails in parallel:
       load_subset_t <- system.time(
-        subsetH2Oframe <- data$fast.load.to.H2O(data$dat.sVar[rows_subset, load_var_names, with = FALSE],
-                                                saveH2O = FALSE,
-                                                destination_frame = destination_frame)
+        subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[rows_subset, load_var_names, with = FALSE], destination_frame = destination_frame)
       )
       if (gvars$verbose) {
         print("time to subset and load data into H2OFRAME: "); print(load_subset_t)

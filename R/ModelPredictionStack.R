@@ -45,6 +45,9 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       stop("...not implemented...")
       return(invisible(self))
     },
+    score_CV = function(data_valid, MSE = TRUE, ...) {
+      stop("...not implemented...")
+    },
     evalMSE = function(test_values) {
       stop("...not implemented...")
       return(invisible(self))
