@@ -10,8 +10,8 @@
 #' @export
 #' @return ...
 define_features <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, hold_column = "hold", verbose = getOption("growthcurveSL.verbose")) {
-  # Making sure nothing gets modified by reference:
-  dataDT <- copy(dataDT)
+  # dataDT <- data.table(dataDT)
+  dataDT <- copy(dataDT) # Making sure nothing gets modified by reference:
 
   # Define which observations are in the hold-out set (and thus should be ignored when creating predictors for training set)
   if (train_set && holdout) {

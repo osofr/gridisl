@@ -41,7 +41,7 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
     predvars <- m.fit$params$predvars
 
     ## **** LOAD ALL DATA ONLY ONCE ****
-    validH2Oframe <- fast.load.to.H2O(validation_data[, c(outvar, predvars), with = FALSE], destination_frame = "validH2Oframe")
+    valid_H2Oframe <- fast.load.to.H2O(validation_data[, c(outvar, predvars), with = FALSE], destination_frame = "CV_valid_H2Oframe")
 
     # Assumes folds were equivalent across all models
     h2o_model_1 <- m.fit$fitted_models_all[[1]]
@@ -51,8 +51,8 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
     for (vfold_idx in seq_along(vfolds_cat)) {
       fold_idx_cv.i <- (fold$fold_assignment %in% vfolds_cat[vfold_idx])
       ## Define validation frame for this fold:
-      validH2Oframe_cv.i <- validH2Oframe[which(fold_idx_cv.i),]
-      cv.i_foldframeID <- h2o.getId(validH2Oframe_cv.i)
+      valid_H2Oframe_cv.i <- valid_H2Oframe[which(fold_idx_cv.i),]
+      cv.i_foldframeID <- h2o.getId(valid_H2Oframe_cv.i)
       dest_key_LIST <- vector(mode = "list", length = length(m.fit$fitted_models_all))
 
       for (idx in seq_along(m.fit$fitted_models_all)) {
@@ -81,6 +81,7 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
       # remove the fold-specific frame from h2o cluster
       # h2o.rm(cv.i_foldframeID)
     }
+    h2o.rm(valid_H2Oframe)
     return(pAoutMat)
   }
 }
@@ -92,11 +93,11 @@ getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_id
     data <- DataStorageObject
     outvar <- m.fit$params$outvar
     predvars <- m.fit$params$predvars
-    subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE], destination_frame = "subsetH2Oframe")
+    prediction_H2Oframe <- fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE], destination_frame = "prediction_H2Oframe")
   } else {
-    subsetH2Oframe <- ParentObject$getsubsetH2Oframe
+    prediction_H2Oframe <- h2o::h2o.getFrame(ParentObject$get_train_H2Oframe_ID)
   }
-  return(subsetH2Oframe)
+  return(prediction_H2Oframe)
 }
 
 ## take a list of args, take a function body and return only the args that belong to function signature
@@ -130,7 +131,7 @@ replace_add_user_args <- function(mainArgs, userArgs, fun) {
 ## ---------------------------------------------------------------------------
 ## S3 method for fitting h2o GLM with binomial() family (logistic regression):
 ## use solver="L_BFGS" when doing classification and use "IRLSM" when not
-fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, validationH2Oframe  = NULL, ...) {
+fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
 # fit.h2oglm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
@@ -148,8 +149,8 @@ fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, valid
                   missing_values_handling = "Skip")
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.glm)
-  if (!is.null(validationH2Oframe)) {
-    mainArgs$validation_frame <- validationH2Oframe
+  if (!is.null(validation_frame)) {
+    mainArgs$validation_frame <- validation_frame
   }
 
   # h2o::h2o.glm(x = x, y = y, training_frame = training_frame, lambda = 0L, family = "gaussian")
@@ -178,7 +179,7 @@ fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, valid
 }
 
 ## S3 method for h2o randomForest fit (Random Forest):
-fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_contrl, validationH2Oframe  = NULL, ...) {
+fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    ntrees = 100,
@@ -186,8 +187,8 @@ fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_cont
                    ignore_const_cols = FALSE)
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.randomForest)
-  if (!is.null(validationH2Oframe)) {
-    mainArgs$validation_frame <- validationH2Oframe
+  if (!is.null(validation_frame)) {
+    mainArgs$validation_frame <- validation_frame
   }
 
   model.fit <- do.call(h2o::h2o.randomForest, mainArgs)
@@ -205,7 +206,7 @@ fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_cont
 
 ## S3 method for h2o gbm fit, takes BinDat data object:
 ## use "bernoulli" when doing classification and use "gaussian" when not
-fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, validationH2Oframe  = NULL, ...) {
+fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    distribution = "bernoulli",
@@ -215,8 +216,8 @@ fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, valid
                    ignore_const_cols = FALSE)
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
-  if (!is.null(validationH2Oframe)) {
-    mainArgs$validation_frame <- validationH2Oframe
+  if (!is.null(validation_frame)) {
+    mainArgs$validation_frame <- validation_frame
   }
 
   model.fit <- do.call(h2o::h2o.gbm, mainArgs)
@@ -234,7 +235,7 @@ fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, valid
 
 ## S3 method for h2o deeplearning fit, takes BinDat data object:
 ## use "bernoulli" when doing classification and use "gaussian" when doing regression
-fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_contrl, validationH2Oframe  = NULL, ...) {
+fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    distribution = "bernoulli",
@@ -243,8 +244,8 @@ fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_cont
                    ignore_const_cols = FALSE)
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
-  if (!is.null(validationH2Oframe)) {
-    mainArgs$validation_frame <- validationH2Oframe
+  if (!is.null(validation_frame)) {
+    mainArgs$validation_frame <- validation_frame
   }
 
   model.fit <- do.call(h2o::h2o.deeplearning, mainArgs)
@@ -264,23 +265,17 @@ fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_cont
 ## Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
 ## ----------------------------------------------------------------
 predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
-  subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
+  H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
   pAout <- rep.int(gvars$misval, length(subset_idx))
   if (sum(subset_idx) > 0) {
-    pAout[subset_idx] <- predict_h2o_new(m.fit$H2O.model.object@model_id, frame_id = h2o.getId(subsetH2Oframe))
-    # predictFrame <- h2o::h2o.predict(m.fit$H2O.model.object, newdata = subsetH2Oframe)
-    # if ("p1" %in% colnames(predictFrame)) {
-    #    <- as.vector(predictFrame[,"p1"])
-    # } else {
-    #   pAout[subset_idx] <- as.vector(predictFrame[,"predict"])
-    # }
+    pAout[subset_idx] <- predict_h2o_new(m.fit$H2O.model.object@model_id, frame_id = h2o.getId(H2Oframe))
   }
   return(pAout)
 }
 
 ## TO DO: Add prediction only based on the subset of models (rather than predicting for all models)
 predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict_model_names, ...) {
-  subsetH2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
+  H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
   models_list <- m.fit$fitted_models_all
   if (!missing(predict_model_names)) models_list <- models_list[predict_model_names]
 
@@ -289,13 +284,7 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
 
   if (sum(subset_idx) > 0) {
     for (idx in seq_along(models_list)) {
-      pAoutMat[subset_idx, idx] <- predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(subsetH2Oframe))
-      # predictFrame <- predict(models_list[[idx]], newdata = subsetH2Oframe)
-      # if ("p1" %in% colnames(predictFrame)) {
-      #   pAoutMat[subset_idx, idx] <- as.vector(predictFrame[,"p1"])
-      # } else {
-      #   pAoutMat[subset_idx, idx] <- as.vector(predictFrame[,"predict"])
-      # }
+      pAoutMat[subset_idx, idx] <- predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe))
     }
   }
   return(pAoutMat)
@@ -412,7 +401,10 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
     fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
       assert_that(is.DataStorageClass(data))
-      subsetH2Oframe <- self$setdata(data, subset_idx, self$classify, ...)
+      train_H2Oframe <- self$setdata(data, subset_idx, self$classify, destination_frame = "train_H2Oframe", ...)
+      private$train_H2Oframe <- train_H2Oframe
+      private$train_H2Oframe_ID <- h2o::h2o.getId(train_H2Oframe)
+
       if ((length(predvars) == 0L) || (sum(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
         message("unable to run " %+% self$fit.class %+% " with h2o for: intercept only models or designmat with zero rows or  constant outcome (y) ...")
         class(self$model.fit) <- "try-error"
@@ -423,14 +415,17 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
       if (!is.null(validation_data)) {
         assert_that(is.DataStorageClass(validation_data))
-        validationH2Oframe <- self$setdata(validation_data, classify = self$classify, destination_frame = "validationH2Oframe", ...)
+        valid_H2Oframe <- self$setdata(validation_data, classify = self$classify, destination_frame = "valid_H2Oframe", ...)
+        private$valid_H2Oframe <- valid_H2Oframe
+        private$valid_H2Oframe_ID <- h2o::h2o.getId(valid_H2Oframe)
+
       } else {
-        validationH2Oframe = NULL
+        valid_H2Oframe = NULL
       }
 
       self$model.fit$params <- self$params
-      self$model.fit <- try(fit(self$fit.class, self$model.fit, training_frame = subsetH2Oframe, y = outvar, x = predvars,
-                            model_contrl = self$model_contrl, fold_column = data$fold_column, validationH2Oframe = validationH2Oframe, ...),
+      self$model.fit <- try(fit(self$fit.class, self$model.fit, training_frame = train_H2Oframe, y = outvar, x = predvars,
+                            model_contrl = self$model_contrl, fold_column = data$fold_column, validation_frame = valid_H2Oframe, ...),
                         silent = FALSE)
 
       if (inherits(self$model.fit, "try-error")) {
@@ -513,8 +508,14 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
   ),
 
   active = list( # 2 types of active bindings (w and wout args)
-    emptydata = function() { private$subsetH2Oframe <- NULL},
-    getsubsetH2Oframe = function() {private$subsetH2Oframe},
+    emptydata = function() { },
+
+    get_train_H2Oframe = function() {private$train_H2Oframe},
+    get_train_H2Oframe_ID = function() {private$train_H2Oframe_ID},
+
+    get_valid_H2Oframe = function() {private$valid_H2Oframe},
+    get_valid_H2Oframe_ID = function() {private$valid_H2Oframe_ID},
+
     getmodel_ids = function() {
       if (is.null(self$model.fit$model_ids)) {
         model_ids <- list(self$model.fit$H2O.model.object@model_id)
@@ -530,6 +531,9 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
   ),
 
   private = list(
-    subsetH2Oframe = NULL
+    train_H2Oframe = NULL,
+    train_H2Oframe_ID = NULL,
+    valid_H2Oframe = NULL,
+    valid_H2Oframe_ID = NULL
   )
 )

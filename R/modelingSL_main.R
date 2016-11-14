@@ -78,8 +78,8 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   }
 
   ## Define R6 regression class (specify subset_exprs to select only specific obs during fitting, e.g., only non-holdouts)
-  regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, outvar.class = list("binary"), model_contrl = params)
-  # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, outvar.class = list("binary"), subset_exprs = list("!hold"), model_contrl = params)
+  regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, model_contrl = params)
+  # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, subset_exprs = list("!hold"), model_contrl = params)
 
   ## Define a modeling object, perform fitting (real data is being passed for the first time here):
   modelfit <- PredictionModel$new(reg = regobj)$fit(data = OData_train, validation_data = OData_valid)
@@ -90,7 +90,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   if (!is.null(OData_valid)) preds <- modelfit$predict(newdata = OData_valid)
 
   ## ------------------------------------------------------------------------------------------
-  ## If CV was used, then score the models based on CV out of sample predictions
+  ## If CV was used, then score the models based on CV out-of-sample predictions
   ## ------------------------------------------------------------------------------------------
   if (runCV) {
     mse <- eval_MSE_CV(modelfit, yvals = OData_train$dat.sVar[[nodes$Ynode]])
@@ -104,37 +104,45 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
 #' Predict for new dataset
 #'
 #' @param modelfit Model fit object returned by \code{\link{fit_model}} function.
-#' @param newdata ...
-#' @param predict_only_bestK_models ... Not implemented ...
+#' @param newdata Subject-specific data for which predictions should be obtained.
+#' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
+#' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
+#' @param evalMSE Use newdata for model scoring (based on MSE)
+#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
+#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-#' @return ...
+#' @return A matrix of subject level predictions (subject are rows, columns are different models) or a data.table with subject level covariates added along with model-based predictions.
 #' @export
-predict_model <- function(modelfit, newdata, predict_only_bestK_models, verbose = getOption("growthcurveSL.verbose")) {
+predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE = FALSE, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
+  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
 
-  if (missing(newdata)) {
-    stop("must provide newdata")
-  }
-
-  newOData <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
+  if (!missing(newdata))
+    newdata <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
 
   if (!missing(predict_only_bestK_models)) {
     assert_that(is.integerish(predict_only_bestK_models))
     predict_model_names = modelfit$get_best_model_names(K = predict_only_bestK_models)
-    print(paste0("obtaining predictions for the best models: ", paste0(predict_model_names, collapse = ",")))
-    modelfit$predict(newdata = newOData, predict_model_names = predict_model_names, MSE = FALSE)
-    return(modelfit$getprobA1)
-
+    message(paste0("obtaining predictions for the best models: ", paste0(predict_model_names, collapse = ",")))
+    modelfit$predict(newdata = newdata, predict_model_names = predict_model_names, MSE = evalMSE)
   } else {
-    print(paste0("obtaining predictions for all models: "))
-    modelfit$predict(newdata = newOData, MSE = FALSE)
-    predsDT <- newOData$dat.sVar[, c(nodes$IDnode, modelfit$predvars), with = FALSE]
-    predsDT[, (colnames(modelfit$getprobA1)) := as.data.table(modelfit$getprobA1)]
-    return(predsDT)
+    message("obtaining predictions for all models...")
+    modelfit$predict(newdata = newdata, MSE = evalMSE)
   }
+
+  preds <- modelfit$getprobA1 # actual matrix of predictions needs to be extracted
+
+  if (add_subject_data) {
+    if (missing(newdata)) newdata <- modelfit$OData_train
+    predsDT <- newdata$dat.sVar[, c(nodes$IDnode, modelfit$predvars), with = FALSE]
+    predsDT[, (colnames(modelfit$getprobA1)) := as.data.table(modelfit$getprobA1)]
+    preds <- predsDT
+  }
+
+  return(preds)
 }
 
 # ---------------------------------------------------------------------------------------

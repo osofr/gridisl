@@ -1,4 +1,4 @@
-#' Predict for a holdout set
+#' Predict for a holdout set (NOT IMPLEMENTED)
 #'
 #' @param OData Input data object created by \code{importData} function.
 #' @param tmin ...
@@ -7,7 +7,7 @@
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 #' @export
-predict_curve <- function(OData, tmin, tmax, modelIDs, verbose = getOption("growthcurveSL.verbose")) {
+predict_fullcurve <- function(OData, tmin, tmax, modelIDs, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- OData$nodes
   modelfit <- OData$modelfit
@@ -65,13 +65,14 @@ predict_curve <- function(OData, tmin, tmax, modelIDs, verbose = getOption("grow
 # @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
-fit_growthcurve_holdout <- function(ID, t_name, x, y, data, params, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+fit_growthSL_holdout <- function(ID, t_name, x, y, data, params, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)
 
   if (is.null(hold_column)) {
     hold_column <- "hold"
+    message("...selecting holdout observations...")
     data <- add_holdout_ind(data, ID, hold_column = hold_column, random = random, seed = seed)
   }
   params$hold_column <- hold_column
@@ -109,35 +110,26 @@ fit_growthcurve_holdout <- function(ID, t_name, x, y, data, params, hold_column 
 #' Predict for a holdout set
 #'
 #' @param modelfit Model fit object returned by \code{\link{get_fit}} function.
-#' @param valid_data ...
-#' @param predict_only_best_model ... Not implemented ...
+#' @param valid_data Subject-specific holdout (validation) data for which predictions should be obtained.
+#' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
+#' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
+#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
+#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 #' @export
-predict_growthcurve_holdout <- function(modelfit, valid_data, predict_only_best_model = TRUE, verbose = getOption("growthcurveSL.verbose")) {
+predict_holdouts <- function(modelfit, valid_data, predict_only_bestK_models, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
+  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
-
-  if (missing(valid_data)) {
-    OData_valid <- modelfit$OData_valid
-  } else {
-    OData_valid <- importData(data = valid_data, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
-    # Get predictions for holdout data only when new validation set was provided:
-    modelfit$predict(newdata = OData_valid)
-    # modelfit$predict(newdata = OData_valid, subset_exprs = subset_exprs)
-  }
-
-  holdoutDT <- OData_valid$dat.sVar[, c(nodes$IDnode, modelfit$predvars, nodes$Ynode, modelfit$OData_train$hold_column), with = FALSE]
-  holdoutDT[, (colnames(modelfit$getprobA1)) := as.data.table(modelfit$getprobA1)]
-  # MSE <- modelfit$evalMSE(OData_valid)
-  print("MSE: "); print(unlist(modelfit$getMSE))
-  return(holdoutDT)
+  if (missing(valid_data)) valid_data <- modelfit$OData_valid$dat.sVar
+  return(predict_model(modelfit = modelfit, newdata = valid_data, predict_only_bestK_models, evalMSE = TRUE, add_subject_data = add_subject_data))
 }
 
 # ---------------------------------------------------------------------------------------
-#' Define and fit growth models with cross-validation.
+#' Define and fit growth models with full cross-validation.
 #'
 #' @param ID A character string name of the column that contains the unique subject identifiers.
 #' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
@@ -156,7 +148,7 @@ predict_growthcurve_holdout <- function(modelfit, valid_data, predict_only_best_
 # @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
-fit_growthcurveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = NULL, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+fit_growthSL_CV <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = NULL, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)
@@ -205,38 +197,30 @@ fit_growthcurveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_c
 #' Predict for cross-validation sets
 #'
 #' @param modelfit Model fit object returned by \code{\link{get_fit}} function.
-#' @param valid_data ...
-#' @param predict_only_best_model ... Not implemented ...
+#' @param valid_data New validation data for external CV
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-#' @return ...
+#' @return new CV-based MSEs
 #' @export
-predict_growthcurveSL <- function(modelfit, valid_data, predict_only_best_model = TRUE, verbose = getOption("growthcurveSL.verbose")) {
+score_CVgrowthcurveSL <- function(modelfit, valid_data, verbose = getOption("growthcurveSL.verbose")) {
+  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose
-
-  ## 1. Get OData_train from modelfit
+  ## Get OData_train from modelfit
   OData_train <- modelfit$OData_train
   nodes <- OData_train$nodes
-
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
-
   if (missing(valid_data)) {
     # DO NOT RESCORE, USE LAST CV PREDICTIONS INSTEAD
     OData_valid <- modelfit$OData_valid
   } else {
+    # RE-SCORE THE CV MODELS BASED ON NEW VALIDATION DATA
     OData_valid <- importData(data = valid_data, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
-    ## 2. Get predictions for each CV model based on external validation CV:
+    ## Rescore the model based on CV fold predictions (out of sample) based on external validation set:
     t_CV <- system.time(
       modelfit <- modelfit$score_CV(validation_data = OData_valid)
     )
     print("t_CV: "); print(t_CV)
   }
-
-  # 3. Obtain the CV-based MSE
-  # Get predictions for validation data based on holdout CV models:
-  holdoutDT <- OData_valid$dat.sVar[, c(nodes$IDnode, modelfit$predvars, nodes$Ynode, OData_train$fold_column), with = FALSE]
-  holdoutDT[, (colnames(modelfit$getprobA1)) := as.data.table(modelfit$getprobA1)]
-  # MSE <- modelfit$evalMSE(OData_valid)
   print("MSE: "); print(unlist(modelfit$getMSE))
-  return(holdoutDT)
+  return(modelfit$getMSE)
 }

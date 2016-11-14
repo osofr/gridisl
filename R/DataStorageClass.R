@@ -168,58 +168,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       invisible(self)
     },
 
-    # # taken from hbgd R package:
-    # add_holdout_ind = function(hold_column = "hold", random = TRUE, seed = NULL) {
-    #   if (!is.null(seed)) set.seed(as.numeric(seed))
-    #   if (hold_column %in% names(self$dat.sVar)) {
-    #     self$dat.sVar[, (hold_column) := NULL]
-    #   }
-    #   samplemax2 <- function(x) {
-    #     if (x == 1L) {
-    #       return(FALSE)
-    #     } else {
-    #       res <- rep.int(FALSE, x)
-    #       res[ length(res) ] <- TRUE
-    #       return(res)
-    #     }
-    #   }
-
-    #   samplerandom2 <- function(x) {
-    #     if (x == 1L) {
-    #       return(FALSE)
-    #     } else {
-    #       res <- rep.int(FALSE, x)
-    #       res[ sample((1:x), 1) ] <- TRUE
-    #       return(res)
-    #     }
-    #   }
-
-    #   if (random) {
-    #     self$dat.sVar[, (hold_column) := samplerandom2(.N), by = eval(self$nodes$IDnode)]
-    #   } else {
-    #     self$dat.sVar[, (hold_column) := samplemax2(.N), by = eval(self$nodes$IDnode)]
-    #   }
-    #   self$hold_column <- hold_column
-
-    #   return(invisible(self))
-    # },
-
-    # define_CVfolds = function(nfolds = 5, fold_column = "fold_id", seed = 1) {
-    #   if (fold_column %in% names(self$dat.sVar)) {
-    #     self$dat.sVar[, (fold_column) := NULL]
-    #   }
-    #   nuniqueIDs <- self$nuniqueIDs
-    #   if (is.numeric(seed)) set.seed(seed)  #If seed is specified, set seed prior to next step
-    #   fold_id <- as.factor(sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds (stratified folds not yet supported)
-    #   foldsDT <- data.table("ID" = unique(self$dat.sVar[[self$nodes$IDnode]]), fold_column = fold_id)
-    #   setnames(foldsDT, old = names(foldsDT), new = c(self$nodes$IDnode, fold_column))
-    #   setkeyv(foldsDT, cols = self$nodes$IDnode)
-    #   self$dat.sVar <- merge(self$dat.sVar, foldsDT, by = self$nodes$IDnode, all.x = TRUE)
-    #   self$fold_column <- fold_column
-    #   self$nfolds <- nfolds
-    #   return(invisible(self))
-    # },
-
     # -----------------------------------------------------------------------------
     # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
     # -----------------------------------------------------------------------------

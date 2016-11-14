@@ -99,24 +99,5 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       lapply(self$PredictionModels, function(PredictionModel) PredictionModel$wipe.alldat())
       return(self)
     }
-    # emptymodelfit = function() { self$ModelFitObject$emptymodelfit },
-    # getprobA1 = function() { private$probA1 },
-    # getsubset = function() { self$subset_idx },
-    # getoutvarnm = function() { self$outvar },
-    # getoutvarval = function() { self$ModelFitObject$getY },
-    # getMSE = function() { private$MSE[["MSE_mean"]] },
-    # getMSEvar = function() { private$MSE[["MSE_var"]] },
-    # getMSEsd = function() { private$MSE[["MSE_sd"]] },
-    # getvar = function() { private$MSE[["var"]] },
-    # getfit = function() { self$ModelFitObject$model.fit },
-    # getmodel_ids = function() { self$ModelFitObject$getmodel_ids },
-    # getmodel_algorithms = function() { self$ModelFitObject$getmodel_algorithms }
   )
-  # ,
-  # private = list(
-  #   # model.fit = list(),   # the model fit (either coefficients or the model fit object)
-  #   # MSE = list(),
-  #   # probA1 = NULL,    # Predicted probA^s=1 conditional on Xmat
-  #   # probAeqa = NULL   # Likelihood of observing a particular value A^s=a^s conditional on Xmat
-  # )
 )

@@ -3,7 +3,7 @@ h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negati
 
 # Train a model using a single h2o learner (user-spec) with cross-validation & keep CV predictions
 #' @export
-SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial", fold_column, model_contrl, validationH2Oframe = NULL, ...) {
+SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial", fold_column, model_contrl, validation_frame = NULL, ...) {
   # if (is.numeric(seed)) set.seed(seed)  #If seed given, set seed prior to next step
   # h2o.no_progress()
   learner_fun <- match.fun(learner)
@@ -22,7 +22,7 @@ SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial",
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = learner_fun)
 
-  if (!is.null(validationH2Oframe)) mainArgs$validation_frame <- validationH2Oframe
+  if (!is.null(validation_frame)) mainArgs$validation_frame <- validation_frame
 
   if (("x" %in% names(formals(learner))) && (as.character(formals(learner)$x)[1] != "")) {
     # Special case where we pass a subset of the colnames, x, in a custom learner function wrapper
@@ -48,7 +48,7 @@ SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial",
 # S3 method for h2o deeplearning fit, takes BinDat data object:
 # use "bernoulli" when doing classification and use "gaussian" when doing regression
 #' @export
-SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomial", fold_column, model_contrl, validationH2Oframe  = NULL, ...) {
+SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomial", fold_column, model_contrl, validation_frame  = NULL, ...) {
   # h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                   intercept = TRUE,
@@ -69,7 +69,7 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
   algo_fun_name <- "h2o."%+%grid.algorithm
   if (!exists(algo_fun_name)) stop("could not locate the function %+% " %+% grid.algorithm)
 
-  if (!is.null(validationH2Oframe)) mainArgs$validation_frame <- validationH2Oframe
+  if (!is.null(validation_frame)) mainArgs$validation_frame <- validation_frame
 
   algo_fun <- get0(algo_fun_name, mode = "function", inherits = TRUE)
   mainArgs <- keep_only_fun_args(mainArgs, fun = algo_fun)   # Keep only the relevant args in mainArgs list:

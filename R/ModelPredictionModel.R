@@ -65,6 +65,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     subset_vars = NULL,     # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
     subset_exprs = NULL,     # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
     subset_idx = NULL,      # Logical vector of length n (TRUE = include the obs)
+    subset_train = NULL,
     ReplMisVal0 = logical(),
 
     initialize = function(reg, ...) {
@@ -141,6 +142,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (!is.null(validation_data)) self$OData_valid <- validation_data
 
       self$define.subset.idx(data)
+      self$subset_train <- self$subset_idx
       model.fit <- self$ModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, validation_data = validation_data, ...)
 
       if (inherits(model.fit, "try-error")) {
@@ -160,11 +162,11 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
     # Predict the response E[Y|newdata];
     predict = function(newdata, subset_vars, subset_exprs, predict_model_names, MSE = TRUE, ...) {
-      if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
+      if (!self$is.fitted) stop("Please fit the model prior to attempting to make predictions.")
 
-      if (missing(newdata) && is.null(private$probA1)) {
-        private$probA1 <- self$ModelFitObject$predictP1(subset_idx = self$subset_idx, predict_model_names = predict_model_names)
-
+      # if (missing(newdata) && is.null(private$probA1)) {
+      if (missing(newdata)) {
+        private$probA1 <- self$ModelFitObject$predictP1(subset_idx = self$subset_train, predict_model_names = predict_model_names)
       } else {
         if (!missing(subset_vars)) self$subset_vars <- subset_vars
         if (!missing(subset_exprs)) self$subset_exprs <- subset_exprs
@@ -253,7 +255,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     # return top K model objects ranked by prediction MSE on a holdout (CV) fold
     # ------------------------------------------------------------------------------
     get_best_models = function(K = 1) {
-      top_model_names <- get_best_model_names(K)
+      top_model_names <- self$get_best_model_names(K)
       message("fetching top " %+% K %+% " models ranked by the smallest holdout / validation MSE")
       return(self$getmodel_byname(top_model_names))
     },
