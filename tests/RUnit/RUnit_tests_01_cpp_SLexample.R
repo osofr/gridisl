@@ -30,7 +30,7 @@ test.genericfit_FACE_BS <- function() {
 }
 
 test.holdoutfit_FACE_BS <- function() {
-  # library("growthcurveSL")
+  library("growthcurveSL")
   options(growthcurveSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]

@@ -22,11 +22,12 @@ if(FALSE) {
   devtools::build(args = "--compact-vignettes") # build package tarball compacting vignettes
 
   # check reverse dependencies:
-  devtools::revdep(dependencies = c("Depends", "Imports", "Suggests", "LinkingTo"),
-                    recursive = FALSE, ignore = NULL)
+  devtools::revdep(dependencies = c("Depends", "Imports", "Suggests", "LinkingTo"), recursive = FALSE, ignore = NULL)
   res <- devtools::revdep_check()
   devtools::revdep_check_summary(res)
   # revdep_check_save_logs(res)
+
+  # devtools::install_github('osofr/growthcurveSL', build_vignettes = FALSE, dependencies = FALSE)
 
   setwd("..")
 }

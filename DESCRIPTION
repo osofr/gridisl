@@ -23,7 +23,6 @@ Imports:
 LinkingTo: Rcpp
 Suggests:
     h2o,
-    h2oEnsemble,
     face,
     knitr,
     magrittr,

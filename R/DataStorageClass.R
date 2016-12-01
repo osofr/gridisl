@@ -33,6 +33,7 @@ add_CVfolds_ind = function(data, ID, nfolds = 5, fold_column = "fold", seed = NU
 #' If FALSE then the last observation for each subject is selected as a holdout.
 #' @param seed Random number seed for selecting a random holdout.
 #' @return An input data with added holdout indicator column (TRUE for holdout observation indicator, FALSE for training observation indicator).
+#' @export
 add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed = NULL) {
   data <- data.table::data.table(data)
   data.table::setkeyv(data, cols = ID)
