@@ -11,12 +11,12 @@ opts_chunk$set(fig.path = figure.dir, comment = NA)
 
 panderOptions("table.split.table", Inf)
 
-#'
-#' Number of unique independent units in the input data:
-{{prettyNum(OData$nuniqueIDs, big.mark = ",", scientific = FALSE)}}
-#'
-#' Number of person-time observations in the input data:
-{{prettyNum(OData$nobs, big.mark = ",", scientific = FALSE)}}
+#
+# Number of unique independent units in the input data:
+# {{prettyNum(OData$nuniqueIDs, big.mark = ",", scientific = FALSE)}}
+#
+# Number of person-time observations in the input data:
+# {{prettyNum(OData$nobs, big.mark = ",", scientific = FALSE)}}
 
 #'
 #' ## Model Performance Based on MSE for Holdout / Validation Data

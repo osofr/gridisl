@@ -164,7 +164,7 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
       return(self$model.fit)
     },
 
-    predictP1 = function(data, subset_idx) {
+    predictP1 = function(data, subset_idx, ...) {
       predict.w.Y <- self$model_contrl$predict.w.Y
       if (is.null(predict.w.Y)) predict.w.Y <- FALSE
       P1 <- predictP1(self$model.fit,

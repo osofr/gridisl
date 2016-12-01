@@ -76,7 +76,7 @@ fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar") {
   tmpf <- tempfile(fileext = ".csv")
   assertthat::assert_that(is.data.table(dat.sVar))
 
-  data.table::fwrite(dat.sVar, tmpf, turbo = TRUE, verbose = TRUE, na = "NA_h2o")
+  data.table::fwrite(dat.sVar, tmpf, verbose = TRUE, na = "NA_h2o")
 
   types <- sapply(dat.sVar, class)
   types <- gsub("integer64", "numeric", types)

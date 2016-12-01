@@ -1,5 +1,117 @@
-test.SL <- function() {
+test.genericfit_FACE_BS <- function() {
   # library("growthcurveSL")
+  options(growthcurveSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  # covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+  # define holdout col:
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  holdout_col <- cpp_holdout[["hold"]]
+
+  run_algo <- function(algo) {
+    mfit_useY <- fit_model(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
+                               train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
+                               params  = list(fit.package = algo, predict.w.Y = TRUE, name = "useY"))
+    fit_preds_1 <- predict_model(mfit_useY, newdata = cpp)
+    # print(head(fit_preds_1[]))
+    print(mfit_useY$getMSE)
+
+    mfit_cor <- fit_model(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
+                               train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
+                               params  = list(fit.package = algo, predict.w.Y = FALSE, name = "correct"))
+    print(mfit_cor$getMSE)
+    fit_preds_2 <- predict_model(mfit_cor, newdata = cpp)
+    # print(head(fit_preds_2[]))
+  }
+
+  run_algo("face")
+  run_algo("brokenstick")
+
+}
+
+test.holdoutfit_FACE_BS <- function() {
+  # library("growthcurveSL")
+  options(growthcurveSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  # covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+  # define holdout col:
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  holdout_col <- cpp_holdout[["hold"]]
+
+  run_algo <- function(algo) {
+    # Fit, training on non-holdouts and using holdouts as validation set (for scoring only)
+    mfit_useY_hold <- fit_growthSL_holdout(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
+                                                data = cpp_holdout, hold_column = "hold",
+                                                params = list(fit.package = algo, predict.w.Y = TRUE, name = "useY"))
+    print("Holdout MSE, using the holdout Y for prediction"); print(mfit_useY_hold$modelfit$getMSE)
+    # FACE MSE: [1] 0.2271609
+    # BS MSE: [1] 0.02650036
+    # predict for previously used holdout / validation set:
+    preds_holdout_1 <- predict_holdouts(mfit_useY_hold)
+    print(nrow(preds_holdout_1))     # [1] 453
+    print(head(preds_holdout_1[]))
+    #       face.useY
+    # [1,]  1.1349727
+    # [2,] -0.9447051
+    # [3,]  0.4762184
+    # [4,]  0.6611348
+    # [5,]  1.3357934
+    # [6,]  0.6251740
+    #      brokenstick.useY
+    # [1,]        1.2869520
+    # [2,]       -1.3341364
+    # [3,]        0.6166304
+    # [4,]        0.8225809
+    # [5,]        1.1366634
+    # [6,]        0.5201101
+
+    mfit_cor_hold <- fit_growthSL_holdout(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
+                                               data = cpp_holdout, hold_column = "hold",
+                                               params = list(fit.package = algo, predict.w.Y = FALSE, name = "correct"))
+    print("Holdout MSE, hiding the holdout Y for prediction"); print(mfit_cor_hold$modelfit$getMSE)
+    # FACE MSE: [1] 1.211989
+    # BS MSE: [1] 1.186241
+
+    # predict for previously used holdout / validation set:
+    preds_holdout_2 <- predict_holdouts(mfit_cor_hold)
+    print(nrow(preds_holdout_2)) # [1] 453
+    print(head(preds_holdout_2[]))
+    #      face.correct
+    # [1,]    0.8130066
+    # [2,]   -0.5080113
+    # [3,]    0.3607981
+    # [4,]    0.6898970
+    # [5,]    1.4985014
+    # [6,]    0.8654325
+    #          brokenstick.correct
+    # [1,]           0.5584825
+    # [2,]          -0.7488577
+    # [3,]           0.6277059
+    # [4,]           1.0331509
+    # [5,]           1.0495770
+    # [6,]           0.8009358
+    return(list(mfit_useY_hold =  mfit_useY_hold, mfit_cor_hold =  mfit_cor_hold))
+  }
+
+  res_FACE <- run_algo("face")
+  res_BS <- run_algo("brokenstick")
+
+  mfits_stack <- make_PredictionStack(res_BS$mfit_useY_hold$modelfit, res_BS$mfit_cor_hold$modelfit, res_FACE$mfit_useY_hold$modelfit, res_FACE$mfit_cor_hold$modelfit)
+  print(mfits_stack$get_best_MSEs(K = 2))
+  print(mfits_stack$get_best_MSE_table(K = 2))
+  make_report_rmd(mfits_stack, K = 2, file.name = paste0("BS_ALL_", getOption("growthcurveSL.file.name")), format = "html", openFile = TRUE)
+
+  # get the model objects for top K models:
+  top_model <- mfits_stack$get_best_models(K = 1)
+  mfits_stack$show(model_stats = TRUE, all_fits = TRUE)
+  # fetch the model fits directly:
+  res_BS$mfit_useY_hold$modelfit$getfit
+
+}
+
+test.SL <- function() {
+  library("growthcurveSL")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
   # h2o::h2o.init(nthreads = 32, max_mem_size = "40G")
@@ -12,6 +124,7 @@ test.SL <- function() {
   # define holdout col:
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   holdout_col <- cpp_holdout[["hold"]]
+
   ## ----------------------------------------------------------------
   ## Define learners (glm, grid glm and grid gbm)
   ## ----------------------------------------------------------------
@@ -42,39 +155,39 @@ test.SL <- function() {
                              train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
                              params  = GRIDparams)
 
-  # return predictions for all models in the ensemble
+  ## return predictions for all models in the ensemble
   fit_preds <- predict_model(grid_mfit_val, newdata = cpp)
   head(fit_preds[])
-  # + add subject-level features to predictions
+  ## + add subject-level features to predictions
   fit_preds <- predict_model(grid_mfit_val, newdata = cpp, add_subject_data = TRUE)
   fit_preds[]
-  # Without newdata predictions for training data are returned:
+  ## Without newdata predictions for training data are returned:
   fit_preds_nonew <- predict_model(grid_mfit_val)
   head(fit_preds_nonew); nrow(fit_preds_nonew)
-  # + subject spec data:
+  ## + subject spec data:
   fit_preds_nonew <- predict_model(grid_mfit_val, add_subject_data = TRUE)
   fit_preds_nonew[]
 
-  # just return a K column matrix of predictions for top K models (ranked by validation MSE)
+  ## just return a K column matrix of predictions for top K models (ranked by validation MSE)
   fit_preds_best <- predict_model(grid_mfit_val, newdata = cpp, predict_only_bestK_models = 1)
   head(fit_preds_best[])
-  # + subj-spec data
+  ## + subj-spec data
   fit_preds_best <- predict_model(grid_mfit_val, newdata = cpp, predict_only_bestK_models = 1, add_subject_data = TRUE)
   fit_preds_best[]
 
-  # Same without newdata, predict for training data
+  ## Same without newdata, predict for training data
   fit_preds_best_nonew <- predict_model(grid_mfit_val, predict_only_bestK_models = 1)
   head(fit_preds_best_nonew[])
-  # + subj-spec data
+  ## + subj-spec data
   fit_preds_best_nonew <- predict_model(grid_mfit_val, predict_only_bestK_models = 1, add_subject_data = TRUE)
   fit_preds_best_nonew[]
 
-  # get the model objects for top K models:
+  ## get the model objects for top K models:
   top_model <- grid_mfit_val$get_best_models(K = 1)
 
   grid_mfit_val$show(model_stats = TRUE, all_fits = TRUE)
 
-  # fetch the model fits directly:
+  ## fetch the model fits directly:
   model_1 <- grid_mfit_val$getfit$fitted_models_all[[1]]
 
   ## ----------------------------------------------------------------
@@ -140,31 +253,31 @@ test.growthSL <- function() {
                    glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
                    stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
 
-  # add holdout indicator column
+  ## add holdout indicator column
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
 
-  # fit, training on non-holdouts and using holdouts as validation set (for scoring only)
+  ## fit, training on non-holdouts and using holdouts as validation set (for scoring only)
   mfit_hold <- fit_growthSL_holdout(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                                     data = cpp_holdout, params = GRIDparams,
                                     hold_column = "hold")
 
-  # predict for previously used holdout / validation set:
+  ## predict for previously used holdout / validation set:
   preds_holdout_all <- predict_holdouts(mfit_hold)
   head(preds_holdout_all[])
-  # predict for best model only (based on prev. holdouts)
+  ## predict for best model only (based on prev. holdouts)
   preds_holdout_best <- predict_holdouts(mfit_hold, predict_only_bestK_models = 1)
   head(preds_holdout_best[])
-  # add subject-level data to prediction data
+  ## add subject-level data to prediction data
   preds_holdout_best <- predict_holdouts(mfit_hold, predict_only_bestK_models = 1, add_subject_data = TRUE)
   head(preds_holdout_best[])
-  # Obtain predictions from the best holdout model for all training data points:
+  ## Obtain predictions from the best holdout model for all training data points:
   preds_holdout_train <- predict_model(mfit_hold, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_holdout_train[]
-  # Obtain predictions from the best holdout model for all data:
+  ## Obtain predictions from the best holdout model for all data:
   preds_holdout_cpp <- predict_model(mfit_hold, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_holdout_cpp[]
 
-  # fit the model based on additional special features (summaries) of the outcomes:
+  ## fit the model based on additional special features (summaries) of the outcomes:
   mfit_hold2 <- fit_growthSL_holdout(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                                      data = cpp_holdout, params = GRIDparams,
                                      hold_column = "hold", use_new_features = TRUE)
@@ -172,15 +285,16 @@ test.growthSL <- function() {
   preds_holdout2 <- predict_holdouts(mfit_hold2, add_subject_data = TRUE)
   preds_holdout2[]
 
-  # DOES NOT WORK RIGHT NOW, SINCE IT DOESN'T KNOW HOW TO DEFINE THE SPECIAL FEATURES!!!!!
+  ## DOES NOT WORK RIGHT NOW, SINCE IT DOESN'T KNOW HOW TO DEFINE THE SPECIAL FEATURES!!!!!
   preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_holdout2_alldat[]
-  # HAVE TO FIRST MANUALLY DEFINE FEATURES FOR ENTIRE DATASET:
+
+  ## HAVE TO FIRST MANUALLY DEFINE FEATURES FOR ENTIRE DATASET:
   cpp_plus <- define_features(cpp_holdout, nodes = mfit_hold2$modelfit$OData_train$nodes, train_set = TRUE, holdout = FALSE)
   preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp_plus, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_holdout2_alldat[]
 
-  # ask the function to create the random holdouts internally:
+  ## ask the function to create the random holdouts internally:
   mfit_hold3 <- fit_growthSL_holdout(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                                      data = cpp_holdout, params = GRIDparams,
                                      random = TRUE, use_new_features = TRUE)
@@ -188,36 +302,36 @@ test.growthSL <- function() {
   head(preds_holdout3[])
 
   modelfit <- mfit_hold3$modelfit
-  # get 3 top performing models:
+  ## get 3 top performing models:
   models <- modelfit$get_best_models(K = 1)
 
   ## ------------------------------------------------------------------------------------
   ## Fitting with model scoring based on full V-FOLD CROSS-VALIDATION
   ## ------------------------------------------------------------------------------------
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
-  # CV with manually defined fold column
+  ## CV with manually defined fold column
   mfit_cv1 <- fit_growthSL_CV(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                               data = cpp_folds, params = GRIDparams, fold_column = "fold")
-  # No re-scoring (use previous validation data)
+  ## No re-scoring (use previous validation data)
   MSE_cv1_a <- score_CVgrowthcurveSL(modelfit)
 
-  # ****** DOESN'T WORK ******
-  # Re-score on new validation data:
+  ## ****** DOESN'T WORK ******
+  ## Re-score on new validation data:
   MSE_cv1_b <- score_CVgrowthcurveSL(modelfit, mfit_cv1$valid_data)
 
-  # USE SPECIAL FEATURES WHEN MODEL FITTING
+  ## USE SPECIAL FEATURES WHEN MODEL FITTING
   mfit_cv2 <- fit_growthSL_CV(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                               data = cpp_folds, params = GRIDparams,
                               fold_column = "fold", use_new_features = TRUE)
 
-  # WORKS
+  ## WORKS
   preds_cv2_a <- score_CVgrowthcurveSL(mfit_cv2$modelfit)
-  # WORKS
+  ## WORKS
   preds_cv2_b <- score_CVgrowthcurveSL(mfit_cv2$modelfit, mfit_cv2$valid_data)
-  # WORKS
+  ## WORKS
   preds_cv2_check <- score_CVgrowthcurveSL(mfit_cv2$modelfit, mfit_cv2$train_data)
 
-  # Internally define folds for CV
+  ## Internally define folds for CV
   mfit_cv3 <- fit_growthSL_CV(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                               data = cpp_holdout, params = GRIDparams,
                               nfolds = 5, use_new_features = TRUE)
@@ -229,10 +343,13 @@ test.growthSL <- function() {
   models <- modelfit$get_best_models(K = 3)
 
 
-  # CV SCORING that uses the exact training data with features based on holdout observation outcome
-  # THESE predictions should be equivalent to internal h2o prediction for out-of-sample CV folds
+  ## CV SCORING that uses the exact training data with features based on holdout observation outcome
+  ## THESE predictions should be equivalent to internal h2o prediction for out-of-sample CV folds
   preds_cv3_check <- score_CVgrowthcurveSL(mfit_cv3$modelfit, mfit_cv3$train_data)
 
+  ## ***************************************************************************************************************************
+  ## *********************************** ADD EXAMPLE WITH PREDICT MODEL ********************************************************
+  ## ***************************************************************************************************************************
 
   ## ------------------------------------------------------------------------------------
   ## CHECKING CV IMPLEMENTATION VS. INTERNAL H2O CV
