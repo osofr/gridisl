@@ -80,15 +80,12 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   ## Define R6 regression class (specify subset_exprs to select only specific obs during fitting, e.g., only non-holdouts)
   regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, model_contrl = params)
   # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, subset_exprs = list("!hold"), model_contrl = params)
-
   ## Define a modeling object, perform fitting (real data is being passed for the first time here):
   modelfit <- PredictionModel$new(reg = regobj)$fit(data = OData_train, validation_data = OData_valid)
-
   ## ------------------------------------------------------------------------------------------
   ## If validation data supplied, score the models based on validation set as well
   ## ------------------------------------------------------------------------------------------
   if (!is.null(OData_valid)) preds <- modelfit$predict(newdata = OData_valid)
-
   ## ------------------------------------------------------------------------------------------
   ## If CV was used, then score the models based on CV out-of-sample predictions
   ## ------------------------------------------------------------------------------------------
@@ -96,7 +93,6 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
     mse <- eval_MSE_CV(modelfit, yvals = OData_train$dat.sVar[[nodes$Ynode]])
     print("Mean cross-validated MSE by model: "); print(data.frame(mse))
   }
-
   return(modelfit)
 }
 

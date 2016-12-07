@@ -12,7 +12,6 @@ predict_fullcurve <- function(OData, tmin, tmax, modelIDs, verbose = getOption("
   nodes <- OData$nodes
   modelfit <- OData$modelfit
   sel_vars <- c(nodes$IDnode, nodes$tnode, nodes$Lnodes, unlist(OData$new.factor.names), nodes$Ynode)
-  # browser()
 
   if (missing(tmin)) tmin <- OData$min.t
   if (missing(tmax)) tmax <- min(OData$max.t, 700)
@@ -25,8 +24,6 @@ predict_fullcurve <- function(OData, tmin, tmax, modelIDs, verbose = getOption("
 
   gridDT <- OData$dat.sVar[, sel_vars, with = FALSE][gridDT, roll = TRUE]
   gridDT <- OData$dat.sVar[][gridDT, roll = TRUE]
-
-  # gridDT[1:100, ]
 
   newOData <- OData$clone()
   newOData$dat.sVar <- gridDT
@@ -65,7 +62,108 @@ predict_fullcurve <- function(OData, tmin, tmax, modelIDs, verbose = getOption("
 # @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
-fit_growthSL_holdout <- function(ID, t_name, x, y, data, params, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+  gvars$verbose <- verbose
+  nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
+  orig_colnames <- colnames(data)
+
+  if (is.null(hold_column)) {
+    hold_column <- "hold"
+    message("...selecting holdout observations...")
+    data <- add_holdout_ind(data, ID, hold_column = hold_column, random = random, seed = seed)
+  }
+  params$hold_column <- hold_column
+  train_data <- data[!data[[hold_column]], ]
+
+  ## ------------------------------------------------------------------------------------------
+  ## Define training data summaries (excludes holdouts, summaries are created without the holdout observations):
+  ## ------------------------------------------------------------------------------------------
+  train_data <- define_features(train_data, nodes, train_set = TRUE, holdout = TRUE, hold_column = hold_column)
+  if (!is.null(expr_to_train)) train_data <- train_data[eval(parse(text=expr_to_train)), ]
+
+  ## ------------------------------------------------------------------------------------------
+  ## Define validation data (includes the holdout only, each summary is created without the holdout observation):
+  ## ------------------------------------------------------------------------------------------
+  valid_data <- define_features(data, nodes, train_set = FALSE, hold_column = hold_column)
+  valid_data <- valid_data[valid_data[[hold_column]], ]
+
+  ## ------------------------------------------------------------------------------------------
+  ## Add new features as predictors?
+  ## ------------------------------------------------------------------------------------------
+  if (use_new_features) {
+    new_features <- setdiff(colnames(train_data), c(orig_colnames, hold_column))
+    x <- c(x, new_features)
+  }
+
+  ## ------------------------------------------------------------------------------------------
+  ## Perfom fitting based on training set (and model scoring based on holdout validation set)
+  ## ------------------------------------------------------------------------------------------
+  modelfit <- fit_model(ID, t_name, x, y, train_data = train_data, valid_data = valid_data, params = params)
+
+  ## ------------------------------------------------------------------------------------------
+  ## Re-fit the best scored model using all available data
+  ## ------------------------------------------------------------------------------------------
+  ## Define training data summaries (using all observations):
+  data <- define_features(data, nodes, train_set = TRUE, holdout = FALSE)
+  OData_all <- importData(data = data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
+  best_fit <- modelfit$refit_best_model(OData_all)
+  return(list(modelfit = modelfit, train_data = train_data, valid_data = valid_data))
+}
+
+# ---------------------------------------------------------------------------------------
+#' Prediction for holdout SuperLearner fit
+#'
+#' @param modelfit Model fit object returned by \code{\link{get_fit}} function.
+#' @param newdata Subject-specific holdout (validation) data for which predictions should be obtained.
+#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
+#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @return ...
+#' @export
+predict_holdoutSL <- function(modelfit, newdata, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+  if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
+  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
+  assert_that(is.PredictionModel(modelfit))
+  gvars$verbose <- verbose
+  nodes <- modelfit$OData_train$nodes
+  if (missing(newdata)) {
+    newdata <- modelfit$OData_valid$dat.sVar
+  } else {
+    newdata <- define_features(newdata, nodes, train_set = TRUE, holdout = FALSE)
+  }
+  ## will use the best model retrained on all data for prediction:
+  modelfit$use_best_retrained_model <- TRUE
+  preds <- predict_model(modelfit = modelfit, newdata = newdata, add_subject_data = add_subject_data)
+  modelfit$use_best_retrained_model <- FALSE
+  ## will obtain predictions for all models in the ensemble that were trained on non-holdout observations only:
+  # preds2 <- predict_model(modelfit = modelfit, newdata = newdata, add_subject_data = add_subject_data)
+  return(preds)
+}
+
+# ---------------------------------------------------------------------------------------
+#' Predict for holdout observations only
+#'
+#' @param modelfit Model fit object returned by \code{\link{get_fit}} function.
+#' @param valid_data Subject-specific holdout (validation) data for which predictions should be obtained.
+#' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
+#' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
+#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
+#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @return ...
+predict_holdouts_only <- function(modelfit, predict_only_bestK_models, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+  if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
+  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
+  assert_that(is.PredictionModel(modelfit))
+  gvars$verbose <- verbose
+  nodes <- modelfit$OData_train$nodes
+  valid_data <- modelfit$OData_valid$dat.sVar
+  return(predict_model(modelfit = modelfit, newdata = valid_data, predict_only_bestK_models, evalMSE = TRUE, add_subject_data = add_subject_data))
+}
+
+
+#' @export
+fit_resid_growthSL_holdout <- function(ID, t_name, x, y, data, params, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)
@@ -99,33 +197,23 @@ fit_growthSL_holdout <- function(ID, t_name, x, y, data, params, hold_column = N
   }
 
   ## ------------------------------------------------------------------------------------------
-  ## Perfom fitting (and scoring based on validation set)
+  ## First fit glm on training set alone. Then define new outcome as a residual of glm predictions for entire data
   ## ------------------------------------------------------------------------------------------
-  modelfit <- fit_model(ID, t_name, x, y, train_data = train_data, valid_data = valid_data, params = params)
+  ## will be made into a passable user-defined argument:
+  resid_params <- list(fit.package = "h2o", fit.algorithm = "glm", family = params$family)
+  ## x might be allowed to include add'l user-def covars:
+  modelfit_first <- fit_model(ID, t_name, x = t_name, y, train_data = train_data, params = resid_params)
+  ## save predictions from the first model (fit on training data, but predictions made for all data)
+  train_data[, ("first_preds") := predict_model(modelfit = modelfit_first, newdata = train_data, evalMSE = FALSE)]
+  valid_data[, ("first_preds") := predict_model(modelfit = modelfit_first, newdata = valid_data, evalMSE = FALSE)]
+  ## evaluate the residuals which are to be used as outcomes for the next stage SL
+  train_data[, ("residual_y") := (eval(as.name(y)) - first_preds)]
+  valid_data[, ("residual_y") := (eval(as.name(y)) - first_preds)]
+  ## Fit the holout SL using training model residuals as outcomes:
+  y <- "residual_y" ## redefine the outcome
+  modelfit_resid <- fit_model(ID, t_name, x, y = y, train_data = train_data, valid_data = valid_data, params = params)
 
-  return(list(modelfit = modelfit, train_data = train_data, valid_data = valid_data))
-}
-
-# ---------------------------------------------------------------------------------------
-#' Predict for a holdout set
-#'
-#' @param modelfit Model fit object returned by \code{\link{get_fit}} function.
-#' @param valid_data Subject-specific holdout (validation) data for which predictions should be obtained.
-#' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
-#' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
-#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
-#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-#' @return ...
-#' @export
-predict_holdouts <- function(modelfit, valid_data, predict_only_bestK_models, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
-  if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
-  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
-  assert_that(is.PredictionModel(modelfit))
-  gvars$verbose <- verbose
-  nodes <- modelfit$OData_train$nodes
-  if (missing(valid_data)) valid_data <- modelfit$OData_valid$dat.sVar
-  return(predict_model(modelfit = modelfit, newdata = valid_data, predict_only_bestK_models, evalMSE = TRUE, add_subject_data = add_subject_data))
+  return(list(modelfit = list(modelfit_first = modelfit_first, modelfit_resid = modelfit_resid), train_data = train_data, valid_data = valid_data))
 }
 
 # ---------------------------------------------------------------------------------------

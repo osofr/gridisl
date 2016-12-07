@@ -58,6 +58,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     OData_train = NULL, # object of class DataStorageClass used for training
     OData_valid = NULL, # object of class DataStorageClass used for scoring models
     ModelFitObject = NULL, # object of class ModelFitObject that is used in fitting / prediction
+    use_best_retrained_model = FALSE,
+    BestModelFitObject = NULL,
     fit.package = character(),
     fit.algorithm = character(),
     model_contrl = list(),
@@ -99,30 +101,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (is.null(reg$subset_vars)) {self$subset_vars <- TRUE}
       assert_that(is.logical(self$subset_vars) || is.character(self$subset_vars)) # is.call(self$subset_vars) ||
 
-      # ***************************************************************************
-      # Add any additional options passed on to modeling functions as extra args
-      # ****** NOTE: This needs to be changed to S3 dispatch for greater flexibility ******
-      # ***************************************************************************
-      # class(self$fit.algorithm) <- c(class(self$fit.algorithm), self$fit.package)
-      if (self$fit.package %in% c("h2o", "h2oEnsemble")) {
-        if (self$fit.algorithm %in% "GridLearner") {
-          self$ModelFitObject <- h2oGridModelClass$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, reg = reg, ...)
-        } else {
-          self$ModelFitObject <- h2oModelClass$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, reg = reg, ...)
-        }
-      } else if (self$fit.package %in% c("face")) {
-        self$ModelFitObject <- faceModelClass$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, reg = reg, ...)
-        self$fit.algorithm <- NULL
-        # self$fit.algorithm <- self$fit.package
-      } else if (self$fit.package %in% c("brokenstick")) {
-        self$ModelFitObject <- brokenstickModelClass$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, reg = reg, ...)
-        self$fit.algorithm <- NULL
-        # self$fit.algorithm <- self$fit.package
-      } else {
-        self$ModelFitObject <- glmModelClass$new(fit.algorithm = self$fit.algorithm, fit.package = self$fit.package, reg = reg, ...)
-      }
-
-      self$ModelFitObject$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
+      self$ModelFitObject <- self$define_model_fit_object(self$fit.package, self$fit.algorithm, reg, ...)
 
       if (gvars$verbose) {
         print("New instance of " %+% class(self)[1] %+% " :"); self$show()
@@ -130,9 +109,34 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       invisible(self)
     },
 
-    # if (predict) then use the same data to make predictions for all obs in self$subset_idx;
-    # store these predictions in private$probA1 and private$probAeqa
-    fit = function(overwrite = FALSE, data, predict = FALSE, validation_data = NULL, ...) { # Move overwrite to a field? ... self$overwrite
+    define_model_fit_object = function(fit.package, fit.algorithm, reg, ...) {
+      # ***************************************************************************
+      # Add any additional options passed on to modeling functions as extra args
+      # ****** NOTE: This needs to be changed to S3 dispatch for greater flexibility ******
+      # ***************************************************************************
+      # class(fit.algorithm) <- c(class(fit.algorithm), self$fit.package)
+      if (fit.package %in% c("h2o", "h2oEnsemble")) {
+        if (fit.algorithm %in% "GridLearner") {
+          ModelFitObject <- h2oGridModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+        } else {
+          ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+        }
+      } else if (fit.package %in% c("face")) {
+        ModelFitObject <- faceModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+        fit.algorithm <- NULL
+        # fit.algorithm <- fit.package
+      } else if (fit.package %in% c("brokenstick")) {
+        ModelFitObject <- brokenstickModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+        fit.algorithm <- NULL
+        # fit.algorithm <- fit.package
+      } else {
+        ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+      }
+      ModelFitObject$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
+      return(ModelFitObject)
+    },
+
+    fit = function(overwrite = FALSE, data, validation_data = NULL, ...) { # Move overwrite to a field? ... self$overwrite
       if (gvars$verbose) print("fitting the model: "); self$show()
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
 
@@ -146,18 +150,41 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       model.fit <- self$ModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, validation_data = validation_data, ...)
 
       if (inherits(model.fit, "try-error")) {
-        message("running " %+% self$ModelFitObject$fit.class %+% " with h2o has failed, trying to run speedglm as a backup...")
+        message("running " %+% self$ModelFitObject$fit.class %+% " with h2o has failed, trying speedglm as a backup...")
         self$ModelFitObject <- glmModelClass$new(fit.algorithm = "GLM", fit.package = "speedglm", reg = reg, ...)
         self$ModelFitObject$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
         model.fit <- self$ModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       }
 
       self$is.fitted <- TRUE
+
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       # **********************************************************************
       self$wipe.alldat
       return(invisible(self))
+    },
+
+    refit_best_model = function(data, ...) {
+      if (gvars$verbose) print("refitting the best model: "); self$show()
+      self$define.subset.idx(data)
+
+      ## reset the training data to be all data for future prediction with missing newdata
+      self$OData_train <- data
+      ## reset the subset to include all data that was used for retraining (for automatic future prediction with missing newdata)
+      self$subset_train <- self$subset_idx
+
+      top_model_params <- self$get_best_model_params()
+      best_reg <- RegressionClass$new(outvar = self$outvar, predvars = self$predvars, model_contrl = top_model_params)
+      self$BestModelFitObject <- self$define_model_fit_object(top_model_params$fit.package, top_model_params$fit.algorithm, best_reg)
+      model.fit <- self$BestModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+      if (inherits(model.fit, "try-error")) stop("refitting of the best model failed")
+
+      # **********************************************************************
+      # to save RAM space when doing many stacked regressions wipe out all internal data:
+      # **********************************************************************
+      # self$wipe.alldat
+      return(invisible(model.fit))
     },
 
     # Predict the response E[Y|newdata];
@@ -171,9 +198,14 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         if (!missing(subset_vars)) self$subset_vars <- subset_vars
         if (!missing(subset_exprs)) self$subset_exprs <- subset_exprs
         self$define.subset.idx(newdata)
-        private$probA1 <- self$ModelFitObject$predictP1(data = newdata, subset_idx = self$subset_idx, predict_model_names = predict_model_names)
+
+        if (!self$use_best_retrained_model) {
+          private$probA1 <- self$ModelFitObject$predictP1(data = newdata, subset_idx = self$subset_idx, predict_model_names = predict_model_names)
+        } else {
+          private$probA1 <- self$BestModelFitObject$predictP1(data = newdata, subset_idx = self$subset_idx)
+        }
       }
-      if (MSE) {
+      if (MSE && !self$use_best_retrained_model) {
         test_values <- newdata$get.outvar(self$subset_idx, var = self$outvar)
         private$MSE <- self$evalMSE(test_values)
       }
@@ -261,6 +293,14 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     # ------------------------------------------------------------------------------
+    # return the parameters of the top K models as a list (ranked by prediction MSE on a holdout (CV) fold)
+    # ------------------------------------------------------------------------------
+    get_best_model_params = function(K = 1) {
+      top_model_names <- self$get_best_model_names(K)
+      return(self$ModelFitObject$get_best_model_params(top_model_names))
+    },
+
+    # ------------------------------------------------------------------------------
     # return a data.frame with best mean MSEs, including SDs & corresponding model names
     # ------------------------------------------------------------------------------
     get_best_MSE_table = function(K = 1) {
@@ -319,6 +359,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
           self$ModelFitObject$show(all_fits = all_fits)
         }
         return(invisible(NULL))
+
       } else {
         return(list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs, fit.package = self$fit.package, fit.algorithm = self$fit.algorithm))
       }

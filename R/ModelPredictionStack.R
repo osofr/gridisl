@@ -73,6 +73,16 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       best_models <- best_models[names(self$get_best_MSEs(K))]
       return(best_models)
     },
+
+    # ------------------------------------------------------------------------------
+    # return the parameters of the top K models as a list (ranked by prediction MSE on a holdout (CV) fold)
+    # ------------------------------------------------------------------------------
+    get_best_model_params = function(K = 1) {
+      best_models <- unlist(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_model_params(K = K)))
+      # best_models <- best_models[names(self$get_best_MSEs(K))]
+      return(best_models)
+    },
+
     # ------------------------------------------------------------------------------
     # return a data.frame with best mean MSEs, including SDs & corresponding model names
     # ------------------------------------------------------------------------------

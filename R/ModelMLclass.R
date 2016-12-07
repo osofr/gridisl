@@ -183,8 +183,9 @@ fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_cont
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    ntrees = 100,
-                   balance_classes = TRUE,
-                   ignore_const_cols = FALSE)
+                   # balance_classes = TRUE,
+                   ignore_const_cols = FALSE
+                   )
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.randomForest)
   if (!is.null(validation_frame)) {
@@ -212,8 +213,9 @@ fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, valid
                    distribution = "bernoulli",
                    # distribution = "gaussian",
                    ntrees = 100,
-                   balance_classes = TRUE,
+                   # balance_classes = TRUE,
                    ignore_const_cols = FALSE)
+
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
   if (!is.null(validation_frame)) {
@@ -240,7 +242,7 @@ fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_cont
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    distribution = "bernoulli",
                    # distribution = "gaussian",
-                   balance_classes = TRUE,
+                   # balance_classes = TRUE,
                    ignore_const_cols = FALSE)
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
@@ -322,6 +324,10 @@ h2oGridModelClass  <- R6Class(classname = "h2oModelClass",
         if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
         return(lapply(model_IDs, h2o::h2o.getModel))
       }
+    },
+
+    get_best_model_params = function(model_names) {
+      return(super$get_best_model_params(model_names))
     },
 
     # Output info on the general type of regression being fitted:
@@ -468,6 +474,35 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       }
     },
 
+    get_best_model_params = function(model_names) {
+      # model_obj <- self$model.fit$H2O.model.object
+      model_obj <- self$getmodel_byname(model_names[1])[[1]]
+
+      top_params <- list(fit.package = self$model_contrl$fit.package,
+                         fit.algorithm = model_obj@algorithm)
+
+      # top_params_tmp <- model_obj@parameters ## only the user-set parameters are stored here
+      top_params_tmp <- model_obj@allparameters ## alternative is to grab the exact params used in the model, including defaults
+
+      top_params_tmp$model_id <- NULL
+      top_params_tmp$training_frame <- NULL
+      top_params_tmp$validation_frame <- NULL
+      top_params_tmp$x <- NULL
+      top_params_tmp$y <- NULL
+      top_params_tmp$nfolds <- NULL
+      top_params_tmp$fold_column <- NULL
+      top_params_tmp$fold_assignment <- NULL
+
+      top_params <- c(top_params, top_params_tmp)
+
+      ## don't use all the rest of the parameters in model control that are specific to grid search:
+      # best_params <- self$model_contrl
+      # best_params$fit.algorithm <- model_obj@algorithm
+      # top_params <- c(best_params, top_params)
+
+      return(top_params)
+    },
+
     setdata = function(data, subset_idx, classify = FALSE, destination_frame = "newH2Osubset", ...) {
       outvar <- self$outvar
       predvars <- self$predvars
@@ -501,6 +536,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       }
       return(subsetH2Oframe)
     },
+
     show = function(all_fits = FALSE, ...) {
       print(self$model.fit)
       return(invisible(NULL))
@@ -527,6 +563,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
         return(self$model.fit$model_ids)
       }
     },
+
     getmodel_algorithms = function() { self$model.fit$model_algorithms }
   ),
 
