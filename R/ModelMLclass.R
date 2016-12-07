@@ -216,7 +216,6 @@ fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, valid
                    # balance_classes = TRUE,
                    ignore_const_cols = FALSE)
 
-
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = h2o::h2o.gbm)
   if (!is.null(validation_frame)) {
     mainArgs$validation_frame <- validation_frame
@@ -405,9 +404,10 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       invisible(self)
     },
 
-    fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
+    fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, destination_frame, ...) {
       assert_that(is.DataStorageClass(data))
-      train_H2Oframe <- self$setdata(data, subset_idx, self$classify, destination_frame = "train_H2Oframe", ...)
+      if (missing(destination_frame)) destination_frame <- "train_H2Oframe"
+      train_H2Oframe <- self$setdata(data, subset_idx, self$classify, destination_frame = destination_frame, ...)
       private$train_H2Oframe <- train_H2Oframe
       private$train_H2Oframe_ID <- h2o::h2o.getId(train_H2Oframe)
 

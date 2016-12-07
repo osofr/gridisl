@@ -91,9 +91,9 @@ fit.speedglm <- function(fit.class, fit, Xmat, Yvals, ...) {
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
 predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
-  if (!missing(DataStorageObject)) {
+  # if (!missing(DataStorageObject)) {
     ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE, getXmat = TRUE)
-  }
+  # }
   Xmat <- ParentObject$getXmat
   assert_that(!is.null(Xmat)); assert_that(!is.null(subset_idx))
   # Set to default missing value for A[i] degenerate/degerministic/misval:
@@ -186,7 +186,8 @@ glmModelClass <- R6Class(classname = "glmModelClass",
       return(self$model.fit)
     },
 
-    predictP1 = function(data, subset_idx) {
+    predictP1 = function(data, subset_idx, ...) {
+      if (missing(data)) stop("to obtain predictions with glm must provide newdata")
       P1 <- predictP1(self$model.fit,
                       ParentObject = self,
                       DataStorageObject = data,
@@ -206,9 +207,15 @@ glmModelClass <- R6Class(classname = "glmModelClass",
       return(res)
     },
 
+    get_best_model_params = function(model_names) {
+      top_params <- list(fit.package = self$model_contrl$fit.package,
+                         fit.algorithm = self$model_contrl$fit.algorithm)
+      return(top_params)
+    },
+
     # Sets Xmat, Yvals, evaluates subset and performs correct subseting of data
     # everything is performed using data$ methods (data is of class DataStorageClass)
-    setdata = function(data, subset_idx, getoutvar = TRUE, getXmat = TRUE) {
+    setdata = function(data, subset_idx, getoutvar = TRUE, getXmat = TRUE, ...) {
       assert_that(is.DataStorageClass(data))
       if (getoutvar) private$Yvals <- data$get.outvar(subset_idx, self$outvar) # Always a vector
       if (getXmat) self$define.Xmat(data, subset_idx)
@@ -234,6 +241,7 @@ glmModelClass <- R6Class(classname = "glmModelClass",
       private$Xmat <- Xmat
       return(invisible(self))
     },
+
     show = function(all_fits = FALSE, ...) {
       print(self$model.fit)
       return(invisible(NULL))

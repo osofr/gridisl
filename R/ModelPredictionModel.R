@@ -170,14 +170,14 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       self$define.subset.idx(data)
 
       ## reset the training data to be all data for future prediction with missing newdata
-      self$OData_train <- data
+      # self$OData_train <- data
       ## reset the subset to include all data that was used for retraining (for automatic future prediction with missing newdata)
-      self$subset_train <- self$subset_idx
+      # self$subset_train <- self$subset_idx
 
       top_model_params <- self$get_best_model_params()
       best_reg <- RegressionClass$new(outvar = self$outvar, predvars = self$predvars, model_contrl = top_model_params)
       self$BestModelFitObject <- self$define_model_fit_object(top_model_params$fit.package, top_model_params$fit.algorithm, best_reg)
-      model.fit <- self$BestModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+      model.fit <- self$BestModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, destination_frame = "alldata_H2Oframe", ...)
       if (inherits(model.fit, "try-error")) stop("refitting of the best model failed")
 
       # **********************************************************************

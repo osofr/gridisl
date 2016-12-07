@@ -8,27 +8,28 @@ test.genericfit_FACE_BS <- function() {
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   # covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
   # define holdout col:
-  cpp_holdout <- `(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   holdout_col <- cpp_holdout[["hold"]]
 
-  run_algo <- function(algo) {
+  run_algo <- function(fit.package, fit.algorithm) {
     mfit_useY <- fit_model(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
                                train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
-                               params  = list(fit.package = algo, predict.w.Y = TRUE, name = "useY"))
+                               params  = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = TRUE, name = "useY"))
     fit_preds_1 <- predict_model(mfit_useY, newdata = cpp)
     # print(head(fit_preds_1[]))
     print(mfit_useY$getMSE)
 
     mfit_cor <- fit_model(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
                                train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
-                               params  = list(fit.package = algo, predict.w.Y = FALSE, name = "correct"))
+                               params  = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = FALSE, name = "correct"))
     print(mfit_cor$getMSE)
     fit_preds_2 <- predict_model(mfit_cor, newdata = cpp)
     # print(head(fit_preds_2[]))
   }
 
-  run_algo("face")
-  run_algo("brokenstick")
+  run_algo("face", "face")
+  run_algo("brokenstick", "brokenstick")
+  run_algo("speedglm", "glm")
 
 }
 
@@ -36,7 +37,7 @@ test.genericfit_FACE_BS <- function() {
 ## face / brokenstick based on random holdouts
 ## ------------------------------------------------------------------------------------
 test.holdoutfit_FACE_BS <- function() {
-  library("growthcurveSL")
+  # library("growthcurveSL")
   options(growthcurveSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -45,16 +46,17 @@ test.holdoutfit_FACE_BS <- function() {
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   holdout_col <- cpp_holdout[["hold"]]
 
-  run_algo <- function(algo) {
+  run_algo <- function(fit.package, fit.algorithm) {
+
     # Fit, training on non-holdouts and using holdouts as validation set (for scoring only)
     mfit_useY_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
                                      data = cpp_holdout, hold_column = "hold",
-                                     params = list(fit.package = algo, predict.w.Y = TRUE, name = "useY"))
+                                     params = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = TRUE, name = "useY"))
     print("Holdout MSE, using the holdout Y for prediction"); print(mfit_useY_hold$modelfit$getMSE)
     # FACE MSE: [1] 0.2271609
     # BS MSE: [1] 0.02650036
     # predict for previously used holdout / validation set:
-    preds_holdout_1 <- predict_holdouts_only(mfit_useY_hold)
+    preds_holdout_1 <- growthcurveSL:::predict_holdouts_only(mfit_useY_hold)
     print(nrow(preds_holdout_1))     # [1] 453
     print(head(preds_holdout_1[]))
     #       face.useY
@@ -72,15 +74,22 @@ test.holdoutfit_FACE_BS <- function() {
     # [5,]        1.1366634
     # [6,]        0.5201101
 
+    ## Obtain predictions for model trained on non-holdout obs:
+    preds_holdout_train <- predict_model(mfit_useY_hold, newdata = cpp_holdout, add_subject_data = TRUE)
+    preds_holdout_train[]
+    ## Obtain predictions for a model trained on all data:
+    preds_alldat_train <- predict_holdoutSL(mfit_useY_hold, newdata = cpp_holdout, add_subject_data = TRUE)
+    preds_alldat_train[]
+
     mfit_cor_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
                                     data = cpp_holdout, hold_column = "hold",
-                                    params = list(fit.package = algo, predict.w.Y = FALSE, name = "correct"))
+                                    params = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = FALSE, name = "correct"))
     print("Holdout MSE, hiding the holdout Y for prediction"); print(mfit_cor_hold$modelfit$getMSE)
     # FACE MSE: [1] 1.211989
     # BS MSE: [1] 1.186241
 
     # predict for previously used holdout / validation set:
-    preds_holdout_2 <- predict_holdouts_only(mfit_cor_hold)
+    preds_holdout_2 <- growthcurveSL:::predict_holdouts_only(mfit_cor_hold)
     print(nrow(preds_holdout_2)) # [1] 453
     print(head(preds_holdout_2[]))
     #      face.correct
@@ -97,13 +106,24 @@ test.holdoutfit_FACE_BS <- function() {
     # [4,]           1.0331509
     # [5,]           1.0495770
     # [6,]           0.8009358
+
+    ## Obtain predictions for model trained on non-holdout obs:
+    preds_holdout_train <- predict_model(mfit_cor_hold, newdata = cpp_holdout, add_subject_data = TRUE)
+    preds_holdout_train[]
+    ## Obtain predictions for a model trained on all data:
+    preds_alldat_train <- predict_holdoutSL(mfit_cor_hold, newdata = cpp_holdout, add_subject_data = TRUE)
+    preds_alldat_train[]
+
     return(list(mfit_useY_hold =  mfit_useY_hold, mfit_cor_hold =  mfit_cor_hold))
   }
 
-  res_FACE <- run_algo("face")
-  res_BS <- run_algo("brokenstick")
+  res_FACE <- run_algo("face", "face")
+  res_BS <- run_algo("brokenstick", "brokenstick")
+  res_GLM <- run_algo("speedglm", "glm")
 
-  mfits_stack <- make_PredictionStack(res_BS$mfit_useY_hold$modelfit, res_BS$mfit_cor_hold$modelfit, res_FACE$mfit_useY_hold$modelfit, res_FACE$mfit_cor_hold$modelfit)
+  mfits_stack <- make_PredictionStack(res_BS$mfit_useY_hold$modelfit, res_BS$mfit_cor_hold$modelfit,
+                                      res_FACE$mfit_useY_hold$modelfit, res_FACE$mfit_cor_hold$modelfit,
+                                      res_GLM$mfit_cor_hold$modelfit)
   print(mfits_stack$get_best_MSEs(K = 2))
   print(mfits_stack$get_best_MSE_table(K = 2))
   make_report_rmd(mfits_stack, K = 2, file.name = paste0("BS_ALL_", getOption("growthcurveSL.file.name")), format = "html", openFile = TRUE)
@@ -287,34 +307,31 @@ test.holdoutSL <- function() {
   mfit_hold2 <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                                      data = cpp_holdout, params = GRIDparams,
                                      hold_column = "hold", use_new_features = TRUE)
-  ## Get predictions for all holdout data points:
+
+  ## Predictions for all holdout data points for all models trained on non-holdout data:
   preds_holdout2 <- growthcurveSL:::predict_holdouts_only(mfit_hold2, add_subject_data = TRUE)
   preds_holdout2[]
-
-  ## Obtain predictions from the best holdout model for all data (default in predict_model when newdata is missing is to use last fitted dataset):
+  ## Predictions for training data from models trained on non-holdout data (default):
   preds_holdout_train <- predict_model(mfit_hold2, add_subject_data = TRUE)
   preds_holdout_train[]
   preds_holdout_train <- predict_model(mfit_hold2, predict_only_bestK_models = 2, add_subject_data = TRUE)
   preds_holdout_train[]
-
-  ## --------------------------------------------------------------------------------------------
-  ## Obtain predictions for all observations from the best SL model fit (trained on all data)
-  ## --------------------------------------------------------------------------------------------
+  ## Predictions for new data based on best SL model trained on all data:
   preds_alldat <- predict_holdoutSL(mfit_hold2, newdata = cpp_holdout, add_subject_data = TRUE)
   preds_alldat[]
 
   ## does not work right now, since it doesn't know how to define the special features!!!!!
   preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
-  preds_holdout2_alldat[]
-  ## Insteead, have to first manually define features for entire dataset:
+  ## Instead, have to first manually define features for entire dataset:
   cpp_plus <- define_features(cpp_holdout, nodes = mfit_hold2$modelfit$OData_train$nodes, train_set = TRUE, holdout = FALSE)
   preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp_plus, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_holdout2_alldat[]
 
   ## Ask the fit function to determine random holdouts internally:
   mfit_hold3 <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                                     data = cpp_holdout, params = GRIDparams,
-                                     random = TRUE, use_new_features = TRUE)
+                              data = cpp_holdout, params = GRIDparams,
+                              random = TRUE, use_new_features = TRUE)
+
   preds_holdout3 <- growthcurveSL:::predict_holdouts_only(mfit_hold3$modelfit)
   head(preds_holdout3[])
 
@@ -389,11 +406,6 @@ test.residual.holdoutSL <- function() {
   mfit_resid_hold <- fit_resid_growthSL_holdout(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                                                 data = cpp_holdout, params = GRIDparams,
                                                 hold_column = "hold", use_new_features = TRUE)
-
-
-
-
-
 
 OData_train <- OData$clone()
 OData_train$dat.sVar <- OData$dat.sVar[!OData$dat.sVar[[OData$hold_column]], ]

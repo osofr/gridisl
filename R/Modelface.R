@@ -30,10 +30,11 @@ fit.face <- function(fit.class, fit, subj, argvals, Yvals, knots = NULL, ...) {
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
 predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict.w.Y = FALSE, knots  = NULL, ...) {
-  if (!missing(DataStorageObject)) {
+  # if (!missing(DataStorageObject)) {
     # Will also obtain the outcomes of the prediction set:
     ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
-  }
+  # }
+
 
   model.object <- m.fit$model.object
   fitted.argvals <- m.fit$fitted.argvals
@@ -117,6 +118,7 @@ faceModelClass <- R6Class(classname = "faceModelClass",
     },
 
     predictP1 = function(data, subset_idx, ...) {
+      if (missing(data)) stop("to obtain predictions with face must provide newdata")
       predict.w.Y <- self$model_contrl$predict.w.Y
       if (is.null(predict.w.Y)) predict.w.Y <- FALSE
       P1 <- predictP1(self$model.fit,
@@ -136,6 +138,12 @@ faceModelClass <- R6Class(classname = "faceModelClass",
       res <- list(self$model.fit$model.object)
       names(res) <- model_names
       return(res)
+    },
+
+    get_best_model_params = function(model_names) {
+      top_params <- list(fit.package = self$model_contrl$fit.package,
+                         fit.algorithm = self$model_contrl$fit.algorithm)
+      return(top_params)
     },
 
     # Sets Xmat, Yvals, evaluates subset and performs correct subseting of data

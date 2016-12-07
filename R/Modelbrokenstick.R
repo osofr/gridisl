@@ -81,10 +81,11 @@ fit.brokenstick <- function(fit.class, fit, subject, x, Yvals, knots = NULL, mn 
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
 predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict.w.Y = FALSE, ...) {
-  if (!missing(DataStorageObject)) {
+  # if (!missing(DataStorageObject)) {
     # Will also obtain the outcomes of the prediction set:
-    ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
-  }
+  ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
+  # }
+
   model.object <- m.fit$model.object
   fitted.subject <- m.fit$fitted.subject
   fitted.x <- m.fit$fitted.x
@@ -165,6 +166,7 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
     },
 
     predictP1 = function(data, subset_idx, ...) {
+      if (missing(data)) stop("to obtain predictions with brokenstick must provide newdata")
       predict.w.Y <- self$model_contrl$predict.w.Y
       if (is.null(predict.w.Y)) predict.w.Y <- FALSE
       P1 <- predictP1(self$model.fit,
@@ -184,6 +186,12 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
       res <- list(self$model.fit$model.object)
       names(res) <- model_names
       return(res)
+    },
+
+    get_best_model_params = function(model_names) {
+      top_params <- list(fit.package = self$model_contrl$fit.package,
+                         fit.algorithm = self$model_contrl$fit.algorithm)
+      return(top_params)
     },
 
     # Sets Xmat, Yvals, evaluates subset and performs correct subseting of data
