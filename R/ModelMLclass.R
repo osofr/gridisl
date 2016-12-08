@@ -328,14 +328,15 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       invisible(self)
     },
 
-    fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, destination_frame, ...) {
+    # fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, destination_frame, ...) {
+    fit = function(data, subset_idx, validation_data = NULL, destination_frame, ...) {
       assert_that(is.DataStorageClass(data))
       if (missing(destination_frame)) destination_frame <- "train_H2Oframe"
       train_H2Oframe <- self$setdata(data, subset_idx, self$classify, destination_frame = destination_frame, ...)
       private$train_H2Oframe <- train_H2Oframe
       private$train_H2Oframe_ID <- h2o::h2o.getId(train_H2Oframe)
 
-      if ((length(predvars) == 0L) || (length(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
+      if ((length(self$predvars) == 0L) || (length(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
         message("unable to run " %+% self$fit.class %+% " with h2o for: intercept only models or designmat with zero rows or  constant outcome (y) ...")
         class(self$model.fit) <- "try-error"
         self$emptydata
@@ -353,12 +354,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
         valid_H2Oframe = NULL
       }
 
-      # self$model.fit$params <- self$params
-      # self$model.fit <- try(fit(self$fit.class, self$model.fit, training_frame = train_H2Oframe, y = outvar, x = predvars,
-      #                       model_contrl = self$model_contrl, fold_column = data$fold_column, validation_frame = valid_H2Oframe, ...),
-      #                   silent = FALSE)
-
-      self$model.fit <- try(fit(self$fit.class, self$params, training_frame = train_H2Oframe, y = outvar, x = predvars,
+      self$model.fit <- try(fit(self$fit.class, self$params, training_frame = train_H2Oframe, y = self$outvar, x = self$predvars,
                             model_contrl = self$model_contrl, fold_column = data$fold_column, validation_frame = valid_H2Oframe, ...),
                         silent = FALSE)
 
@@ -436,11 +432,6 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       outvar <- self$outvar
       predvars <- self$predvars
       if (missing(subset_idx)) subset_idx <- 1:data$nobs
-      # if (!missing(subset_idx)) {
-      #   rows_subset <- which(subset_idx)
-      # } else {
-      #   rows_subset <- 1:data$nobs
-      # }
 
       load_var_names <- c(outvar, predvars)
 

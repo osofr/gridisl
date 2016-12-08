@@ -154,7 +154,8 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
       invisible(self)
     },
 
-    fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
+    fit = function(data, subset_idx, validation_data = NULL, ...) {
+    # fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
       self$setdata(data, subset_idx = subset_idx, getXmat = TRUE, ...)
       # self$model.fit$params <- self$params
       self$model.fit <- fit(self$fit.class, self$params,
@@ -205,6 +206,7 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
       nodes <- data$nodes
       IDnode <- nodes$IDnode
       tnode <- nodes$tnode
+
       if (getoutvar) private$Yvals <- data$get.outvar(subset_idx, self$outvar) # Always a vector
       if (getXmat) {
         # self$define.Xmat(data, subset_idx) # design matrix in normal sense is not used in face

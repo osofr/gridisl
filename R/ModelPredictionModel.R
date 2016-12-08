@@ -185,13 +185,13 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       self$define.subset.idx(data)
       self$subset_train <- self$subset_idx
-      model.fit <- self$ModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, validation_data = validation_data, ...)
+      model.fit <- self$ModelFitObject$fit(data, subset_idx = self$subset_idx, validation_data = validation_data, ...)
 
       if (inherits(model.fit, "try-error")) {
         message("running " %+% self$ModelFitObject$fit.class %+% " with h2o has failed, trying speedglm as a backup...")
         self$ModelFitObject <- glmModelClass$new(fit.algorithm = "GLM", fit.package = "speedglm", reg = reg, ...)
-        # self$ModelFitObject$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
-        model.fit <- self$ModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
+        # self$outvar, self$predvars,
+        model.fit <- self$ModelFitObject$fit(data, subset_idx = self$subset_idx, ...)
       }
 
       self$is.fitted <- TRUE
@@ -215,7 +215,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       top_model_params <- self$get_best_model_params()
       best_reg <- RegressionClass$new(outvar = self$outvar, predvars = self$predvars, model_contrl = top_model_params)
       self$BestModelFitObject <- self$define_model_fit_object(top_model_params$fit.package, top_model_params$fit.algorithm, best_reg)
-      model.fit <- self$BestModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, destination_frame = "alldata_H2Oframe", ...)
+      # self$outvar, self$predvars,
+      model.fit <- self$BestModelFitObject$fit(data, subset_idx = self$subset_idx, destination_frame = "alldata_H2Oframe", ...)
       if (inherits(model.fit, "try-error")) stop("refitting of the best model failed")
 
       # **********************************************************************

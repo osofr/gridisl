@@ -128,13 +128,13 @@ test.holdoutfit_FACE_BS_h2o <- function() {
   res_GLM2 <- run_algo("glm", "glm")
   res_GLM3 <- run_algo("h2o", "glm")
   res_GBM <- run_algo("h2o", "gbm")
-  res_RF <- run_algo("h2o", "randomForest")
+  res_DRF <- run_algo("h2o", "randomForest")
   res_DP <- run_algo("h2o", "deeplearning")
 
   mfits_stack <- make_PredictionStack(res_BS$mfit_useY_hold$modelfit, res_BS$mfit_cor_hold$modelfit,
                                       res_FACE$mfit_useY_hold$modelfit, res_FACE$mfit_cor_hold$modelfit,
                                       res_GLM3$mfit_cor_hold$modelfit, res_GBM$mfit_cor_hold$modelfit,
-                                      res_RF$mfit_cor_hold$modelfit, res_DP$mfit_cor_hold$modelfit
+                                      res_DRF$mfit_cor_hold$modelfit, res_DP$mfit_cor_hold$modelfit
                                       )
 
   print(mfits_stack$get_best_MSEs(K = 2))

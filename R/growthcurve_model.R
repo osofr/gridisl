@@ -160,7 +160,6 @@ predict_holdouts_only <- function(modelfit, predict_only_bestK_models, add_subje
   return(predict_model(modelfit = modelfit, newdata = valid_data, predict_only_bestK_models, evalMSE = TRUE, add_subject_data = add_subject_data))
 }
 
-
 #' @export
 fit_residholdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose

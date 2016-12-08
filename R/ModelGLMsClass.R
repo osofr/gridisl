@@ -158,14 +158,13 @@ glmModelClass <- R6Class(classname = "glmModelClass",
       invisible(self)
     },
 
-    fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
+    fit = function(data, subset_idx, validation_data = NULL, ...) {
+    # fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
       self$setdata(data, subset_idx = subset_idx, getXmat = TRUE, ...)
       self$model.fit <- fit(self$fit.class, self$params,
                                Xmat = private$Xmat,
                                Yvals = private$Yvals,
                                DataStorageObject = data,
-                               outvar = outvar,
-                               predvars = predvars,
                                subset_idx = subset_idx,
                                model_contrl = self$model_contrl, ...)
       return(self$model.fit)
