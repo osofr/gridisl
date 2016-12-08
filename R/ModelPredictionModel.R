@@ -372,17 +372,19 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       } else if (is.null(self$subset_vars)) {
         subset_idx <- data$evalsubst(subset_exprs = self$subset_exprs)
       }
-
       assert_that(is.logical(subset_idx))
+
       if ((length(subset_idx) < data$nobs) && (length(subset_idx) > 1L)) {
         stop("ModelFitObject$define.subset.idx: subset_idx must be logical vector of length 1 or length nobs; current length:" %+% length(subset_idx))
       }
+
       if (length(subset_idx) == 1L) {
         subset_idx <- rep.int(subset_idx, data$nobs)
         if (gvars$verbose) message("subset_idx has length 1; repeating subset_idx nobs times, for nobs: " %+% data$nobs)
       }
       assert_that(length(subset_idx) == data$nobs)
-      self$subset_idx <- subset_idx
+      self$subset_idx <- which(subset_idx)
+
       return(invisible(self))
     },
 

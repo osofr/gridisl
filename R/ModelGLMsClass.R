@@ -80,8 +80,8 @@ predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
   assert_that(!is.null(Xmat)); assert_that(!is.null(subset_idx))
   # Set to default missing value for A[i] degenerate/degerministic/misval:
   # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newBinDatObject$n)
-  pAout <- rep.int(gvars$misval, length(subset_idx))
-  if (sum(subset_idx) > 0) {
+  pAout <- rep.int(gvars$misval, max(subset_idx))
+  if (length(subset_idx) > 0) {
     if (!all(is.na(m.fit$coef))) {
       eta <- Xmat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
       pAout[subset_idx] <- match.fun(FUN = m.fit$linkfun)(eta)
@@ -209,13 +209,13 @@ glmModelClass <- R6Class(classname = "glmModelClass",
 
     define.Xmat = function(data, subset_idx) {
       predvars <- self$predvars
-      if (sum(subset_idx) == 0L) {  # When nrow(Xmat) == 0L avoids exception (when nrow == 0L => prob(A=a) = 1)
+      if (length(subset_idx) == 0L) {  # When nrow(Xmat) == 0L avoids exception (when nrow == 0L => prob(A=a) = 1)
         Xmat <- matrix(, nrow = 0L, ncol = (length(predvars) + 1))
         colnames(Xmat) <- c("Intercept", predvars)
       } else {
         # *** THIS IS THE ONLY LOCATION IN THE PACKAGE WHERE CALL TO DataStorageClass$get.dat.sVar() IS MADE ***
         if (length(predvars)==0L) {
-          Xmat <- as.matrix(rep.int(1L, sum(subset_idx)), ncol=1)
+          Xmat <- as.matrix(rep.int(1L, length(subset_idx)), ncol=1)
         } else {
           Xmat <- as.matrix(cbind(Intercept = 1, data$get.dat.sVar(subset_idx, predvars)))
         }

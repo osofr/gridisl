@@ -49,8 +49,8 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
 
   # Set to default missing value for A[i] degenerate/degerministic/misval:
   # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newBinDatObject$n)
-  pAout <- rep.int(gvars$misval, length(subset_idx))
-  if (sum(subset_idx) > 0) {
+  pAout <- rep.int(gvars$misval, max(subset_idx))
+  if (length(subset_idx) > 0) {
     ## get fits at new data point, while also including fitted (training data points)
 
     new.face.dat <- data.frame(

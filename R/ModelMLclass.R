@@ -84,11 +84,11 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
 getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_idx) {
   assert_that(!is.null(subset_idx))
   if (!missing(DataStorageObject)) {
-    rows_subset <- which(subset_idx)
+    # rows_subset <- which(subset_idx)
     data <- DataStorageObject
     outvar <- m.fit$params$outvar
     predvars <- m.fit$params$predvars
-    prediction_H2Oframe <- fast.load.to.H2O(data$dat.sVar[rows_subset, c(outvar, predvars), with = FALSE], destination_frame = "prediction_H2Oframe")
+    prediction_H2Oframe <- fast.load.to.H2O(data$dat.sVar[subset_idx, c(outvar, predvars), with = FALSE], destination_frame = "prediction_H2Oframe")
   } else {
     prediction_H2Oframe <- h2o::h2o.getFrame(ParentObject$get_train_H2Oframe_ID)
   }
@@ -237,10 +237,10 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   models_list <- m.fit$fitted_models_all
   if (!missing(predict_model_names)) models_list <- models_list[predict_model_names]
 
-  pAoutMat <- matrix(gvars$misval, nrow = length(subset_idx), ncol = length(models_list))
+  pAoutMat <- matrix(gvars$misval, nrow = max(subset_idx), ncol = length(models_list))
   colnames(pAoutMat) <- names(models_list)
 
-  if (sum(subset_idx) > 0) {
+  if (length(subset_idx) > 0) {
     for (idx in seq_along(models_list)) {
       pAoutMat[subset_idx, idx] <- predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe))
     }
@@ -335,7 +335,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       private$train_H2Oframe <- train_H2Oframe
       private$train_H2Oframe_ID <- h2o::h2o.getId(train_H2Oframe)
 
-      if ((length(predvars) == 0L) || (sum(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
+      if ((length(predvars) == 0L) || (length(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
         message("unable to run " %+% self$fit.class %+% " with h2o for: intercept only models or designmat with zero rows or  constant outcome (y) ...")
         class(self$model.fit) <- "try-error"
         self$emptydata
@@ -435,11 +435,12 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     setdata = function(data, subset_idx, classify = FALSE, destination_frame = "newH2Osubset", ...) {
       outvar <- self$outvar
       predvars <- self$predvars
-      if (!missing(subset_idx)) {
-        rows_subset <- which(subset_idx)
-      } else {
-        rows_subset <- 1:data$nobs
-      }
+      if (missing(subset_idx)) subset_idx <- 1:data$nobs
+      # if (!missing(subset_idx)) {
+      #   rows_subset <- which(subset_idx)
+      # } else {
+      #   rows_subset <- 1:data$nobs
+      # }
 
       load_var_names <- c(outvar, predvars)
 
@@ -448,7 +449,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
       # 1. works on single core but fails in parallel:
       load_subset_t <- system.time(
-        subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[rows_subset, load_var_names, with = FALSE], destination_frame = destination_frame)
+        subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[subset_idx, load_var_names, with = FALSE], destination_frame = destination_frame)
       )
       if (gvars$verbose) {
         print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
