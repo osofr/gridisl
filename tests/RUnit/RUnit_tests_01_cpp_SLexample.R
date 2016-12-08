@@ -406,7 +406,7 @@ test.residual.holdoutSL <- function() {
 
   h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
   GRIDparams = list(fit.package = "h2o",
-                   fit.algorithm = "GridLearner",
+                   fit.algorithm = "ResidGridLearner",
                    family = "gaussian",
                    grid.algorithm = c("glm", "gbm"), seed = 23,
                    glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
@@ -416,24 +416,11 @@ test.residual.holdoutSL <- function() {
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
 
   ## fit the model based on additional special features (summaries) of the outcomes:
-  mfit_resid_hold <- fit_resid_growthSL_holdout(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                                                data = cpp_holdout, params = GRIDparams,
-                                                hold_column = "hold", use_new_features = TRUE)
+  mfit_resid_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                                    data = cpp_holdout, params = GRIDparams,
+                                    hold_column = "hold", use_new_features = TRUE)
 
-OData_train <- OData$clone()
-OData_train$dat.sVar <- OData$dat.sVar[!OData$dat.sVar[[OData$hold_column]], ]
-meancurve_preds <- PredictionModel$new(reg = regobj_meancurve)$fit(data = OData_train)$predict(newdata = OData)$getprobA1
-OData$dat.sVar[, ("glmpredY") := meancurve_preds]
-OData$dat.sVar[, ("residualY") := eval(as.name(OData$nodes$Ynode)) - meancurve_preds]
-
-OData$nodes$Ynode <- "residualY"
-mfits_residSL1 <- get_fit(OData,
-                          predvars = c("AGEDAYS", covars, "nY", "meanY", "sdY", "medianY", "minY", "maxY", "lt", "rt", "Y.lt", "Y.rt"),
-                          # predvars = c("AGEDAYS", covars, "nY", "meanY", "sdY", "medianY", "minY", "maxY", "lt", "rt", "Y.lt", "Y.rt", "l.obs", "mid.obs", "r.obs"),
-                          params = GRIDparams.resid1, holdout = TRUE, hold_column = "hold")
-holdPredDT <- predictHoldout(mfits_residSL1)
-OData$nodes$Ynode <- "HAZ"
-
+  preds_holdout_all <- growthcurveSL:::predict_holdouts_only(mfit_resid_hold)
 
 }
 

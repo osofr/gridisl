@@ -29,12 +29,12 @@ is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(Predi
 #' @export
 importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
-  if (verbose) {
-    current.options <- capture.output(str(gvars$opts))
-    print("Using the following growthcurveSL options/settings: ")
-    cat('\n')
-    cat(paste0(current.options, collapse = '\n'), '\n')
-  }
+  # if (verbose) {
+  #   current.options <- capture.output(str(gvars$opts))
+  #   print("Using the following growthcurveSL options/settings: ")
+  #   cat('\n')
+  #   cat(paste0(current.options, collapse = '\n'), '\n')
+  # }
 
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
     covars <- setdiff(colnames(data), c(ID, OUTCOME))

@@ -12,7 +12,7 @@ gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
 allowed.fit.package <- c("face", "brokenstick", "speedglm", "glm", "h2o")
-allowed.fit.algorithm = c("face", "brokenstick", "glm", "gbm", "randomForest", "deeplearning", "GridLearner")
+allowed.fit.algorithm = c("face", "brokenstick", "glm", "gbm", "randomForest", "deeplearning", "GridLearner", "ResidGridLearner")
 # , "SuperLearner"
 allowed.bin.method = c("equal.mass", "equal.len", "dhist")
 

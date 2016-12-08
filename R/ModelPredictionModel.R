@@ -1,4 +1,3 @@
-
 assign_model_name_id <- function(H2O.model.object, model_algorithm, name = NULL) {
   if (!missing(H2O.model.object) && inherits(H2O.model.object, "H2OModel")) {
     model_ids <- list(H2O.model.object@model_id)
@@ -37,6 +36,9 @@ create_fit_object <- function(model.fit, model_alg, fitfunname, params, coef, no
   return(fit)
 }
 
+create_fit_params <- function(reg) {
+  return(list(outvar = reg$outvar, predvars = reg$predvars, stratify = reg$subset_exprs[[1]]))
+}
 
 #----------------------------------------------------------------------------------
 # Class that defines the same type of models for regression problem E[Y|X]
@@ -157,6 +159,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (fit.package %in% c("h2o", "h2oEnsemble")) {
         if (fit.algorithm %in% "GridLearner") {
           ModelFitObject <- h2oGridModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+        } else if (fit.algorithm %in% "ResidGridLearner") {
+          ModelFitObject <- h2oResidualModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
         } else {
           ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
         }
