@@ -1,14 +1,6 @@
 #' @import data.table
 NULL
 
-make_model_ID_name <- function(algorithm, user_name = NULL) {
-  model_ids <- list(algorithm)
-  new_names <- algorithm
-  if (!is.null(user_name)) new_names <- new_names %+% "." %+% user_name
-  names(model_ids) <- new_names
-  return(model_ids)
-}
-
 # Generic for fitting the logistic (binomial family) GLM model
 fit <- function(fit, ...) UseMethod("fit")
 
@@ -16,7 +8,7 @@ fit <- function(fit, ...) UseMethod("fit")
 predictP1 <- function(m.fit, ...) UseMethod("predictP1")
 
 # S3 method for glm binomial family fit, takes BinDat data object:
-fit.glm <- function(fit.class, fit, Xmat, Yvals, ...) {
+fit.glm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
   if (gvars$verbose) print("calling glm.fit...")
   if (nrow(Xmat) == 0L) {
     model.fit <- list()
@@ -32,24 +24,24 @@ fit.glm <- function(fit.class, fit, Xmat, Yvals, ...) {
     }, GetWarningsToSuppress())
   }
 
-  fit$coef <- model.fit$coef;
-  fit$model_algorithms <- list("glm")
-  names(fit$model_algorithms) <- fit$model_algorithms[[1]]
+  model.fit$linear.predictors <- NULL
+  model.fit$weights <- NULL
+  model.fit$prior.weights <- NULL
+  model.fit$y <- NULL
+  model.fit$residuals <- NULL
+  model.fit$fitted.values <- NULL
+  model.fit$effects <- NULL
+  model.fit$qr <- NULL
 
-  fit$fitfunname <- "glm";
-  fit$linkfun <- "logit_linkinv";
-  fit$nobs <- nrow(Xmat)
+  # print(object.size(model.fit), units = "Kb")
 
-  if (gvars$verbose) {
-    print("glm fits:")
-    print(fit$coef)
-  }
-  class(fit)[2] <- "GLMmodel"
-  return(fit)
+  return(create_fit_object(model.fit, model_alg = "glm", fitfunname = "glm", linkfun = "logit_linkinv",
+                           params = params, coef = model.fit$coef, nobs = nobs, model_contrl = model_contrl,
+                           fitclass = "GLMmodel"))
 }
 
 # S3 method for speedglm binomial family fit, takes BinDat data object:
-fit.speedglm <- function(fit.class, fit, Xmat, Yvals, ...) {
+fit.speedglm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
   if (gvars$verbose) print("calling speedglm.wfit...")
   if (nrow(Xmat) == 0L) {
     model.fit <- list()
@@ -70,23 +62,13 @@ fit.speedglm <- function(fit.class, fit, Xmat, Yvals, ...) {
 
   if (inherits(model.fit, "try-error")) { # if failed, fall back on stats::glm
     message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", model.fit)
-    return(fit.glm(fit.class, fit, Xmat, Yvals, ...))
+    return(fit.glm(fit.class, params, Xmat, Yvals, model_contrl, ...))
   }
 
-  fit$coef <- model.fit$coef;
-  fit$model_algorithms <- list("glm")
-  names(fit$model_algorithms) <- fit$model_algorithms[[1]]
+  return(create_fit_object(model.fit, model_alg = "glm", fitfunname = "speedglm", linkfun = "logit_linkinv",
+                           params = params, coef = model.fit$coef, nobs = nobs, model_contrl = model_contrl,
+                           fitclass = "GLMmodel"))
 
-  fit$fitfunname <- "speedglm";
-  fit$linkfun <- "logit_linkinv";
-  fit$nobs <- nrow(Xmat)
-
-  if (gvars$verbose) {
-    print("speedglm fits:")
-    print(fit$coef)
-  }
-  class(fit)[2] <- "GLMmodel"
-  return(fit)
 }
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
@@ -151,15 +133,19 @@ glmModelClass <- R6Class(classname = "glmModelClass",
   portable = TRUE,
   class = TRUE,
   public = list(
+    reg = list(),
+    params = list(),
     outvar = character(),
     predvars = character(),
     model_contrl = list(),
     ReplMisVal0 = logical(),
-    params = list(),
     fit.class = c("glm", "speedglm"),
-    model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, model_algorithms = NA),
+    # model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, model_algorithms = NA),
+    model.fit = list(),
 
     initialize = function(fit.algorithm, fit.package, reg, ...) {
+      self$reg <- reg
+      self$params <- create_fit_params(reg)
       self$outvar <- reg$outvar
       self$predvars <- reg$predvars
       self$model_contrl <- reg$model_contrl
@@ -174,8 +160,7 @@ glmModelClass <- R6Class(classname = "glmModelClass",
 
     fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
       self$setdata(data, subset_idx = subset_idx, getXmat = TRUE, ...)
-      self$model.fit$params <- self$params
-      self$model.fit <- fit(self$fit.class, self$model.fit,
+      self$model.fit <- fit(self$fit.class, self$params,
                                Xmat = private$Xmat,
                                Yvals = private$Yvals,
                                DataStorageObject = data,
@@ -253,7 +238,7 @@ glmModelClass <- R6Class(classname = "glmModelClass",
     emptyY = function() { private$Yvals <- NULL},
     getXmat = function() {private$Xmat},
     getY = function() {private$Yvals},
-    getmodel_ids = function() { return(make_model_ID_name(self$model.fit$model_algorithms, self$model_contrl$name)) },
+    getmodel_ids = function() { return(assign_model_name_id(model_algorithm = self$model.fit$model_algorithms, name = self$model_contrl$name)) },
     getmodel_algorithms = function() { self$model.fit$model_algorithms }
   ),
 

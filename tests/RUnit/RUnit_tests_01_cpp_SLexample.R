@@ -36,7 +36,7 @@ test.genericfit_FACE_BS <- function() {
 ## ------------------------------------------------------------------------------------
 ## face / brokenstick based on random holdouts
 ## ------------------------------------------------------------------------------------
-test.holdoutfit_FACE_BS <- function() {
+test.holdoutfit_FACE_BS_h2o <- function() {
   # library("growthcurveSL")
   options(growthcurveSL.verbose = TRUE)
   data(cpp)
@@ -87,6 +87,11 @@ test.holdoutfit_FACE_BS <- function() {
     print("Holdout MSE, hiding the holdout Y for prediction"); print(mfit_cor_hold$modelfit$getMSE)
     # FACE MSE: [1] 1.211989
     # BS MSE: [1] 1.186241
+    # speed or reg GLM MSE: [1] 1.813257
+    # h2o GLM MSE: [1] 1.619442
+    # GBM MSE [1] 1.531809
+    # DRF MSE [1] 1.531855
+    # deeplearning MSE [1] 1.543277
 
     # predict for previously used holdout / validation set:
     preds_holdout_2 <- growthcurveSL:::predict_holdouts_only(mfit_cor_hold)
@@ -119,11 +124,19 @@ test.holdoutfit_FACE_BS <- function() {
 
   res_FACE <- run_algo("face", "face")
   res_BS <- run_algo("brokenstick", "brokenstick")
-  res_GLM <- run_algo("speedglm", "glm")
+  res_GLM1 <- run_algo("speedglm", "glm")
+  res_GLM2 <- run_algo("glm", "glm")
+  res_GLM3 <- run_algo("h2o", "glm")
+  res_GBM <- run_algo("h2o", "gbm")
+  res_RF <- run_algo("h2o", "randomForest")
+  res_DP <- run_algo("h2o", "deeplearning")
 
   mfits_stack <- make_PredictionStack(res_BS$mfit_useY_hold$modelfit, res_BS$mfit_cor_hold$modelfit,
                                       res_FACE$mfit_useY_hold$modelfit, res_FACE$mfit_cor_hold$modelfit,
-                                      res_GLM$mfit_cor_hold$modelfit)
+                                      res_GLM3$mfit_cor_hold$modelfit, res_GBM$mfit_cor_hold$modelfit,
+                                      res_RF$mfit_cor_hold$modelfit, res_DP$mfit_cor_hold$modelfit
+                                      )
+
   print(mfits_stack$get_best_MSEs(K = 2))
   print(mfits_stack$get_best_MSE_table(K = 2))
   make_report_rmd(mfits_stack, K = 2, file.name = paste0("BS_ALL_", getOption("growthcurveSL.file.name")), format = "html", openFile = TRUE)
@@ -305,8 +318,8 @@ test.holdoutSL <- function() {
   ## Fit the model based on additional special features (summaries) of the outcomes:
   # --------------------------------------------------------------------------------------------
   mfit_hold2 <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                                     data = cpp_holdout, params = GRIDparams,
-                                     hold_column = "hold", use_new_features = TRUE)
+                              data = cpp_holdout, params = GRIDparams,
+                              hold_column = "hold", use_new_features = TRUE)
 
   ## Predictions for all holdout data points for all models trained on non-holdout data:
   preds_holdout2 <- growthcurveSL:::predict_holdouts_only(mfit_hold2, add_subject_data = TRUE)

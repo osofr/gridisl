@@ -17,8 +17,6 @@ Leave missing to obtain predictions for all models that were fit as part of this
 When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
-
-\item{valid_data}{Subject-specific holdout (validation) data for which predictions should be obtained.}
 }
 \value{
 ...

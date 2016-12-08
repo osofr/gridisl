@@ -1,3 +1,43 @@
+
+assign_model_name_id <- function(H2O.model.object, model_algorithm, name = NULL) {
+  if (!missing(H2O.model.object) && inherits(H2O.model.object, "H2OModel")) {
+    model_ids <- list(H2O.model.object@model_id)
+  } else {
+    model_ids <- list(model_algorithm)
+  }
+
+  new_names <- model_algorithm
+  if (!is.null(name)) new_names <- new_names %+% "." %+% name
+  names(model_ids) <- new_names
+
+  return(model_ids)
+}
+
+create_fit_object <- function(model.fit, model_alg, fitfunname, params, coef, nobs, model_contrl, fitclass = "H2Omodel", ...) {
+  fitted_models_all <- vector(mode = "list", length = 1)
+  fitted_models_all[[1]] <- model.fit
+
+  model_ids <- assign_model_name_id(model.fit, model_alg, model_contrl$name)
+  names(fitted_models_all) <- names(model_ids)
+
+  extra_params <- list(...)
+
+  fit <- list(
+    params = params,
+    coef = coef,
+    fitfunname = fitfunname,
+    model_algorithms = list(model_alg),
+    nobs =  nobs,
+    model_ids = model_ids,
+    fitted_models_all = fitted_models_all)
+
+  if (length(extra_params) > 0) fit <- c(fit, extra_params)
+
+  class(fit) <- c(class(fit)[1], fitclass)
+  return(fit)
+}
+
+
 #----------------------------------------------------------------------------------
 # Class that defines the same type of models for regression problem E[Y|X]
 #----------------------------------------------------------------------------------
@@ -114,7 +154,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       # Add any additional options passed on to modeling functions as extra args
       # ****** NOTE: This needs to be changed to S3 dispatch for greater flexibility ******
       # ***************************************************************************
-      # class(fit.algorithm) <- c(class(fit.algorithm), self$fit.package)
       if (fit.package %in% c("h2o", "h2oEnsemble")) {
         if (fit.algorithm %in% "GridLearner") {
           ModelFitObject <- h2oGridModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
@@ -132,7 +171,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       } else {
         ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
       }
-      ModelFitObject$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
       return(ModelFitObject)
     },
 
@@ -152,7 +190,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (inherits(model.fit, "try-error")) {
         message("running " %+% self$ModelFitObject$fit.class %+% " with h2o has failed, trying speedglm as a backup...")
         self$ModelFitObject <- glmModelClass$new(fit.algorithm = "GLM", fit.package = "speedglm", reg = reg, ...)
-        self$ModelFitObject$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
+        # self$ModelFitObject$params <- list(outvar = self$outvar, predvars = self$predvars, stratify = self$subset_exprs)
         model.fit <- self$ModelFitObject$fit(data, self$outvar, self$predvars, self$subset_idx, ...)
       }
 

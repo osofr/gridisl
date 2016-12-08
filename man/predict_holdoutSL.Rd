@@ -2,7 +2,7 @@
 % Please edit documentation in R/growthcurve_model.R
 \name{predict_holdoutSL}
 \alias{predict_holdoutSL}
-\title{Prediction for holdout SuperLearner fit}
+\title{Predict for holdout SuperLearner fit}
 \usage{
 predict_holdoutSL(modelfit, newdata, add_subject_data = FALSE,
   verbose = getOption("growthcurveSL.verbose"))
@@ -21,6 +21,6 @@ When \code{FALSE} (default) only the actual predictions are returned (as a matri
 ...
 }
 \description{
-Prediction for holdout SuperLearner fit
+Predict for holdout SuperLearner fit
 }
 

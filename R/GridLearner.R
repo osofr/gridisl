@@ -26,21 +26,21 @@ SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial",
 
   if (("x" %in% names(formals(learner))) && (as.character(formals(learner)$x)[1] != "")) {
     # Special case where we pass a subset of the colnames, x, in a custom learner function wrapper
-    # model.fit <- learner_fun(y = y, training_frame = training_frame, validation_frame = NULL, family = family, fold_column = fold_column, keep_cross_validation_folds = TRUE)
+    # model_fit <- learner_fun(y = y, training_frame = training_frame, validation_frame = NULL, family = family, fold_column = fold_column, keep_cross_validation_folds = TRUE)
   } else {
     # Use all predictors in training set for training
     mainArgs$x <- x
-    # model.fit <- learner_fun(y = y, x = x, training_frame = training_frame, validation_frame = NULL, family = family, fold_column = fold_column, keep_cross_validation_folds = TRUE)
+    # model_fit <- learner_fun(y = y, x = x, training_frame = training_frame, validation_frame = NULL, family = family, fold_column = fold_column, keep_cross_validation_folds = TRUE)
   }
 
-  model.fit <- do.call(learner_fun, mainArgs)
+  model_fit <- do.call(learner_fun, mainArgs)
 
   fit <- vector(mode = "list")
   fit$fitfunname <- learner;
   if (gvars$verbose) {
-    print("grid search fitted models:"); print(model.fit)
+    print("grid search fitted models:"); print(model_fit)
   }
-  fit$H2O.model.object <- model.fit
+  fit$model_fit <- model_fit
   class(fit) <- c(class(fit)[1], c("H2Omodel"))
   return(fit)
 }
@@ -95,20 +95,20 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
     print("running h2o.grid grid.algorithm: " %+% grid.algorithm);
   }
 
-  model.fit <- do.call(h2o::h2o.grid, mainArgs)
+  model_fit <- do.call(h2o::h2o.grid, mainArgs)
   # sort the grid by increasing MSE:
-  model.fit <- h2o::h2o.getGrid(model.fit@grid_id, sort_by = "mse", decreasing = FALSE)
+  model_fit <- h2o::h2o.getGrid(model_fit@grid_id, sort_by = "mse", decreasing = FALSE)
 
   fit <- vector(mode = "list")
   fit$fitfunname <- "h2o.h2ogrid";
-  fit$H2O.model.object <- model.fit
-  fit$top.model <- h2o::h2o.getModel(model.fit@model_ids[[1]])
+  fit$model_fit <- model_fit
+  fit$top.model <- h2o::h2o.getModel(model_fit@model_ids[[1]])
   # h2o.performance(top.model)
   # h2o.performance(top.model, valid = TRUE)
 
   if (gvars$verbose) {
-    # print("grid search fitted models:"); print(model.fit)
-    print("grid search: " %+% model.fit@grid_id)
+    # print("grid search fitted models:"); print(model_fit)
+    print("grid search: " %+% model_fit@grid_id)
     print("grid search top performing model:"); print(fit$top.model)
     # print(h2o::h2o.performance(fit$top.model))
     # print(h2o::h2o.performance(fit$top.model, valid = TRUE))
@@ -129,7 +129,8 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
 }
 
 #' @export
-fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contrl, fold_column, ...) {
+fit.h2oGridLearner <- function(fit.class, params, training_frame, y, x, model_contrl, fold_column, ...) {
+# fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contrl, fold_column, ...) {
   # if (is.null(fold_column)) stop("must define the column of CV fold IDs using data$define_CVfolds()")
   family <- model_contrl$family
   grid.algorithms <- model_contrl$grid.algorithm
@@ -164,7 +165,7 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
       grid_model_fit <- SLfit.h2ogrid(grid.algorithm = grid.algorithm, training_frame = training_frame, y = y, x = x, family = family,
                                       fold_column = fold_column, model_contrl = model_contrl, ...)
       top_grid_models[[grid.algorithm]] <- grid_model_fit$top.model
-      grid_model_H2O <- grid_model_fit$H2O.model.object
+      grid_model_H2O <- grid_model_fit$model_fit
       grid_objects[[grid.algorithm]] <- grid_model_H2O
       fitted_models[[grid.algorithm]] <- lapply(grid_model_H2O@model_ids, function(model_id) h2o::h2o.getModel(model_id))
     }
@@ -181,7 +182,7 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
     for (learner in learners) {
       learner_fit <- SLfit.h2oLearner(learner = learner, training_frame = training_frame, y = y, x = x, family = family,
                                       fold_column = fold_column, model_contrl = model_contrl, ...)
-      learner_model_H2O <- learner_fit$H2O.model.object
+      learner_model_H2O <- learner_fit$model_fit
       fitted_models_l[[learner]] <- learner_model_H2O
     }
     fitted_models_all <- c(fitted_models_all, fitted_models_l)
@@ -205,23 +206,25 @@ fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contr
     # h2oEnsemble::h2o.save_ensemble(stacked.fit, path = model_contrl$ensemble.dir.path, force = TRUE, export_levelone = TRUE)
   }
 
-  fit$grid_objects <- grid_objects
-  fit$grid_ids <- lapply(fit$grid_objects, function(grids_object) grids_object@grid_id)
-  fit$top_grid_models <- top_grid_models
-  # TO DIRECTLY SAVE ALL MODEL FITS FROM GRID SEARCH (base-learners)
-  fit$fitted_models_all <- fitted_models_all
-  fit$ngridmodels <- ngridmodels
-
-  fit$model_algorithms <- lapply(fit$fitted_models_all, function(model) model@algorithm)
-  fit$model_ids <- lapply(fit$fitted_models_all, function(model) model@model_id)
-
+  model_algorithms <- lapply(fitted_models_all, function(model) model@algorithm)
+  model_ids <- lapply(fitted_models_all, function(model) model@model_id)
   # Assign names to each grid model, keep individual learner names intact (unless a $name arg was passed by the user):
-  GRIDmodel_names <- "grid." %+% unlist(fit$model_algorithms[1:ngridmodels]) %+% "." %+% (1:ngridmodels)
-  learner_names <- names(fit$fitted_models_all)[-(1:ngridmodels)]
+  GRIDmodel_names <- "grid." %+% unlist(model_algorithms[1:ngridmodels]) %+% "." %+% (1:ngridmodels)
+  learner_names <- names(fitted_models_all)[-(1:ngridmodels)]
   model_names <- c(GRIDmodel_names, learner_names)
   if (!is.null(model_contrl$name))  model_names <- model_names %+% "." %+% model_contrl$name
-  names(fit$fitted_models_all) <- names(fit$model_algorithms) <- names(fit$model_ids) <- model_names
+  names(fitted_models_all) <- names(model_algorithms) <- names(model_ids) <- model_names
 
+  fit <- list(
+    params = params,
+    grid_objects = grid_objects,
+    grid_ids = lapply(grid_objects, function(grids_object) grids_object@grid_id),
+    ngridmodels = ngridmodels,
+    model_algorithms = model_algorithms,
+    model_ids = model_ids,
+    top_grid_models = top_grid_models,
+    fitted_models_all = fitted_models_all
+    )
   class(fit) <- c(class(fit)[1], c("H2Ogridmodel"))
   return(fit)
 }

@@ -1,8 +1,3 @@
-# ---------------------------------------------------------------------------
-# TO DO: reformat single h2o model fit object so that its the same with H2O.grid model fit, i.e.,
-#        1. Put model.fit into a named list entry called "fitted_models_all"
-#        2. Then remove 'H2O.model.object'
-# ---------------------------------------------------------------------------
 predict_h2o_new <- function(model_id, frame_id, returnVector = TRUE) {
   h2o.no_progress()
   # waitOnJob = FALSE,
@@ -131,12 +126,12 @@ replace_add_user_args <- function(mainArgs, userArgs, fun) {
 ## ---------------------------------------------------------------------------
 ## S3 method for fitting h2o GLM with binomial() family (logistic regression):
 ## use solver="L_BFGS" when doing classification and use "IRLSM" when not
-fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
+fit.h2oglm <- function(fit.class, params, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
 # fit.h2oglm <- function(fit.class, fit, subsetH2Oframe, outvar, predvars, rows_subset, model_contrl, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                   intercept = TRUE,
-                  family = "gaussian",
+                  # family = "gaussian",
                   standardize = TRUE,
                   # standardize = FALSE,
                   # solver = "L_BFGS",
@@ -155,31 +150,20 @@ fit.h2oglm <- function(fit.class, fit, training_frame, y, x, model_contrl, valid
 
   # h2o::h2o.glm(x = x, y = y, training_frame = training_frame, lambda = 0L, family = "gaussian")
   model.fit <- do.call(h2o::h2o.glm, mainArgs)
+
   # assign the fitted coefficients in correct order (same as predictor order in x)
   out_coef <- vector(mode = "numeric", length = length(x)+1)
   out_coef[] <- NA
   names(out_coef) <- c("Intercept", x)
   out_coef[names(model.fit@model$coefficients)] <- model.fit@model$coefficients
-  fit$coef <- out_coef;
-
-  fit$linkfun <- "logit_linkinv";
-  fit$fitfunname <- "h2o.glm";
-  fit$model_algorithms <- list("glm")
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
-  fit$H2O.model.object <- model.fit
+  nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
 
-  if (gvars$verbose) {
-    print("h2oglm fits:")
-    print(fit$coef)
-  }
-
-  class(fit) <- c(class(fit)[1], c("H2Omodel"))
-  return(fit)
+  return(create_fit_object(model.fit, model_alg = "glm", fitfunname = "h2o.glm", params = params, coef = out_coef, nobs = nobs, model_contrl = model_contrl))
 }
 
 ## S3 method for h2o randomForest fit (Random Forest):
-fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
+fit.h2orandomForest <- function(fit.class, params, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    ntrees = 100,
@@ -193,24 +177,18 @@ fit.h2orandomForest <- function(fit.class, fit, training_frame, y, x, model_cont
   }
 
   model.fit <- do.call(h2o::h2o.randomForest, mainArgs)
-  fit$coef <- NULL;
 
-  fit$fitfunname <- "h2o.randomForest";
-  fit$model_algorithms <- list("randomForest")
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
-  fit$H2O.model.object <- model.fit
-
-  class(fit) <- c(class(fit)[1], c("H2Omodel"))
-  return(fit)
+  nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
+  return(create_fit_object(model.fit, model_alg = "randomForest", fitfunname = "h2o.randomForest", params = params, coef = NULL, nobs = nobs, model_contrl = model_contrl))
 }
 
 ## S3 method for h2o gbm fit, takes BinDat data object:
 ## use "bernoulli" when doing classification and use "gaussian" when not
-fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
+fit.h2ogbm <- function(fit.class, params, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
-                   distribution = "bernoulli",
+                   # distribution = "bernoulli",
                    # distribution = "gaussian",
                    ntrees = 100,
                    # balance_classes = TRUE,
@@ -220,26 +198,18 @@ fit.h2ogbm <- function(fit.class, fit, training_frame, y, x, model_contrl, valid
   if (!is.null(validation_frame)) {
     mainArgs$validation_frame <- validation_frame
   }
-
   model.fit <- do.call(h2o::h2o.gbm, mainArgs)
-  fit$coef <- NULL;
-
-  fit$fitfunname <- "h2o.gbm";
-  fit$model_algorithms <- list("gbm")
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
-  fit$H2O.model.object <- model.fit
-
-  class(fit) <- c(class(fit)[1], c("H2Omodel"))
-  return(fit)
+  nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
+  return(create_fit_object(model.fit, model_alg = "gbm", fitfunname = "h2o.gbm", params = params, coef = NULL, nobs = nobs, model_contrl = model_contrl))
 }
 
 ## S3 method for h2o deeplearning fit, takes BinDat data object:
 ## use "bernoulli" when doing classification and use "gaussian" when doing regression
-fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
+fit.h2odeeplearning <- function(fit.class, params, training_frame, y, x, model_contrl, validation_frame  = NULL, ...) {
   h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
-                   distribution = "bernoulli",
+                   # distribution = "bernoulli",
                    # distribution = "gaussian",
                    # balance_classes = TRUE,
                    ignore_const_cols = FALSE)
@@ -250,31 +220,18 @@ fit.h2odeeplearning <- function(fit.class, fit, training_frame, y, x, model_cont
   }
 
   model.fit <- do.call(h2o::h2o.deeplearning, mainArgs)
-  fit$coef <- NULL;
-
-  fit$fitfunname <- "h2o.deeplearning";
-  fit$model_algorithms <- list("deeplearning")
   confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  fit$nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
-  fit$H2O.model.object <- model.fit
-
-  class(fit) <- c(class(fit)[1], c("H2Omodel"))
-  return(fit)
+  nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
+  return(create_fit_object(model.fit, model_alg = "deeplearning", fitfunname = "h2o.deeplearning", params = params, coef = NULL, nobs = nobs, model_contrl = model_contrl))
 }
+
 
 ## ----------------------------------------------------------------
 ## Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
 ## ----------------------------------------------------------------
 predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
-  H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
-  pAout <- rep.int(gvars$misval, length(subset_idx))
-  if (sum(subset_idx) > 0) {
-    pAout[subset_idx] <- predict_h2o_new(m.fit$H2O.model.object@model_id, frame_id = h2o.getId(H2Oframe))
-  }
-  return(pAout)
+  return(predictP1.H2Ogridmodel(m.fit, ParentObject, DataStorageObject, subset_idx, ...))
 }
-
-## TO DO: Add prediction only based on the subset of models (rather than predicting for all models)
 predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict_model_names, ...) {
   H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
   models_list <- m.fit$fitted_models_all
@@ -298,37 +255,6 @@ h2oGridModelClass  <- R6Class(classname = "h2oModelClass",
   class = TRUE,
   public = list(
     fit.class = c("GridLearner"),
-
-    initialize = function(...) {
-      super$initialize(...)
-      invisible(self)
-    },
-
-    fit = function(...) {
-      return(super$fit(...))
-    },
-
-    predictP1 = function(...) {
-      return(super$predictP1(...))
-    },
-
-    score_CV = function(...) {
-      return(super$score_CV(...))
-    },
-
-    getmodel_byname = function(model_names, model_IDs) {
-      if (!missing(model_names)) {
-        return(self$model.fit$fitted_models_all[model_names])
-      } else {
-        if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
-        return(lapply(model_IDs, h2o::h2o.getModel))
-      }
-    },
-
-    get_best_model_params = function(model_names) {
-      return(super$get_best_model_params(model_names))
-    },
-
     # Output info on the general type of regression being fitted:
     show = function(all_fits = FALSE, ...) {
       model.fit <- self$model.fit
@@ -357,21 +283,15 @@ h2oGridModelClass  <- R6Class(classname = "h2oModelClass",
     },
 
     summary = function(all_fits = FALSE) {
-      # model.fit <- self$model.fit
-      # grid_objects <- self$model.fit$grid_objects
-      # top_grid_models <- self$model.fit$top_grid_models
-      # no.grids <- "Total No. of Grids: " %+% length(model.fit$grid_objects)
-      # cat(no.grids)
-      # for (grid_nm in names(grid_objects)) {
-      #   print(grid_objects[[grid_nm]])
-      #   cat("top model for this grid: \n")
-      #   print(top_grid_models[[grid_nm]])
-      # }
       print("...")
       return(invisible(self))
     }
   )
 )
+
+create_fit_params <- function(reg) {
+  return(list(outvar = reg$outvar, predvars = reg$predvars, stratify = reg$subset_exprs[[1]]))
+}
 
 # IMPLEMENTING NEW CLASS FOR BINARY REGRESSION THAT USES h2o
 # NEEDS TO be able to pass on THE REGRESSION SETTINGS FOR h2o-specific functions
@@ -380,17 +300,21 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
   portable = TRUE,
   class = TRUE,
   public = list(
+    reg = NULL,
+    params = list(),
     outvar = character(),
     predvars = character(),
     model_contrl = list(),
-    params = list(),
     classify = FALSE,
     fit.class = c("glm", "randomForest", "gbm", "deeplearning", "GridLearner"),
-    model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA, model_algorithms = NA),
+    # model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA, model_algorithms = NA),
+    model.fit = list(),
     outfactors = NA,
     nfolds = 5,
 
     initialize = function(fit.algorithm, fit.package, reg, ...) {
+      self$reg <- reg
+      self$params <- create_fit_params(reg)
       self$outvar <- reg$outvar
       self$predvars <- reg$predvars
       self$model_contrl <- reg$model_contrl
@@ -429,8 +353,12 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
         valid_H2Oframe = NULL
       }
 
-      self$model.fit$params <- self$params
-      self$model.fit <- try(fit(self$fit.class, self$model.fit, training_frame = train_H2Oframe, y = outvar, x = predvars,
+      # self$model.fit$params <- self$params
+      # self$model.fit <- try(fit(self$fit.class, self$model.fit, training_frame = train_H2Oframe, y = outvar, x = predvars,
+      #                       model_contrl = self$model_contrl, fold_column = data$fold_column, validation_frame = valid_H2Oframe, ...),
+      #                   silent = FALSE)
+
+      self$model.fit <- try(fit(self$fit.class, self$params, training_frame = train_H2Oframe, y = outvar, x = predvars,
                             model_contrl = self$model_contrl, fold_column = data$fold_column, validation_frame = valid_H2Oframe, ...),
                         silent = FALSE)
 
@@ -466,8 +394,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
     getmodel_byname = function(model_names, model_IDs) {
       if (!missing(model_names)) {
-        return(list(self$model.fit$H2O.model.object))
-        # return(self$model.fit$fitted_models_all[model_names])
+        return(self$model.fit$fitted_models_all[model_names])
       } else {
         if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
         return(lapply(model_IDs, h2o::h2o.getModel))
@@ -481,9 +408,10 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       top_params <- list(fit.package = self$model_contrl$fit.package,
                          fit.algorithm = model_obj@algorithm)
 
+      if (top_params$fit.algorithm %in% "drf") top_params$fit.algorithm <- "randomForest"
+
       # top_params_tmp <- model_obj@parameters ## only the user-set parameters are stored here
       top_params_tmp <- model_obj@allparameters ## alternative is to grab the exact params used in the model, including defaults
-
       top_params_tmp$model_id <- NULL
       top_params_tmp$training_frame <- NULL
       top_params_tmp$validation_frame <- NULL
@@ -493,6 +421,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       top_params_tmp$fold_column <- NULL
       top_params_tmp$fold_assignment <- NULL
 
+      top_params_tmp$score_each_iteration <- NULL # deeplearning fails otherwise
       top_params <- c(top_params, top_params_tmp)
 
       ## don't use all the rest of the parameters in model control that are specific to grid search:
@@ -554,11 +483,12 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
     getmodel_ids = function() {
       if (is.null(self$model.fit$model_ids)) {
-        model_ids <- list(self$model.fit$H2O.model.object@model_id)
-        new_names <- self$model.fit$model_algorithms[[1]]
-        if (!is.null(self$model_contrl$name)) new_names <- new_names %+% "." %+% self$model_contrl$name
-        names(model_ids) <- new_names
-        return(model_ids)
+        return(assign_model_name_id(self$model.fit$H2O.model.object, self$model.fit$model_algorithms[[1]], self$model_contrl$name))
+        # model_ids <- list(self$model.fit$H2O.model.object@model_id)
+        # new_names <- self$model.fit$model_algorithms[[1]]
+        # if (!is.null(self$model_contrl$name)) new_names <- new_names %+% "." %+% self$model_contrl$name
+        # names(model_ids) <- new_names
+        # return(model_ids)
       } else {
         return(self$model.fit$model_ids)
       }

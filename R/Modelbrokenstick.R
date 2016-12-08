@@ -43,7 +43,7 @@ summary.brokenstickmodel <- function(model.fit, format_table = TRUE, ...) {
   out
 }
 
-fit.brokenstick <- function(fit.class, fit, subject, x, Yvals, knots = NULL, mn = NULL, mx = NULL, ...) {
+fit.brokenstick <- function(fit.class, params, subject, x, Yvals, knots = NULL, mn = NULL, mx = NULL, model_contrl, ...) {
   if (gvars$verbose) print("calling brokenstick::brokenstick...")
   if (length(subject) == 0L) {
     model.fit <- list()
@@ -66,17 +66,12 @@ fit.brokenstick <- function(fit.class, fit, subject, x, Yvals, knots = NULL, mn 
               )
   }
 
-  fit$model.object <- model.fit
-  # need to save the fitting data,
-  # because face needs training data (including trained outcomes) to predict for new data points:
-  fit$fitted.subject <- subject
-  fit$fitted.x <- x
-  fit$fitted.Yvals <- Yvals
-  fit$model_algorithms <- list("brokenstick")
-  fit$fitfunname <- "brokenstick"
-  fit$nobs <- length(Yvals)
-  class(fit)[2] <- "brokenstickmodel"
-  return(fit)
+  return(create_fit_object(model.fit, model_alg = "brokenstick", fitfunname = "brokenstick",
+                           params = params, coef = NULL, nobs = length(Yvals), model_contrl = model_contrl,
+                           fitclass = "brokenstickmodel",
+                           fitted.subject = subject, fitted.x = x, fitted.Yvals = Yvals
+                           ))
+
 }
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
@@ -86,7 +81,9 @@ predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, s
   ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
   # }
 
-  model.object <- m.fit$model.object
+  # model.object <- m.fit$model.object
+  model.object <- m.fit$fitted_models_all[[1]]
+
   fitted.subject <- m.fit$fitted.subject
   fitted.x <- m.fit$fitted.x
   fitted.Yvals <- m.fit$fitted.Yvals
@@ -136,15 +133,21 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
   portable = TRUE,
   class = TRUE,
   public = list(
+    reg = list(),
+    params = list(),
     outvar = character(),
     model_contrl = list(),
-    params = list(),
     fit.class = c("brokenstick"),
-    model.fit = list(fitfunname = NA, nobs = NA, params = NA, model_algorithms = NA),
+    # model.fit = list(fitfunname = NA, nobs = NA, params = NA, model_algorithms = NA),
+    model.fit = list(),
 
     initialize = function(fit.algorithm, fit.package, reg, ...) {
-      self$model_contrl <- reg$model_contrl
+      self$reg <- reg
+      self$params <- create_fit_params(reg)
       self$outvar <- reg$outvar
+      self$model_contrl <- reg$model_contrl
+      # self$predvars <- reg$predvars
+
       assert_that(any(c("brokenstick") %in% fit.package))
       self$fit.class <- fit.package
       class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
@@ -153,14 +156,15 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
 
     fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
       self$setdata(data, subset_idx = subset_idx, getXmat = TRUE, ...)
-      self$model.fit$params <- self$params
-      self$model.fit <- fit(self$fit.class, self$model.fit,
+      # self$model.fit$params <- self$params
+      self$model.fit <- fit(self$fit.class, self$params,
                                subject = private$subject,
                                x = private$x,
                                Yvals = private$Yvals,
                                knots = self$model_contrl$knots,
                                mn = self$model_contrl$mn,
                                mx = self$model_contrl$mx,
+                               model_contrl = self$model_contrl,
                                ...)
       return(self$model.fit)
     },
@@ -234,7 +238,7 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
     get.x = function() { private$x },
     get.Y = function() { private$Yvals },
 
-    getmodel_ids = function() { return(make_model_ID_name(self$model.fit$model_algorithms, self$model_contrl$name)) },
+    getmodel_ids = function() { return(assign_model_name_id(model_algorithm = self$model.fit$model_algorithms[[1]], name = self$model_contrl$name)) },
     getmodel_algorithms = function() { self$model.fit$model_algorithms }
   ),
 

@@ -1,4 +1,4 @@
-fit.face <- function(fit.class, fit, subj, argvals, Yvals, knots = NULL, ...) {
+fit.face <- function(fit.class, params, subj, argvals, Yvals, knots = NULL, model_contrl, ...) {
   if (gvars$verbose) print("calling face::face.sparse...")
   if (length(subj) == 0L) {
     model.fit <- list()
@@ -14,18 +14,11 @@ fit.face <- function(fit.class, fit, subj, argvals, Yvals, knots = NULL, ...) {
     model.fit <- suppressMessages(face::face.sparse(facedat, knots = knots))
   }
 
-  fit$model.object <- model.fit
-  # need to save the fitting data,
-  # because face needs training data (including trained outcomes) to predict for new data points:
-  fit$fitted.Yvals <- Yvals
-  fit$fitted.argvals <- argvals
-  fit$fitted.subj <- subj
-  fit$model_algorithms <- list("face")
-
-  fit$fitfunname <- "face.sparse";
-  fit$nobs <- length(Yvals)
-  class(fit)[2] <- "facemodel"
-  return(fit)
+  return(create_fit_object(model.fit, model_alg = "face", fitfunname = "face.sparse",
+                           params = params, coef = NULL, nobs = length(Yvals), model_contrl = model_contrl,
+                           fitclass = "facemodel",
+                           fitted.subj = subj, fitted.argvals = argvals, fitted.Yvals = Yvals
+                           ))
 }
 
 # Prediction for glmfit objects, predicts P(A = 1 | newXmat)
@@ -35,8 +28,9 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
     ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = TRUE, getXmat = TRUE)
   # }
 
+  # model.object <- m.fit$model.object
+  model.object <- m.fit$fitted_models_all[[1]]
 
-  model.object <- m.fit$model.object
   fitted.argvals <- m.fit$fitted.argvals
   fitted.subj <- m.fit$fitted.subj
   fitted.Yvals <- m.fit$fitted.Yvals
@@ -88,16 +82,21 @@ faceModelClass <- R6Class(classname = "faceModelClass",
   portable = TRUE,
   class = TRUE,
   public = list(
+    reg = list(),
+    params = list(),
     outvar = character(),
     nobs = integer(),
     model_contrl = list(),
-    params = list(),
     fit.class = c("face"),
-    model.fit = list(fitfunname = NA, nobs = NA, params = NA, model_algorithms = NA),
+    # model.fit = list(fitfunname = NA, nobs = NA, params = NA, model_algorithms = NA),
+    model.fit = list(),
 
     initialize = function(fit.algorithm, fit.package, reg, ...) {
-      self$model_contrl <- reg$model_contrl
+      self$reg <- reg
+      self$params <- create_fit_params(reg)
       self$outvar <- reg$outvar
+      self$model_contrl <- reg$model_contrl
+
       assert_that(any(c("face") %in% fit.package))
       self$fit.class <- fit.package
       class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
@@ -106,12 +105,13 @@ faceModelClass <- R6Class(classname = "faceModelClass",
 
     fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, ...) {
       self$setdata(data, subset_idx = subset_idx, getXmat = TRUE, ...)
-      self$model.fit$params <- self$params
-      self$model.fit <- fit(self$fit.class, self$model.fit,
+      # self$model.fit$params <- self$params
+      self$model.fit <- fit(self$fit.class, self$params,
                                subj = private$subj,
                                argvals = private$argvals,
                                Yvals = private$Yvals,
                                knots = self$model_contrl$knots,
+                               model_contrl = self$model_contrl,
                                ...)
 
       return(self$model.fit)
@@ -180,7 +180,7 @@ faceModelClass <- R6Class(classname = "faceModelClass",
     get.argvals = function() { private$argvals },
     get.Y = function() { private$Yvals },
 
-    getmodel_ids = function() { return(make_model_ID_name(self$model.fit$model_algorithms, self$model_contrl$name)) },
+    getmodel_ids = function() { return(assign_model_name_id(model_algorithm = self$model.fit$model_algorithms[[1]], name = self$model_contrl$name)) },
     getmodel_algorithms = function() { self$model.fit$model_algorithms }
   ),
 

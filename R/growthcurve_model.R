@@ -111,7 +111,7 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
 }
 
 # ---------------------------------------------------------------------------------------
-#' Prediction for holdout SuperLearner fit
+#' Predict for holdout SuperLearner fit
 #'
 #' @param modelfit Model fit object returned by \code{\link{get_fit}} function.
 #' @param newdata Subject-specific holdout (validation) data for which predictions should be obtained.
@@ -144,7 +144,6 @@ predict_holdoutSL <- function(modelfit, newdata, add_subject_data = FALSE, verbo
 #' Predict for holdout observations only
 #'
 #' @param modelfit Model fit object returned by \code{\link{get_fit}} function.
-#' @param valid_data Subject-specific holdout (validation) data for which predictions should be obtained.
 #' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
 #' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
 #' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
@@ -163,7 +162,7 @@ predict_holdouts_only <- function(modelfit, predict_only_bestK_models, add_subje
 
 
 #' @export
-fit_resid_growthSL_holdout <- function(ID, t_name, x, y, data, params, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+fit_residholdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)
@@ -197,7 +196,7 @@ fit_resid_growthSL_holdout <- function(ID, t_name, x, y, data, params, hold_colu
   }
 
   ## ------------------------------------------------------------------------------------------
-  ## First fit glm on training set alone. Then define new outcome as a residual of glm predictions for entire data
+  ## First fit the glm on training set alone. Then define new outcome as a residual of glm predictions for entire data
   ## ------------------------------------------------------------------------------------------
   ## will be made into a passable user-defined argument:
   resid_params <- list(fit.package = "h2o", fit.algorithm = "glm", family = params$family)
@@ -213,7 +212,27 @@ fit_resid_growthSL_holdout <- function(ID, t_name, x, y, data, params, hold_colu
   y <- "residual_y" ## redefine the outcome
   modelfit_resid <- fit_model(ID, t_name, x, y = y, train_data = train_data, valid_data = valid_data, params = params)
 
+
+  ## ------------------------------------------------------------------------------------------
+  ## Re-fit the best scored model using all available data
+  ## ------------------------------------------------------------------------------------------
+  ## Define training data summaries (using all observations):
+  data <- define_features(data, nodes, train_set = TRUE, holdout = FALSE)
+  modelfit_first <- fit_model(ID, t_name, x = t_name, y, train_data = data, params = resid_params)
+  ## save predictions from the first model
+  data[, ("first_preds") := predict_model(modelfit = modelfit_first, newdata = data, evalMSE = FALSE)]
+  ## evaluate the residuals which are to be used as outcomes for the next stage SL
+  data[, ("residual_y") := (eval(as.name(y)) - first_preds)]
+
+  OData_all <- importData(data = data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
+  ## Fit the best model in holdout SL using all model and residuals as outcomes:
+  y <- "residual_y" ## redefine the outcome
+  modelfit_resid <- fit_model(ID, t_name, x, y = y, train_data = train_data, valid_data = valid_data, params = params)
+  best_fit <- modelfit_resid$refit_best_model(OData_all)
+
+  return(list(modelfit = modelfit, train_data = train_data, valid_data = valid_data))
   return(list(modelfit = list(modelfit_first = modelfit_first, modelfit_resid = modelfit_resid), train_data = train_data, valid_data = valid_data))
+
 }
 
 # ---------------------------------------------------------------------------------------
