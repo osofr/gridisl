@@ -24,7 +24,7 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
   h2o.no_progress()
 
   if (missing(validation_data)) {
-    # Grab the internallly stored h2o cross-validation predictions (out of sample)
+    ## Grab the internallly stored h2o cross-validation predictions (out of sample)
     pAoutMat <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
     return(pAoutMat)
 
@@ -35,19 +35,25 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
     outvar <- m.fit$params$outvar
     predvars <- m.fit$params$predvars
 
-    ## **** LOAD ALL DATA ONLY ONCE ****
+    ## **** LOAD ALL DATA ONLY ONCE INTO h2o FRAME ****
     valid_H2Oframe <- fast.load.to.H2O(validation_data[, c(outvar, predvars), with = FALSE], destination_frame = "CV_valid_H2Oframe")
 
-    # Assumes folds were equivalent across all models
+    ## Assumes folds were defined in exactly the same way across all models in fitted_models_all[] list
     h2o_model_1 <- m.fit$fitted_models_all[[1]]
     fold <- as.data.frame(h2o.cross_validation_fold_assignment(h2o_model_1))
     vfolds_cat <- sort(unique(fold$fold_assignment))
 
     for (vfold_idx in seq_along(vfolds_cat)) {
-      fold_idx_cv.i <- (fold$fold_assignment %in% vfolds_cat[vfold_idx])
+      fold_idx_cv.i <- which(fold$fold_assignment %in% vfolds_cat[vfold_idx])
       ## Define validation frame for this fold:
-      valid_H2Oframe_cv.i <- valid_H2Oframe[which(fold_idx_cv.i),]
+      subset_frame_t <- system.time(
+        valid_H2Oframe_cv.i <- valid_H2Oframe[fold_idx_cv.i, ]
+        # valid_H2Oframe_cv.i <- valid_H2Oframe[which(fold_idx_cv.i),]
+        )
+      print("subset_frame_t: "); print(subset_frame_t)
+
       cv.i_foldframeID <- h2o.getId(valid_H2Oframe_cv.i)
+
       dest_key_LIST <- vector(mode = "list", length = length(m.fit$fitted_models_all))
 
       for (idx in seq_along(m.fit$fitted_models_all)) {
@@ -73,10 +79,11 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
           pAoutMat[fold_idx_cv.i, idx] <- as.vector(newpreds[,"predict"])
         }
       }
-      # remove the fold-specific frame from h2o cluster
+      ## remove the fold-specific frame from h2o cluster - this will cause a bug since it will remove parts of original frame valid_H2Oframe
       # h2o.rm(cv.i_foldframeID)
     }
-    h2o.rm(valid_H2Oframe)
+    ## do not need to remove this manually, h2o will automatically clean this up when R's gc frees the variable
+    # h2o.rm(valid_H2Oframe)
     return(pAoutMat)
   }
 }
@@ -443,7 +450,6 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
         print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
       }
 
-      # **** WILL CREATE A TEMPORARY h2o FRAME ****
       self$outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
       # Below being TRUE implies that the conversion to H2O.FRAME produced errors, since there should be no NAs in the source subset data
       if (any(is.na(self$outfactors))) stop("FOUND NA OUTCOMES IN H2OFRAME WHEN THERE WERE NOT SUPPOSED TO BE ANY")
@@ -501,7 +507,7 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
   portable = TRUE,
   class = TRUE,
   public = list(
-    ModelFitFirstGLM = NULL,
+    firstGLMfit = NULL,
 
     # fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, destination_frame, ...) {
     fit = function(data, subset_idx, validation_data = NULL, destination_frame, ...) {
@@ -530,63 +536,52 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
         valid_H2Oframe = NULL
       }
 
-      # browser()
-
       ## ------------------------------------------------------------------------------------------
       ## PART I. Fit the univariate glm on training set. Define new outcome as a residual of glm predictions for entire data (train + validation)
       ## ------------------------------------------------------------------------------------------
       ## will be made into a passable user-defined argument:
       firstGLM_params <- list(fit.package = "h2o", fit.algorithm = "glm", family = self$model_contrl$family)
 
-      # ## x might be allowed to include add'l user-def covars:
-      # modelfit_firstGLM <- fit_model(ID, t_name, x = t_name, y, train_data = train_data, params = firstGLM_params)
-
       ## Option A (low level -- going directly for the residual glm fit)
-      FirstGLM.fit.class <- "glm"
-      class(FirstGLM.fit.class) <- c(class(FirstGLM.fit.class), "h2o" %+% FirstGLM.fit.class)
-      self$ModelFitFirstGLM <- try(fit(FirstGLM.fit.class, self$params, training_frame = train_H2Oframe, y = self$outvar, x = nodes$tnode,
-                                    model_contrl = firstGLM_params, ...),
-                            silent = FALSE)
+      ## (x might be allowed later to include add'l user-def covars)
+      firstGLMfit_class <- "glm"
+      class(firstGLMfit_class) <- c(class(firstGLMfit_class), "h2o" %+% firstGLMfit_class)
+      self$firstGLMfit <- try(fit(firstGLMfit_class, self$params, training_frame = train_H2Oframe, y = self$outvar, x = nodes$tnode,
+                                  model_contrl = firstGLM_params, ...),
+                              silent = FALSE)
 
-      firstGLM_preds_train <- predict_h2o_new(self$ModelFitFirstGLM$fitted_models_all[[1]]@model_id, frame_id = h2o.getId(train_H2Oframe))
-      firstGLM_preds_valid <- predict_h2o_new(self$ModelFitFirstGLM$fitted_models_all[[1]]@model_id, frame_id = h2o.getId(valid_H2Oframe))
-
-      # self$ModelFitObject$predictP1(data = newdata, subset_idx = self$subset_idx, predict_model_names = predict_model_names)
-      # firstGLM_preds_train <- predictP1(self$ModelFitFirstGLM, ParentObject = self, DataStorageObject = data, subset_idx = self$subset_idx)
-
-      ## Option B (high level -- instantiating a daughter class that will be responsible for creating residual glm fits)
-      # regFirstGLM <- RegressionClass$new(outvar = nodes$Ynode, predvars = nodes$tnode, model_contrl = firstGLM_params)
-      # self$ModelFitFirstGLM <- h2oModelClass$new(fit.algorithm = "glm", fit.package = "h2o", reg = regFirstGLM, ...)$fit(data = data)
-      # firstGLM_preds_train <- self$ModelFitFirstGLM$predict(newdata = data, MSE = FALSE)$getprobA1
-      # firstGLM_preds_valid <- self$ModelFitFirstGLM$predict(newdata = validation_data, MSE = FALSE)$getprobA1
+      GLMmodelID <- self$firstGLMfit$fitted_models_all[[1]]@model_id
+      firstGLM_preds_train <- predict_h2o_new(GLMmodelID, frame_id = h2o.getId(train_H2Oframe), returnVector = FALSE)
+      firstGLM_preds_valid <- predict_h2o_new(GLMmodelID, frame_id = h2o.getId(valid_H2Oframe), returnVector = FALSE)
 
       ## save predictions from the first model (fit on training data, but predictions made for all data)
-      ## ****** NOTE, we could avoid the entire convert to R -> back to h2o cycle with these predictions ******
-      train_H2Oframe[["first_preds"]] <- as.h2o(firstGLM_preds_train)
-      train_H2Oframe[["residual_y"]] <- train_H2Oframe[[self$outvar]] - train_H2Oframe[["first_preds"]]
-
-      # train_data[, ("first_preds") := predict_model(modelfit = modelfit_firstGLM, newdata = train_data, evalMSE = FALSE)]
-      # valid_data[, ("first_preds") := predict_model(modelfit = modelfit_firstGLM, newdata = valid_data, evalMSE = FALSE)]
+      train_H2Oframe[["firstGLM_preds"]] <- firstGLM_preds_train
+      train_H2Oframe[["residual_y"]] <- train_H2Oframe[[self$outvar]] - train_H2Oframe[["firstGLM_preds"]]
 
       ## evaluate residuals and define them as new outcomes (to be used as outcomes for the next stage SL)
       if (!is.null(validation_data)) {
-        valid_H2Oframe[["first_preds"]] <- as.h2o(firstGLM_preds_valid)
-        valid_H2Oframe[["residual_y"]] <- valid_H2Oframe[[self$outvar]] - valid_H2Oframe[["first_preds"]]
-        # train_data[, ("residual_y") := (eval(as.name(y)) - first_preds)]
-        # valid_data[, ("residual_y") := (eval(as.name(y)) - first_preds)]
+        valid_H2Oframe[["firstGLM_preds"]] <- firstGLM_preds_valid
+        valid_H2Oframe[["residual_y"]] <- valid_H2Oframe[[self$outvar]] - valid_H2Oframe[["firstGLM_preds"]]
       }
 
+      ## Option B (high level -- instantiating a daughter class that will be responsible for creating residual glm fits)
+      # regFirstGLM <- RegressionClass$new(outvar = nodes$Ynode, predvars = nodes$tnode, model_contrl = firstGLM_params)
+      # self$firstGLMfit <- h2oModelClass$new(fit.algorithm = "glm", fit.package = "h2o", reg = regFirstGLM, ...)$fit(data = data)
+      # firstGLM_preds_train <- self$firstGLMfit$predict(newdata = data, MSE = FALSE)$getprobA1
+      # firstGLM_preds_valid <- self$firstGLMfit$predict(newdata = validation_data, MSE = FALSE)$getprobA1
+
+      # train_data[, ("firstGLM_preds") := predict_model(modelfit = modelfit_firstGLM, newdata = train_data, evalMSE = FALSE)]
+      # valid_data[, ("firstGLM_preds") := predict_model(modelfit = modelfit_firstGLM, newdata = valid_data, evalMSE = FALSE)]
+      # train_data[, ("residual_y") := (eval(as.name(y)) - firstGLM_preds)]
+      # valid_data[, ("residual_y") := (eval(as.name(y)) - firstGLM_preds)]
+
       ## ------------------------------------------------------------------------------------------
-      ## PART II. Fit the univariate glm on training set. Define new outcome as a residual of glm predictions for entire data (train + validation)
+      ## PART II. Fit the h2o grid or single h2o learner on training data with residual predictions as new outcomes
       ## ------------------------------------------------------------------------------------------
-      ## Fit the holout SL using training model residuals as outcomes:
       y <- "residual_y" ## redefine the outcome
-      # modelfit_resid <- fit_model(ID, t_name, x, y = y, train_data = train_data, valid_data = valid_data, params = params)
-
-      SecondSL.fit.class <- "GridLearner"
-      class(SecondSL.fit.class) <- c(class(SecondSL.fit.class), "h2o" %+% SecondSL.fit.class)
-
-      self$model.fit <- try(fit(SecondSL.fit.class, self$params, training_frame = train_H2Oframe, y = "residual_y", x = self$predvars,
+      mainfit_class <- "GridLearner"
+      class(mainfit_class) <- c(class(mainfit_class), "h2o" %+% mainfit_class)
+      self$model.fit <- try(fit(mainfit_class, self$params, training_frame = train_H2Oframe, y = "residual_y", x = self$predvars,
                             model_contrl = self$model_contrl, fold_column = data$fold_column, validation_frame = valid_H2Oframe, ...),
                         silent = FALSE)
 
@@ -598,9 +593,9 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
       return(self$model.fit)
     },
 
-    # PREDICTION IS MODIFIED INTO 2 STAGES
+    ## PREDICTION IS MODIFIED INTO 2 STAGES (firstGLM prediction + second stage residual predictions for each learner)
     predictP1 = function(data, subset_idx, predict_model_names) {
-      P1_firstGLM <- predictP1(self$ModelFitFirstGLM, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx)
+      P1_firstGLM <- predictP1(self$firstGLMfit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx)
       P1_residSL <- predictP1(self$model.fit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx, predict_model_names = predict_model_names)
 
       if (ncol(P1_firstGLM) > 1) stop("initial glm fit for residuals must provide predictions with one column matrix only")
@@ -608,9 +603,8 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
       for (i in seq.int(ncol(P1_residSL))) {
         P1_residSL[,i] <-  P1_residSL[,i] + P1_firstGLM[,1]
       }
-
-      # P1 <- P1 + predict_h2o_new(self$ModelFitFirstGLM$fitted_models_all[[1]]@model_id, frame_id = h2o.getId(train_H2Oframe))
-      # P1 <- P1 + predictP1(self$ModelFitFirstGLM, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx)
+      # P1 <- P1 + predict_h2o_new(self$firstGLMfit$fitted_models_all[[1]]@model_id, frame_id = h2o.getId(train_H2Oframe))
+      # P1 <- P1 + predictP1(self$firstGLMfit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx)
       if (!missing(predict_model_names)) {
         colnames(P1_residSL) <- predict_model_names
       } else {
