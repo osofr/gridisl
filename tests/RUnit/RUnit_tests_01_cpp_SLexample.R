@@ -321,6 +321,20 @@ test.holdoutSL <- function() {
                               data = cpp_holdout, params = GRIDparams,
                               hold_column = "hold", use_new_features = TRUE)
 
+  print("Holdout MSE, using the holdout Y for prediction"); print(str(mfit_hold2$modelfit$getMSE))
+# $grid.glm.1
+# [1] 1.797792
+# $grid.glm.2
+# [1] 1.976214
+# $grid.glm.3
+# [1] 1.976399
+# $grid.gbm.4
+# [1] 1.597701
+# $grid.gbm.5
+# [1] 1.700594
+# $h2o.glm.reg03
+# [1] 1.776226
+
   ## Predictions for all holdout data points for all models trained on non-holdout data:
   preds_holdout2 <- growthcurveSL:::predict_holdouts_only(mfit_hold2, add_subject_data = TRUE)
   preds_holdout2[]
@@ -420,7 +434,43 @@ test.residual.holdoutSL <- function() {
                                     data = cpp_holdout, params = GRIDparams,
                                     hold_column = "hold", use_new_features = TRUE)
 
-  preds_holdout_all <- growthcurveSL:::predict_holdouts_only(mfit_resid_hold)
+  print("Holdout MSE, using the holdout Y for prediction"); print(mfit_resid_hold$modelfit$getMSE)
+# [1] "Holdout MSE, using the holdout Y for prediction"
+# $grid.glm.1
+# [1] 1.977161
+# $grid.glm.2
+# [1] 1.977161
+# $grid.glm.3
+# [1] 1.977161
+# $grid.gbm.4
+# [1] 1.435757
+# $grid.gbm.5
+# [1] 1.495895
+# $h2o.glm.reg03
+# [1] 1.776226
+
+  preds_holdout_all <- growthcurveSL:::predict_holdouts_only(mfit_resid_hold, add_subject_data = TRUE)
+  preds_holdout_all[]
+
+  ## Predictions for all holdout data points for all models trained on non-holdout data:
+  preds_holdout2 <- growthcurveSL:::predict_holdouts_only(mfit_hold2, add_subject_data = TRUE)
+  preds_holdout2[]
+  ## Predictions for training data from models trained on non-holdout data (default):
+  preds_holdout_train <- predict_model(mfit_hold2, add_subject_data = TRUE)
+  preds_holdout_train[]
+  preds_holdout_train <- predict_model(mfit_hold2, predict_only_bestK_models = 2, add_subject_data = TRUE)
+  preds_holdout_train[]
+  ## Predictions for new data based on best SL model trained on all data:
+  preds_alldat <- predict_holdoutSL(mfit_hold2, newdata = cpp_holdout, add_subject_data = TRUE)
+  preds_alldat[]
+
+  ## does not work right now, since it doesn't know how to define the special features!!!!!
+  preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  ## Instead, have to first manually define features for entire dataset:
+  cpp_plus <- define_features(cpp_holdout, nodes = mfit_hold2$modelfit$OData_train$nodes, train_set = TRUE, holdout = FALSE)
+  preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp_plus, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  preds_holdout2_alldat[]
+
 
 }
 

@@ -133,7 +133,7 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
 
   if (add_subject_data) {
     if (missing(newdata)) newdata <- modelfit$OData_train
-    predsDT <- newdata$dat.sVar[, c(nodes$IDnode, modelfit$predvars), with = FALSE]
+    predsDT <- newdata$dat.sVar[, c(nodes$IDnode, modelfit$predvars, modelfit$outvar), with = FALSE]
     predsDT[, (colnames(modelfit$getprobA1)) := as.data.table(modelfit$getprobA1)]
     preds <- predsDT
   }
