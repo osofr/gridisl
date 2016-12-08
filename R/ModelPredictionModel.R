@@ -4,11 +4,9 @@ assign_model_name_id <- function(H2O.model.object, model_algorithm, name = NULL)
   } else {
     model_ids <- list(model_algorithm)
   }
-
   new_names <- model_algorithm
   if (!is.null(name)) new_names <- new_names %+% "." %+% name
   names(model_ids) <- new_names
-
   return(model_ids)
 }
 
@@ -158,7 +156,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       # ***************************************************************************
       if (fit.package %in% c("h2o", "h2oEnsemble")) {
         if (fit.algorithm %in% "GridLearner") {
-          ModelFitObject <- h2oGridModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+          ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
         } else if (fit.algorithm %in% "ResidGridLearner") {
           ModelFitObject <- h2oResidualModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
         } else {

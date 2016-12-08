@@ -321,7 +321,7 @@ test.holdoutSL <- function() {
                               data = cpp_holdout, params = GRIDparams,
                               hold_column = "hold", use_new_features = TRUE)
 
-  print("Holdout MSE, using the holdout Y for prediction"); print(str(mfit_hold2$modelfit$getMSE))
+  print("Holdout MSE, using the holdout Y for prediction"); print(mfit_hold2$modelfit$getMSE)
   # $grid.glm.1
   # [1] 1.797792
   # $grid.glm.2
@@ -348,8 +348,8 @@ test.holdoutSL <- function() {
   preds_alldat[]
 
   ## does not work right now, since it doesn't know how to define the special features!!!!!
-  preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
-  ## Instead, have to first manually define features for entire dataset:
+  # preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  ## Instead, have to first manually define features for entire dataset - predictions will be for a model trained on non-holdouts only!
   cpp_plus <- define_features(cpp_holdout, nodes = mfit_hold2$modelfit$OData_train$nodes, train_set = TRUE, holdout = FALSE)
   preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp_plus, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_holdout2_alldat[]
@@ -385,9 +385,13 @@ test.holdoutSL <- function() {
   preds_holdout_train <- predict_model(mfit_hold, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_holdout_train[]
 
-  ## Obtain predictions from the best holdout model for all data:
-  preds_holdout_cpp <- predict_model(mfit_hold, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
-  preds_holdout_cpp[]
+  ## Obtain predictions from the best holdout model for all data (trained on non-holdouts only):
+  preds_all_1 <- predict_model(mfit_hold, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  preds_all_1[]
+
+  ## Obtain predictions from the best holdout model for all data (re-trained on all observations):
+  preds_all_2 <- predict_holdoutSL(mfit_hold, newdata = cpp_holdout, add_subject_data = TRUE)
+  preds_all_2[]
 }
 
 ## ------------------------------------------------------------------------------------

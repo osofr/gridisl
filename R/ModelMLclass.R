@@ -256,47 +256,6 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   return(pAoutMat)
 }
 
-h2oGridModelClass  <- R6Class(classname = "h2oModelClass",
-  inherit = h2oModelClass,
-  cloneable = TRUE,
-  portable = TRUE,
-  class = TRUE,
-  public = list(
-    fit.class = c("GridLearner"),
-    # Output info on the general type of regression being fitted:
-    show = function(all_fits = FALSE, ...) {
-      model.fit <- self$model.fit
-      grid_objects <- self$model.fit$grid_objects
-      top_grid_models <- self$model.fit$top_grid_models
-
-      cat(" TOTAL NO. OF GRIDS: " %+% length(model.fit$grid_objects) %+% "\n")
-      cat(" ======================= \n")
-
-      for (grid_nm in names(grid_objects)) {
-        print(grid_objects[[grid_nm]])
-        cat("\n TOP MODEL FOR THIS GRID: \n")
-        cat(" ======================= \n")
-        print(top_grid_models[[grid_nm]])
-      }
-
-      if (all_fits) {
-        cat("\n...Printing the summary fits of all models contained in this ensemble...\n")
-        cat("==========================================================================\n")
-        for (idx in seq_along(model.fit$fitted_models_all)) {
-          cat("Model No. " %+% idx %+% "; ")
-          print(model.fit$fitted_models_all[[idx]])
-        }
-      }
-      return(invisible(NULL))
-    },
-
-    summary = function(all_fits = FALSE) {
-      print("...")
-      return(invisible(self))
-    }
-  )
-)
-
 # IMPLEMENTING NEW CLASS FOR BINARY REGRESSION THAT USES h2o
 # NEEDS TO be able to pass on THE REGRESSION SETTINGS FOR h2o-specific functions
 h2oModelClass  <- R6Class(classname = "h2oModelClass",
@@ -462,8 +421,40 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     },
 
     show = function(all_fits = FALSE, ...) {
-      print(self$model.fit)
+      model.fit <- self$model.fit
+      grid_objects <- self$model.fit$grid_objects
+      top_grid_models <- self$model.fit$top_grid_models
+
+      if (!is.null(grid_objects)) {
+        cat(" TOTAL NO. OF GRIDS: " %+% length(grid_objects) %+% "\n")
+        cat(" ======================= \n")
+        for (grid_nm in names(grid_objects)) {
+          print(grid_objects[[grid_nm]])
+          cat("\n TOP MODEL FOR THIS GRID: \n")
+          cat(" ======================= \n")
+          print(top_grid_models[[grid_nm]])
+        }
+      }
+
+      if (all_fits) {
+        cat("\n...Printing the summary fits of all models contained in this ensemble...\n")
+        cat("==========================================================================\n")
+        for (idx in seq_along(model.fit$fitted_models_all)) {
+          cat("Model No. " %+% idx %+% "; ")
+          print(model.fit$fitted_models_all[[idx]])
+        }
+      }
       return(invisible(NULL))
+    },
+
+    # show = function(all_fits = FALSE, ...) {
+    #   print(self$model.fit)
+    #   return(invisible(NULL))
+    # }
+
+    summary = function(all_fits = FALSE, ...) {
+      print("...")
+      return(invisible(self))
     }
   ),
 
@@ -478,7 +469,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
     getmodel_ids = function() {
       if (is.null(self$model.fit$model_ids)) {
-        return(assign_model_name_id(self$model.fit$H2O.model.object, self$model.fit$model_algorithms[[1]], self$model_contrl$name))
+        return(assign_model_name_id(self$model.fit$fitted_models_all[[1]], self$model.fit$model_algorithms[[1]], self$model_contrl$name))
         # model_ids <- list(self$model.fit$H2O.model.object@model_id)
         # new_names <- self$model.fit$model_algorithms[[1]]
         # if (!is.null(self$model_contrl$name)) new_names <- new_names %+% "." %+% self$model_contrl$name
@@ -499,7 +490,6 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     valid_H2Oframe_ID = NULL
   )
 )
-
 
 h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
   inherit = h2oModelClass,
