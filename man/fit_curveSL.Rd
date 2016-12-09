@@ -28,7 +28,7 @@ fit_curveSL(ID, t_name, x, y, data, params, nfolds = 5, fold_column = NULL,
 \item{seed}{Random number seed for selecting a random holdout.}
 
 \item{expr_to_train}{Additional logical expression which will further subset observations (rows) for training data.
-Use this to restrict the model fitting to a specific subsample of the training datset.}
+Use this to restrict the model fitting to a specific subsample of the training dataset.}
 
 \item{use_new_features}{...}
 

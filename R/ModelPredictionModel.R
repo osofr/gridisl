@@ -95,8 +95,9 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     outvar = character(),   # outcome name(s)
     predvars = character(), # names of predictor vars
     is.fitted = FALSE,
+    nodes = NULL,
     OData_train = NULL, # object of class DataStorageClass used for training
-    OData_valid = NULL, # object of class DataStorageClass used for scoring models
+    OData_valid = NULL, # object of class DataStorageClass used for scoring models (contains validation data)
     ModelFitObject = NULL, # object of class ModelFitObject that is used in fitting / prediction
     use_best_retrained_model = FALSE,
     BestModelFitObject = NULL,
@@ -182,6 +183,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       ## save a pointer to training data class used for fitting
       self$OData_train <- data
+      self$nodes <- self$OData_train$nodes
+
       ## save a pointer to validation data class used for scoring
       if (!is.null(validation_data)) self$OData_valid <- validation_data
 

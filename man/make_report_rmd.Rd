@@ -4,13 +4,15 @@
 \alias{make_report_rmd}
 \title{Generate report(s) with modeling stats using pandoc.}
 \usage{
-make_report_rmd(modelfit, K = 5, format = c("html", "pdf", "word"),
+make_report_rmd(modelfit, data, K = 5, format = c("html", "pdf", "word"),
   file.name = getOption("growthcurveSL.file.name"),
   file.path = getOption("growthcurveSL.file.path"), openFile = TRUE,
   keep_md = FALSE, keep_tex = FALSE, ...)
 }
 \arguments{
-\item{modelfit}{Model fit object returned by the function \code{\link{get_fit}}.}
+\item{modelfit}{Model fit object returned by functions \code{\link{fit_holdoutSL}} or \code{\link{fit_curveSL}}.}
+
+\item{data}{Input dataset used for model fitting (optional).}
 
 \item{K}{The number of top performing models for which to provide performance measures. Defaults to 5 or the total number of models
 fit, whichever is smaller.}

@@ -37,7 +37,8 @@ openFileInOS <- function(f) {
 # ---------------------------------------------------------------------------------------------
 #' Generate report(s) with modeling stats using pandoc.
 #'
-#' @param modelfit Model fit object returned by the function \code{\link{get_fit}}.
+#' @param modelfit Model fit object returned by functions \code{\link{fit_holdoutSL}} or \code{\link{fit_curveSL}}.
+#' @param data Input dataset used for model fitting (optional).
 #' @param K The number of top performing models for which to provide performance measures. Defaults to 5 or the total number of models
 #' fit, whichever is smaller.
 #' @param format Choose the Pandoc output format for the report file (html, pdf or word).
@@ -53,10 +54,12 @@ openFileInOS <- function(f) {
 # \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
 #' @return String specifying the path to the main report file.
 #' @export
-make_report_rmd <- function(modelfit, K = 5, format = c("html", "pdf", "word"),
+make_report_rmd <- function(modelfit, data, K = 5, format = c("html", "pdf", "word"),
                             file.name = getOption('growthcurveSL.file.name'), file.path = getOption('growthcurveSL.file.path'),
                             openFile = TRUE, keep_md = FALSE, keep_tex = FALSE, ...) {
   optArgReport <- list(...)
+
+  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
 
   if (!rmarkdown::pandoc_available(version = "1.12.3"))
     stop(
@@ -96,6 +99,20 @@ call. = FALSE)
     assert_that(is.logical(print_all_fits))
   } else {
     print_all_fits <- FALSE
+  }
+
+  # -------------------------------------------------------------------------------------
+  # Input data
+  # -------------------------------------------------------------------------------------
+  nodes <- modelfit$nodes
+  if (!missing(data)) {
+    nobs <- nrow(data)
+    nuniqueIDs <- length(unique(data[[nodes$IDnode]]))
+    nuniquets <- length(unique(data[[nodes$tnode]]))
+  } else {
+    nobs <- NA
+    nuniqueIDs <- NA
+    nuniquets <- NA
   }
 
   # -------------------------------------------------------------------------------------

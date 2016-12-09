@@ -29,12 +29,14 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
   # inherit = PredictionModel,
   public = list(
     PredictionModels = NULL,
+    nodes = NULL,
     initialize = function(PredictionModels) {
       if (!all(unlist(lapply(PredictionModels, is.PredictionModel)))) {
        stop("All arguments must be of class 'PredictionModel'")
       }
       assert_that("PredictionStack" %in% class(PredictionModels))
       self$PredictionModels <- PredictionModels
+      self$nodes <- PredictionModels[[1]]$nodes
       return(self)
     },
     fit = function(overwrite = FALSE, data, predict = FALSE, validation_data = NULL, ...) {

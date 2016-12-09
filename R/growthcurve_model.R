@@ -105,7 +105,7 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
   }
 
   ## ------------------------------------------------------------------------------------------
-  ## Perfom fitting based on training set (and model scoring based on holdout validation set)
+  ## Perform fitting based on training set (and model scoring based on holdout validation set)
   ## ------------------------------------------------------------------------------------------
   modelfit <- fit_model(ID, t_name, x, y, train_data = train_data, valid_data = valid_data, params = params)
 
@@ -117,7 +117,8 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
   data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
   OData_all <- importData(data = data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
   best_fit <- modelfit$refit_best_model(OData_all)
-  return(list(modelfit = modelfit, train_data = train_data, valid_data = valid_data))
+  return(modelfit)
+  # return(list(modelfit = modelfit, train_data = train_data, valid_data = valid_data))
 }
 
 # ---------------------------------------------------------------------------------------
@@ -133,7 +134,7 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
 #' @param fold_column The name of the column in the input data that contains the cross-validation fold indicators (must be an ordered factor).
 #' @param seed Random number seed for selecting a random holdout.
 #' @param expr_to_train Additional logical expression which will further subset observations (rows) for training data.
-#' Use this to restrict the model fitting to a specific subsample of the training datset.
+#' Use this to restrict the model fitting to a specific subsample of the training dataset.
 #' @param use_new_features ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
@@ -189,7 +190,8 @@ fit_curveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column 
   ## ------------------------------------------------------------------------------------------
   best_fit <- modelfit$refit_best_model(modelfit$OData_train)
 
-  return(list(modelfit = modelfit, train_data = train_data, valid_data = valid_data))
+  return(modelfit)
+  # return(list(modelfit = modelfit, train_data = train_data, valid_data = valid_data))
 }
 
 # ---------------------------------------------------------------------------------------

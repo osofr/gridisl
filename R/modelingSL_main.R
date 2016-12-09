@@ -4,6 +4,27 @@
 # @importFrom ggiraph geom_point_interactive ggiraph
 NULL
 
+#' Get training data used by the modeling object
+#'
+#' Wrapper function for obtaining the training dataset saved in the modeling object.
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_curveSL}.
+#' @return \code{data.table} that was used for model training.
+#' @export
+get_train_data <- function(modelfit) {
+  assert_that(is.PredictionModel(modelfit))
+  return(modelfit$OData_train$dat.sVar)
+}
+#' Get validation data used by the modeling object
+#'
+#' Wrapper function for obtaining the validation dataset saved in the modeling object.
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_curveSL}.
+#' @return \code{data.table} that was used for model scoring (CV-MSE).
+#' @export
+get_validation_data <- function(modelfit) {
+  assert_that(is.PredictionModel(modelfit))
+  return(modelfit$OData_valid$dat.sVar)
+}
+
 # ---------------------------------------------------------------------------------------
 #' Generic modeling function for any longitudinal data.
 #'
