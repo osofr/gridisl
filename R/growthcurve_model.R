@@ -1,3 +1,9 @@
+
+# ---------------------------------------------------------------------------------------
+# TO DO
+# **** ALLOW data to be an R6 object of class DataStorageClass. This will enable calling h2o SL from other pkgs *****
+# 3. Predicting the entire growth curve (need to sort out the summaries, how to handle them, how to define them)
+
 #' Predict for a holdout set (NOT IMPLEMENTED)
 #'
 #' @param OData Input data object created by \code{importData} function.

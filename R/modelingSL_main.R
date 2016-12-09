@@ -5,16 +5,6 @@
 NULL
 
 # ---------------------------------------------------------------------------------------
-# TO DO
-# **** ALLOW data to be an R6 object of class DataStorageClass. This will enable calling h2o SL from other pkgs *****
-# 1. Perform model re-fitting when doing holdout using the entire training data (to be able to obtain the SL) for one or several specific models
-# 2. Enable best model prediction for growthcurve SL (holdout and CV)
-# 3. Predicting the entire growth curve (need to sort out the summaries, how to handle them, how to define them)
-# 4. Double (nested) residual learner with CV. Need to make residual part of the model class def'n so that it works seamlessly
-# 5. [LONG-TERM] Need wrappers for various h2o modeling functions
-# ---------------------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------------------
 #' Generic modeling function for any longitudinal data.
 #'
 #' @param ID A character string name of the column that contains the unique subject identifiers.
@@ -170,38 +160,3 @@ eval_MSE_CV <- function(modelfit, newdata, yvals, verbose = getOption("growthcur
   }
   return(modelfit$getMSE)
 }
-
-# # ---------------------------------------------------------------------------------------
-# #' Predict for cross-validation sets
-# #'
-# #' @param modelfit Model fit object returned by \code{\link{get_fit}} function.
-# #' @param valid_data New validation data for external CV
-# #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-# #' @return new CV-based MSEs
-# #' @export
-# score_CVgrowthcurveSL <- function(modelfit, valid_data, verbose = getOption("growthcurveSL.verbose")) {
-#   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
-#   assert_that(is.PredictionModel(modelfit))
-#   gvars$verbose <- verbose
-#   ## Get OData_train from modelfit
-#   OData_train <- modelfit$OData_train
-#   nodes <- OData_train$nodes
-#   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
-#   if (missing(valid_data)) {
-#     # DO NOT RESCORE, USE LAST CV PREDICTIONS INSTEAD
-#     OData_valid <- modelfit$OData_valid
-#   } else {
-#     # RE-SCORE THE CV MODELS BASED ON NEW VALIDATION DATA
-#     OData_valid <- importData(data = valid_data, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
-#     ## Rescore the model based on CV fold predictions (out of sample) based on external validation set:
-#     t_CV <- system.time(
-#       modelfit <- modelfit$score_CV(validation_data = OData_valid)
-#     )
-#     print("t_CV: "); print(t_CV)
-#   }
-#   print("MSE after manual rescoring of the models: "); print(unlist(modelfit$getMSE))
-#   return(modelfit$getMSE)
-# }
-
-
-
