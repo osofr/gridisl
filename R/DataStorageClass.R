@@ -227,7 +227,6 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # ---------------------------------------------------------------------
     get.dat.sVar = function(rowsubset = TRUE, covars) {
       if (!missing(covars)) {
-        # browser()
         if (length(unique(colnames(self$dat.sVar))) < length(colnames(self$dat.sVar))) {
           warning("repeating column names in the final data set; please check for duplicate summary measure / node names")
         }

@@ -20,7 +20,7 @@ predict_h2o_new <- function(model_id, frame_id, returnVector = TRUE) {
   }
 }
 
-score_h2o_CV_models <- function(m.fit, validation_data, ...) {
+score_h2o_CV_models <- function(m.fit, validation_data, fold_column, ...) {
   h2o.no_progress()
 
   ## Grab the internallly stored h2o out of sample predictions for each CV model (cross-validation predictions are combined into a single vector of length n)
@@ -36,7 +36,7 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
     predvars <- m.fit$params$predvars
 
     ## **** LOAD ALL DATA ONLY ONCE INTO h2o FRAME ****
-    valid_H2Oframe <- fast.load.to.H2O(validation_data[, c(outvar, predvars), with = FALSE], destination_frame = "CV_valid_H2Oframe")
+    valid_H2Oframe <- fast.load.to.H2O(validation_data[, c(outvar, predvars, fold_column), with = FALSE], destination_frame = "CV_valid_H2Oframe")
 
     ## Assumes folds were defined in exactly the same way across all models in fitted_models_all[] list
     h2o_model_1 <- m.fit$fitted_models_all[[1]]
@@ -44,6 +44,7 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
     vfolds_cat <- sort(unique(fold$fold_assignment))
 
     for (vfold_idx in seq_along(vfolds_cat)) {
+      vfold_idx <- 1
       fold_idx_cv.i <- which(fold$fold_assignment %in% vfolds_cat[vfold_idx])
       ## Define validation frame for this fold:
       # subset_frame_t <- system.time(
@@ -57,6 +58,9 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
       dest_key_LIST <- vector(mode = "list", length = length(m.fit$fitted_models_all))
 
       for (idx in seq_along(m.fit$fitted_models_all)) {
+        # idx <- 1
+        # h2o.predict(h2o.getModel(cv_models_IDs[[vfold_idx]]), newdata = h2o.getFrame(cv.i_foldframeID))
+
         # print("idx: "); print(idx); print("model: "); print(names(m.fit$model_ids)[idx])
         h2o_model <- m.fit$fitted_models_all[[idx]]
         cv_models_IDs <- lapply(h2o_model@model$cross_validation_models, "[[", "name")
@@ -72,6 +76,7 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
 
       h2o:::.h2o.__waitOnJob(job_key, pollInterval = 0.01)
       for (idx in seq_along(dest_key_LIST)) {
+        # idx <- 1
         newpreds <- h2o.getFrame(dest_key_LIST[[idx]])
         if ("p1" %in% colnames(newpreds)) {
           pAoutMat[fold_idx_cv.i, idx] <- as.vector(newpreds[,"p1"])
@@ -318,7 +323,8 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       }
 
       self$model.fit <- try(fit(self$fit.class, self$params, training_frame = train_H2Oframe, y = self$outvar, x = self$predvars,
-                            model_contrl = self$model_contrl, fold_column = data$fold_column, validation_frame = valid_H2Oframe, ...),
+                                model_contrl = self$model_contrl, fold_column = self$model_contrl$fold_column, validation_frame = valid_H2Oframe, ...),
+                                # model_contrl = self$model_contrl, fold_column = data$fold_column, validation_frame = valid_H2Oframe, ...),
                         silent = FALSE)
 
       if (inherits(self$model.fit, "try-error")) {
@@ -343,7 +349,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     },
 
     score_CV = function(validation_data) {
-      P1 <- score_h2o_CV_models(self$model.fit, validation_data)
+      P1 <- score_h2o_CV_models(self$model.fit, validation_data, fold_column = self$model_contrl$fold_column)
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)
       }
