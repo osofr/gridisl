@@ -86,12 +86,13 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   ## If validation data supplied, score the models based on validation set as well
   ## ------------------------------------------------------------------------------------------
   if (!is.null(OData_valid)) preds <- modelfit$predict(newdata = OData_valid)
+
   ## ------------------------------------------------------------------------------------------
   ## If CV was used, then score the models based on CV out-of-sample predictions
   ## ------------------------------------------------------------------------------------------
   if (runCV) {
     mse <- eval_MSE_CV(modelfit, yvals = OData_train$dat.sVar[[nodes$Ynode]])
-    print("Mean cross-validated MSE by model: "); print(data.frame(mse))
+    print("Mean CV MSE (for out of sample predictions) as evaluated by h2o: "); print(data.frame(mse))
   }
   return(modelfit)
 }
@@ -146,11 +147,12 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
 #'
 #' @param modelfit Model fit object returned by \code{\link{fit_model}} function.
 #' @param newdata ...
-#' @param modelIDs ... Not implemented ...
+#' @param yvals ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 #' @export
 eval_MSE_CV <- function(modelfit, newdata, yvals, verbose = getOption("growthcurveSL.verbose")) {
+  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose
@@ -160,7 +162,7 @@ eval_MSE_CV <- function(modelfit, newdata, yvals, verbose = getOption("growthcur
     modelfit <- modelfit$score_CV(yvals = yvals)
   } else {
     newOData <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
-    ## 2. Get predictions for each CV model based on external validation CV:
+    ## Get predictions for each CV model based on external validation CV dataset:
     t_CV <- system.time(
       modelfit <- modelfit$score_CV(validation_data = newOData, yvals = yvals)
     )
@@ -169,7 +171,37 @@ eval_MSE_CV <- function(modelfit, newdata, yvals, verbose = getOption("growthcur
   return(modelfit$getMSE)
 }
 
-
+# # ---------------------------------------------------------------------------------------
+# #' Predict for cross-validation sets
+# #'
+# #' @param modelfit Model fit object returned by \code{\link{get_fit}} function.
+# #' @param valid_data New validation data for external CV
+# #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+# #' @return new CV-based MSEs
+# #' @export
+# score_CVgrowthcurveSL <- function(modelfit, valid_data, verbose = getOption("growthcurveSL.verbose")) {
+#   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
+#   assert_that(is.PredictionModel(modelfit))
+#   gvars$verbose <- verbose
+#   ## Get OData_train from modelfit
+#   OData_train <- modelfit$OData_train
+#   nodes <- OData_train$nodes
+#   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
+#   if (missing(valid_data)) {
+#     # DO NOT RESCORE, USE LAST CV PREDICTIONS INSTEAD
+#     OData_valid <- modelfit$OData_valid
+#   } else {
+#     # RE-SCORE THE CV MODELS BASED ON NEW VALIDATION DATA
+#     OData_valid <- importData(data = valid_data, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
+#     ## Rescore the model based on CV fold predictions (out of sample) based on external validation set:
+#     t_CV <- system.time(
+#       modelfit <- modelfit$score_CV(validation_data = OData_valid)
+#     )
+#     print("t_CV: "); print(t_CV)
+#   }
+#   print("MSE after manual rescoring of the models: "); print(unlist(modelfit$getMSE))
+#   return(modelfit$getMSE)
+# }
 
 
 

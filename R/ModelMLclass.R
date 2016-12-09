@@ -23,8 +23,8 @@ predict_h2o_new <- function(model_id, frame_id, returnVector = TRUE) {
 score_h2o_CV_models <- function(m.fit, validation_data, ...) {
   h2o.no_progress()
 
+  ## Grab the internallly stored h2o out of sample predictions for each CV model (cross-validation predictions are combined into a single vector of length n)
   if (missing(validation_data)) {
-    ## Grab the internallly stored h2o cross-validation predictions (out of sample)
     pAoutMat <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
     return(pAoutMat)
 
@@ -46,11 +46,11 @@ score_h2o_CV_models <- function(m.fit, validation_data, ...) {
     for (vfold_idx in seq_along(vfolds_cat)) {
       fold_idx_cv.i <- which(fold$fold_assignment %in% vfolds_cat[vfold_idx])
       ## Define validation frame for this fold:
-      subset_frame_t <- system.time(
+      # subset_frame_t <- system.time(
         valid_H2Oframe_cv.i <- valid_H2Oframe[fold_idx_cv.i, ]
         # valid_H2Oframe_cv.i <- valid_H2Oframe[which(fold_idx_cv.i),]
-        )
-      print("subset_frame_t: "); print(subset_frame_t)
+        # )
+      # print("subset_frame_t: "); print(subset_frame_t)
 
       cv.i_foldframeID <- h2o.getId(valid_H2Oframe_cv.i)
 

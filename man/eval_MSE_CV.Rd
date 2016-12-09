@@ -12,9 +12,9 @@ eval_MSE_CV(modelfit, newdata, yvals,
 
 \item{newdata}{...}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
+\item{yvals}{...}
 
-\item{modelIDs}{... Not implemented ...}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
 }
 \value{
 ...

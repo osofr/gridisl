@@ -208,7 +208,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     refit_best_model = function(data, ...) {
       if (gvars$verbose) print("refitting the best model: "); self$show()
       self$define.subset.idx(data)
-
       ## reset the training data to be all data for future prediction with missing newdata
       # self$OData_train <- data
       ## reset the subset to include all data that was used for retraining (for automatic future prediction with missing newdata)
@@ -220,6 +219,13 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       # self$outvar, self$predvars,
       model.fit <- self$BestModelFitObject$fit(data, subset_idx = self$subset_idx, destination_frame = "alldata_H2Oframe", ...)
       if (inherits(model.fit, "try-error")) stop("refitting of the best model failed")
+
+      # browser()
+      # self$getMSE
+      # self$getmodel_byname("grid.gbm.5")
+      # self$getmodel_byname("grid.gbm.5")[[1]]@parameters
+      # self$ModelFitObject$model.fit$fitted_models_all[[1]]
+      # self$BestModelFitObject$model.fit$fitted_models_all[[1]]@parameters
 
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
@@ -269,7 +275,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         } else if (!missing(validation_data)) {
           test_values <- validation_data$get.outvar(self$subset_idx, var = self$outvar)
         } else {
-          stop("must provide either test values (yvals) or validation data with test values when evaluating MSE")
+          test_values <- self$OData_train$get.outvar(self$subset_idx, var = self$outvar)
+          # stop("must provide either test values (yvals) or validation data with test values when evaluating MSE")
         }
         private$MSE <- self$evalMSE(test_values)
       }

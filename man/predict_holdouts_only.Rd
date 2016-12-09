@@ -8,7 +8,7 @@ predict_holdouts_only(modelfit, predict_only_bestK_models,
   add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
-\item{modelfit}{Model fit object returned by \code{\link{get_fit}} function.}
+\item{modelfit}{Model fit object returned by \code{\link{fit_holdoutSL}} function.}
 
 \item{predict_only_bestK_models}{Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
 Leave missing to obtain predictions for all models that were fit as part of this ensemble.}
