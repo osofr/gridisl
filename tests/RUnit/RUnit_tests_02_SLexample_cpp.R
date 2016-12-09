@@ -275,10 +275,61 @@ test.generic.h2oSL <- function() {
   model_cv <- grid_mfit_cv$getfit$fitted_models_all[[1]]
 }
 
+test.holdoutSL.GLM <- function() {
+  # library("growthcurveSL")
+  require("h2o")
+  h2o::h2o.init(nthreads = -1)
+  options(growthcurveSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  # ----------------------------------------------------------------
+  # Perform fitting with regularlized GLMs using h2o.grid
+  # ----------------------------------------------------------------
+  alpha_opt <- c(0,1,seq(0.1,0.9,0.01))
+  lambda_opt <- c(seq(0.001, 0.009, by = 0.001), seq(0.01, 0.09, by = 0.01)) # , seq(0.1, 0.9, by = 0.02)
+  glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 10),
+                           alpha = alpha_opt, lambda = lambda_opt)
+
+  GLM.GRIDparams = list(name = "GLM",
+                       fit.package = "h2o", fit.algorithm = "GridLearner",
+                       grid.algorithm = c("glm"), seed = 23, glm = glm_hyper_params, family = "gaussian")
+  ## add holdout indicator column
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+
+  mfit_holdGLM <- fit_holdoutSL(ID = "subjid", t_name = "agedays",
+                              y = "haz",
+                              # x = c("agedays", covars),
+                              x = c("agedays", covars, "nY", "meanY", "medianY", "minY", "maxY"),
+                              data = cpp_holdout, params = GLM.GRIDparams,
+                              hold_column = "hold") # , use_new_features = TRUE
+
+    # print("Holdout MSE, using the holdout Y for prediction"); print(mfit_holdGLM$modelfit$getMSE)
+    holdPredDT <- growthcurveSL:::predict_holdouts_only(mfit_holdGLM, predict_only_bestK_models = 5, add_subject_data = TRUE)
+    print("GLM holdPredDT"); print(holdPredDT[])
+    preds_best_train <- predict_model(mfit_holdGLM, predict_only_bestK_models = 1, add_subject_data = TRUE)
+    print("GLM preds_best_train"); print(preds_best_train[])
+    preds_best_all <- predict_SL(mfit_holdGLM, newdata = cpp_holdout, add_subject_data = TRUE)
+    print("GLM preds_best_all"); print(preds_best_all[])
+
+    print("TOP MSE: "); print(min(unlist(mfit_holdGLM$modelfit$getMSE)), na.rm = TRUE)
+    print(mfit_holdGLM$modelfit$get_best_MSEs(5))
+    print(mfit_holdGLM$modelfit$get_best_MSEs(15))
+    BEST_GLM_model <- mfit_holdGLM$modelfit$get_best_models(K = 1)[[1]]
+
+    make_report_rmd(mfit_holdGLM$modelfit,
+                    K = 10,
+                    file.name = paste0("GLMs_", getOption("growthcurveSL.file.name")),
+                    title = paste0("Growth Curve Imputation with GLM"),
+                    format = "html", keep_md = TRUE, openFile = FALSE)
+
+}
+
 ## ------------------------------------------------------------------------------------
 ## Holdout Growth Curve SL with model scoring based on random holdouts
 ## ------------------------------------------------------------------------------------
-test.holdoutSL <- function() {
+test.holdoutSL.GLM.GBM <- function() {
   # library("growthcurveSL")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
@@ -295,7 +346,7 @@ test.holdoutSL <- function() {
   lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
   glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 3), alpha = alpha_opt, lambda = lambda_opt)
   ## gbm grid learner:
-  gbm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
+  gbm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 5, max_runtime_secs = 60*60),
                            ntrees = c(100, 200, 300, 500),
                            learn_rate = c(0.005, 0.01, 0.03, 0.06),
                            max_depth = c(3, 4, 5, 6, 9),
@@ -395,6 +446,14 @@ test.holdoutSL <- function() {
   ## Obtain predictions from the best holdout model for all data (trained on non-holdouts only):
   preds_best_train <- predict_model(mfit_hold, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_best_train[]
+
+  holdPredDT <- growthcurveSL:::predict_holdouts_only(mfit_hold, predict_only_bestK_models = 5, add_subject_data = TRUE)
+  print("10 best MSEs among all learners: "); print(mfit_hold2$modelfit$get_best_MSEs(K = 5))
+  models <- mfit_hold2$modelfit$get_best_models(K = 5)
+  print("Top 5 models: "); print(models)
+  res_tab <- mfit_hold2$modelfit$get_best_MSE_table(K = 5)
+  print("5 best models among all learners: "); print(res_tab)
+  make_report_rmd(mfit_hold2$modelfit, K = 10, format = "html", openFile = FALSE)
 
 }
 

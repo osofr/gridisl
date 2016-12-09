@@ -181,23 +181,16 @@ define_features_drop <- function(dataDT, ID, t_name, y, train_set = TRUE, hold_c
   # gridDT[1:100, ]
   # dataDT_sel[1:20, ]
 
-
   # dataDT_sel <- dataDT[, c(sel_vars, "hold", "lt", "rt", "Y.lt", "Y.rt", "l.obs", "mid.obs", "r.obs"), with = FALSE]
-
   # datDT_gridX <- merge(datDT_tgrid, datDT_subjID, by = c("agedays", "subjid"))
   # merge(dataDT_sel, gridDT, by = c("subjid", "agedays"), all = TRUE)
   # merge(dataDT_sel, gridDT, by = c("subjid", "agedays"), all.x = TRUE)
   # # by.x = NULL, by.y = NULL,
-
   # setkeyv(datDT_tgrid, cols = "agedays")
-
   # dataDT_sel <- dataDT[, c("subjid", "agedays", "haz")]
   # setkeyv(dataDT_sel, cols = c("subjid", "agedays"))
-
   # datDT_tgrid[dataDT_sel, roll = Inf]
-
   # dataDT[datDT_tgrid, roll = TRUE, agedays, by = eval(ID)]
-
   # datDT_tgrid[dataDT, roll = TRUE, agedays, by = eval(ID)]
 
   if (train_set) {

@@ -93,7 +93,6 @@ test.holdout.features <- function() {
 
 test.holdout.features.grid <- function() {
   valid_data_holdonly <- define_features_drop(cpp_holdout, ID = "subjid", t_name = "agedays", y = "haz", train_set = FALSE, hold_column = "hold")
-  datDT_grid <- data.table::data.table(t = seq(0,100,by=1))
 
   cpp_all_train2 <- define_features_drop(cpp_holdout, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
 

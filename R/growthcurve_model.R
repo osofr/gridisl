@@ -243,5 +243,5 @@ predict_holdouts_only <- function(modelfit, predict_only_bestK_models, add_subje
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
   valid_data <- modelfit$OData_valid$dat.sVar
-  return(predict_model(modelfit = modelfit, newdata = valid_data, predict_only_bestK_models, evalMSE = TRUE, add_subject_data = add_subject_data))
+  return(predict_model(modelfit = modelfit, newdata = valid_data, predict_only_bestK_models, evalMSE = FALSE, add_subject_data = add_subject_data))
 }
