@@ -5,7 +5,8 @@
 \title{Define features (predictors) for training or testing (validation) data}
 \usage{
 define_features(dataDT, nodes, train_set = TRUE, holdout = TRUE,
-  hold_column = "hold", verbose = getOption("growthcurveSL.verbose"))
+  hold_column = "hold", noNAs = FALSE,
+  verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
 \item{dataDT}{Input data.table}
@@ -17,6 +18,8 @@ define_features(dataDT, nodes, train_set = TRUE, holdout = TRUE,
 \item{holdout}{...}
 
 \item{hold_column}{...}
+
+\item{noNAs}{...}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
 }

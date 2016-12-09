@@ -84,14 +84,17 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
   ## ------------------------------------------------------------------------------------------
   ## Define training data summaries (excludes holdouts, summaries are created without the holdout observations):
   ## ------------------------------------------------------------------------------------------
-  train_data <- define_features(train_data, nodes, train_set = TRUE, holdout = TRUE, hold_column = hold_column)
+  # train_data <- define_features(train_data, nodes, train_set = TRUE, holdout = TRUE, hold_column = hold_column)
+  train_data <- define_features_drop(train_data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
   if (!is.null(expr_to_train)) train_data <- train_data[eval(parse(text=expr_to_train)), ]
 
   ## ------------------------------------------------------------------------------------------
   ## Define validation data (includes the holdout only, each summary is created without the holdout observation):
   ## ------------------------------------------------------------------------------------------
-  valid_data <- define_features(data, nodes, train_set = FALSE, hold_column = hold_column)
-  valid_data <- valid_data[valid_data[[hold_column]], ]
+  # valid_data <- define_features(data, nodes, train_set = FALSE, hold_column = hold_column)
+  # valid_data <- valid_data[valid_data[[hold_column]], ]
+  # by giving the hold_column the non-holdout observations will be automatically dropped (could have also done it manually)
+  valid_data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = FALSE, hold_column = hold_column)
 
   ## ------------------------------------------------------------------------------------------
   ## Add new features as predictors?
@@ -110,7 +113,8 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
   ## Re-fit the best scored model using all available data
   ## ------------------------------------------------------------------------------------------
   ## Define training data summaries (using all observations):
-  data <- define_features(data, nodes, train_set = TRUE, holdout = FALSE)
+  # data <- define_features(data, nodes, train_set = TRUE, holdout = FALSE)
+  data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
   OData_all <- importData(data = data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
   best_fit <- modelfit$refit_best_model(OData_all)
   return(list(modelfit = modelfit, train_data = train_data, valid_data = valid_data))
@@ -150,7 +154,8 @@ fit_curveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column 
   ## ------------------------------------------------------------------------------------------
   ## Define training data summaries (using all observations):
   ## ------------------------------------------------------------------------------------------
-  train_data <- define_features(data, nodes, train_set = TRUE, holdout = FALSE)
+  # train_data <- define_features(data, nodes, train_set = TRUE, holdout = FALSE)
+  train_data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
   if (!is.null(expr_to_train)) train_data <- train_data[eval(parse(text=expr_to_train)), ]
 
   ## ------------------------------------------------------------------------------------------
@@ -169,8 +174,10 @@ fit_curveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column 
   ## ------------------------------------------------------------------------------------------
   ## Score CV models based on validation set
   ## ------------------------------------------------------------------------------------------
-  ## Define validation data to be used for scoring during CV (each summary point (X_i,Y_i) is created by dropping this observation):
-  valid_data <- define_features(data, nodes, train_set = FALSE, holdout = FALSE)
+  ## Define validation data to be used for scoring during CV (each summary row (X_i,Y_i) is created by first dropping this row):
+  # valid_data <- define_features(data, nodes, train_set = FALSE, holdout = FALSE)
+  valid_data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = FALSE)
+
   OData_valid <- importData(data = valid_data, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
   modelfit <- modelfit$score_CV(validation_data = OData_valid) # returns the modelfit object intself, but does the scoring of each CV model
   print("CV MSE after manual CV model rescoring: "); print(unlist(modelfit$getMSE))
@@ -180,9 +187,6 @@ fit_curveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column 
   ## Re-fit the best manually-scored model on all data
   ## Even though we don't need to do this for CV (best model is already trained), we do this to be consistent with holdoutSL (and for additional error checking)
   ## ------------------------------------------------------------------------------------------
-  ## Define training data summaries (using all observations):
-  # data <- define_features(data, nodes, train_set = TRUE, holdout = FALSE)
-  # OData_all <- importData(data = data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
   best_fit <- modelfit$refit_best_model(modelfit$OData_train)
 
   return(list(modelfit = modelfit, train_data = train_data, valid_data = valid_data))
@@ -209,7 +213,8 @@ predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, verbose = ge
     # newdata <- modelfit$OData_valid$dat.sVar
     newdata <- modelfit$OData_train$dat.sVar
   } else {
-    newdata <- define_features(newdata, nodes, train_set = TRUE, holdout = FALSE)
+    # newdata <- define_features(newdata, nodes, train_set = TRUE, holdout = FALSE)
+    newdata <- define_features_drop(newdata, ID = nodes$IDnode, t_name = nodes$tnode, y = nodes$Ynode, train_set = TRUE)
   }
 
   ## will use the best model retrained on all data for prediction:
