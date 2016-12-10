@@ -37,7 +37,7 @@ openFileInOS <- function(f) {
 # ---------------------------------------------------------------------------------------------
 #' Generate report(s) with modeling stats using pandoc.
 #'
-#' @param modelfit Model fit object returned by functions \code{\link{fit_holdoutSL}} or \code{\link{fit_curveSL}}.
+#' @param modelfit Model fit object returned by functions \code{\link{fit_holdoutSL}} or \code{\link{fit_cvSL}}.
 #' @param data Input dataset used for model fitting (optional).
 #' @param K The number of top performing models for which to provide performance measures. Defaults to 5 or the total number of models
 #' fit, whichever is smaller.

@@ -2,7 +2,7 @@
 % Please edit documentation in R/growthcurve_model.R
 \name{fit_holdoutSL}
 \alias{fit_holdoutSL}
-\title{Define and fit growth models evaluated on holdout observations.}
+\title{Growth curve SuperLearner with one-out holdout validation}
 \usage{
 fit_holdoutSL(ID, t_name, x, y, data, params, hold_column = NULL,
   random = FALSE, seed = NULL, expr_to_train = NULL,
@@ -40,6 +40,9 @@ Use this to restrict the model fitting to a specific subsample of the training d
 ...
 }
 \description{
-Define and fit growth models evaluated on holdout observations.
+Define and fit discrete SuperLearner for growth curve modeling.
+Model selection (scoring) is based on MSE for a single random (or last) holdout data-point for each subject.
+This is in contrast to the model selection with V-fold cross-validated MSE in \code{\link{fit_cvSL}},
+which leaves the entire subjects (entire growth curves) outside of the training sample.
 }
 

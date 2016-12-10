@@ -25,7 +25,7 @@ test.holdout.features <- function() {
   ## Define grid of predictors
   ## ------------------------------------------------------------------------------------
   cpp_all_train <- define_features_drop(cpp_holdout, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
-  cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2)
+  cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2, hold_column = "hold")
 
   ## ------------------------------------------------------------------------------------
   ## Define features for training rows excluding holdouts (summaries defined based on training points only while dropping the holdout observations)

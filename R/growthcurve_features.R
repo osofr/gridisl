@@ -1,15 +1,26 @@
-#' Define dataset of time-point grids for prediction
+#' Define data with grids of time-points for growth curve prediction
 #'
-#' @param dataDT Input data with all relevant summaries defined.
+#' @param dataDT Input data with all the relevant summaries that were used for modeling being already defined.
 #' @param ID A character string name of the column that contains the unique subject identifiers.
 #' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
 #' @param y A character string name of the column that represent the response variable in the model.
 #' @param tmin Min t value of the grid
 #' @param tmax Max t value of the grid
-#' @param incr Increment value for the grid of t's
-#' @return ...
+#' @param incr Increment value for the grid of \code{t}'s
+#' @param hold_column Column name in \code{dataDT} indicating the holdout observations (if used).
+#' @return A \code{data.table} of subject IDs and time-points, along with all the relevant subject specific curve summaries and predictors.
+#' In addition, the output dataset also contains an indicator column 'train_point', set to \code{TRUE} for all (ID,time-points) that also appear
+#' in the input data \code{dataDT}. That is 'train_point' indicates if the row might have been previously used for model training.
+#' Finally, if the argument 'hold_column' is not NULL, the output dataset will contain the indicator column of holdout observations
+#' (named according to hold_column argument).
 #' @export
-define_tgrid <- function(dataDT, ID, t_name, y, tmin = 1, tmax = 500, incr = 2) {
+define_tgrid <- function(dataDT, ID, t_name, y, tmin = 1, tmax = 500, incr = 2, hold_column = NULL) {
+  if (!is.data.table(dataDT)) stop("critical error: dataDT must be a data.table, use 'data.table(dataDT)'")
+  if ("train_point" %in% names(dataDT)) stop("critical error: columns named 'train_point' are not allowed in dataDT")
+  if (!is.null(hold_column)) {
+    if (!(hold_column %in% names(dataDT))) stop("critical error: hold_column is not null, but cannot find the corresponding column name in dataDT")
+  }
+
   ## 1. Define the grid of time-points for which to predict
   t_grid <- seq(tmin, tmax, by = incr)
   gridDT <- CJ(unique(dataDT[[ID]]), as.integer(t_grid))
@@ -18,21 +29,25 @@ define_tgrid <- function(dataDT, ID, t_name, y, tmin = 1, tmax = 500, incr = 2) 
 
   ## 2. Remove person-time combos that already appear in input data (will be later added w/ rbind)
   gridDT <- fsetdiff(gridDT, dataDT[, c(ID, t_name), with = FALSE])
+  gridDT[, ("train_point") :=  FALSE] # indicator that this row hasn't been used for training
+  if (!is.null(hold_column)) gridDT[, (hold_column) :=  FALSE]
 
-  ## 3a. Define (Y.lt, lt) with rolling join (+)
+  # Prep data for defining (Y.lt, lt) & (Y.rt, rt)
   sel_vars <- c(ID, t_name, y) # sel_vars <- c(ID, t_name, y, c("l.obs", "mid.obs", "r.obs"))
   dataDT_sel <- dataDT[, sel_vars, with = FALSE]
   dataDT_sel[, ("t.cp") := eval(as.name(t_name))]
   setkeyv(dataDT_sel, cols = c(ID, t_name))
 
+  ## 3a. Define (Y.lt, lt) with rolling join (+)
   gridDT <- dataDT_sel[, , with = FALSE][gridDT, roll = Inf]
   setnames(gridDT, old = c(y, "t.cp"), new = c("Y.lt", "lt"))
+
   ## 3b. Define (Y.rt, rt) with rolling join (-)
   gridDT <- dataDT_sel[, , with = FALSE][gridDT, roll = -Inf]
   setnames(gridDT, old = c(y, "t.cp"), new = c("Y.rt", "rt"))
 
   ## 4. Select first row of each subject and merge these covars into the grid data
-  sel_covars <- names(dataDT)[!(names(dataDT) %in% c(t_name, y, "lt", "rt", "Y.lt", "Y.rt"))]
+  sel_covars <- names(dataDT)[!(names(dataDT) %in% c(t_name, y, "lt", "rt", "Y.lt", "Y.rt", hold_column))]
   setkeyv(dataDT, c(ID)) # set key to allow binary search using `J()`
   dataDT_ID_bsl <- dataDT[J(unique(eval(as.name(ID)))), sel_covars, mult ='first', with = FALSE]   # if you wanted the first row for each x
   # dataDT_ID_bsl <- dataDT[J(unique(eval(as.name(ID)))), sel_covars, mult ='last', with = FALSE]    # subset out the last row for each x
@@ -49,7 +64,8 @@ define_tgrid <- function(dataDT, ID, t_name, y, tmin = 1, tmax = 500, incr = 2) 
     # setnames(gridDT, old = c(y, "t.cp"), new = c("Y.lt", "lt"))
 
   ## 5. rbind the actual observations into the grid data
-  gridDT <- rbindlist(list(gridDT, dataDT[, names(gridDT), with = FALSE]))
+  gridDT <- rbindlist(list(gridDT, dataDT[, ("train_point") := TRUE][, names(gridDT), with = FALSE]))
+  dataDT[, ("train_point") := NULL]
   setkeyv(gridDT, cols = c(ID, t_name))
   setkeyv(dataDT, cols = c(ID, t_name))
 

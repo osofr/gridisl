@@ -2,12 +2,13 @@
 % Please edit documentation in R/growthcurve_features.R
 \name{define_tgrid}
 \alias{define_tgrid}
-\title{Define dataset of time-point grids for prediction}
+\title{Define data with grids of time-points for growth curve prediction}
 \usage{
-define_tgrid(dataDT, ID, t_name, y, tmin = 1, tmax = 500, incr = 2)
+define_tgrid(dataDT, ID, t_name, y, tmin = 1, tmax = 500, incr = 2,
+  hold_column = NULL)
 }
 \arguments{
-\item{dataDT}{Input data with all relevant summaries defined.}
+\item{dataDT}{Input data with all the relevant summaries that were used for modeling being already defined.}
 
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}
 
@@ -19,12 +20,18 @@ define_tgrid(dataDT, ID, t_name, y, tmin = 1, tmax = 500, incr = 2)
 
 \item{tmax}{Max t value of the grid}
 
-\item{incr}{Increment value for the grid of t's}
+\item{incr}{Increment value for the grid of \code{t}'s}
+
+\item{hold_column}{Column name in \code{dataDT} indicating the holdout observations (if used).}
 }
 \value{
-...
+A \code{data.table} of subject IDs and time-points, along with all the relevant subject specific curve summaries and predictors.
+In addition, the output dataset also contains an indicator column 'train_point', set to \code{TRUE} for all (ID,time-points) that also appear
+in the input data \code{dataDT}. That is 'train_point' indicates if the row might have been previously used for model training.
+Finally, if the argument 'hold_column' is not NULL, the output dataset will contain the indicator column of holdout observations
+(named according to hold_column argument).
 }
 \description{
-Define dataset of time-point grids for prediction
+Define data with grids of time-points for growth curve prediction
 }
 

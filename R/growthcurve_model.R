@@ -1,13 +1,16 @@
 # ---------------------------------------------------------------------------------------
-#' Define and fit growth models evaluated on holdout observations.
+#' Growth curve SuperLearner with one-out holdout validation
 #'
+#' Define and fit discrete SuperLearner for growth curve modeling.
+#' Model selection (scoring) is based on MSE for a single random (or last) holdout data-point for each subject.
+#' This is in contrast to the model selection with V-fold cross-validated MSE in \code{\link{fit_cvSL}},
+#' which leaves the entire subjects (entire growth curves) outside of the training sample.
 #' @param ID A character string name of the column that contains the unique subject identifiers.
 #' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
 #' @param x A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.
 #' @param y A character string name of the column that represent the response variable in the model.
 #' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
 #' @param params Parameters specifying the type of modeling procedure to be used.
-# @param holdout Set to TRUE to train the model fit on non-holdout observations only. Set to FALSE to train the model on the entire input dataset.
 #' @param hold_column The name of the column that contains the holdout observation indicators (TRUE/FALSE) in the input data.
 #' This holdout column must be defined and added to the input data prior to calling this function.
 #' @param random Logical, specifying if the holdout observations should be selected at random.
@@ -44,10 +47,11 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
   ## ------------------------------------------------------------------------------------------
   ## Define validation data (includes the holdout only, each summary is created without the holdout observation):
   ## ------------------------------------------------------------------------------------------
-  # valid_data <- define_features(data, nodes, train_set = FALSE, hold_column = hold_column)
-  # valid_data <- valid_data[valid_data[[hold_column]], ]
   # by giving the hold_column the non-holdout observations will be automatically dropped (could have also done it manually)
   valid_data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = FALSE, hold_column = hold_column)
+  ## old approach
+  # valid_data <- define_features(data, nodes, train_set = FALSE, hold_column = hold_column)
+  # valid_data <- valid_data[valid_data[[hold_column]], ]
 
   ## ------------------------------------------------------------------------------------------
   ## Add new features as predictors?
@@ -66,17 +70,18 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
   ## Re-fit the best scored model using all available data
   ## ------------------------------------------------------------------------------------------
   ## Define training data summaries (using all observations):
-  # data <- define_features(data, nodes, train_set = TRUE, holdout = FALSE)
   data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
   OData_all <- importData(data = data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
   best_fit <- modelfit$refit_best_model(OData_all)
   return(modelfit)
-  # return(list(modelfit = modelfit, train_data = train_data, valid_data = valid_data))
 }
 
 # ---------------------------------------------------------------------------------------
-#' Define and fit growth curve SuperLearner with full cross-validation.
+#' Growth curve SuperLearner with V-fold cross-validation.
 #'
+#' Define and fit discrete SuperLearner for growth curve modeling.
+#' Model selection (scoring) is based on V-fold cross-validated MSE that leaves entire subjects outside of the training sample.
+#' This is in contrast to holdout SuperLearner in \code{\link{fit_holdoutSL}} that leaves only a single random (or last) growth measurement  outside of the training sample.
 #' @param ID A character string name of the column that contains the unique subject identifiers.
 #' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
 #' @param x A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.
@@ -94,7 +99,7 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
 # @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
-fit_curveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = NULL, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+fit_cvSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = NULL, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)
@@ -121,7 +126,7 @@ fit_curveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column 
   }
 
   ## ------------------------------------------------------------------------------------------
-  ## Perfom CV fitting (no scoring yet)
+  ## Perform CV fitting (no scoring yet)
   ## ------------------------------------------------------------------------------------------
   modelfit <- fit_model(ID, t_name, x, y, train_data = train_data, params = params, fold_column = fold_column)
 
@@ -129,9 +134,8 @@ fit_curveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column 
   ## Score CV models based on validation set
   ## ------------------------------------------------------------------------------------------
   ## Define validation data to be used for scoring during CV (each summary row (X_i,Y_i) is created by first dropping this row):
-  # valid_data <- define_features(data, nodes, train_set = FALSE, holdout = FALSE)
   valid_data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = FALSE)
-
+  ## old approach: valid_data <- define_features(data, nodes, train_set = FALSE, holdout = FALSE)
   OData_valid <- importData(data = valid_data, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
   modelfit <- modelfit$score_CV(validation_data = OData_valid) # returns the modelfit object intself, but does the scoring of each CV model
   print("CV MSE after manual CV model rescoring: "); print(unlist(modelfit$getMSE))
@@ -144,13 +148,12 @@ fit_curveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column 
   best_fit <- modelfit$refit_best_model(modelfit$OData_train)
 
   return(modelfit)
-  # return(list(modelfit = modelfit, train_data = train_data, valid_data = valid_data))
 }
 
 # ---------------------------------------------------------------------------------------
 #' Predict for holdout or curve SuperLearner fits
 #'
-#' @param modelfit Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_curveSL}}.
+#' @param modelfit Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.
 #' @param newdata Subject-specific data for which predictions should be obtained.
 #' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
 #' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
@@ -159,7 +162,7 @@ fit_curveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column 
 #' @export
 predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, grid = FALSE, verbose = getOption("growthcurveSL.verbose")) {
 # predict_holdoutSL <- function(modelfit, newdata, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
-  if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_curveSL() prior to obtaining predictions")
+  if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose

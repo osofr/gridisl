@@ -7,7 +7,7 @@ NULL
 #' Get training data used by the modeling object
 #'
 #' Wrapper function for obtaining the training dataset saved in the modeling object.
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_curveSL}.
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
 #' @return \code{data.table} that was used for model training.
 #' @export
 get_train_data <- function(modelfit) {
@@ -17,7 +17,7 @@ get_train_data <- function(modelfit) {
 #' Get validation data used by the modeling object
 #'
 #' Wrapper function for obtaining the validation dataset saved in the modeling object.
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_curveSL}.
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
 #' @return \code{data.table} that was used for model scoring (CV-MSE).
 #' @export
 get_validation_data <- function(modelfit) {

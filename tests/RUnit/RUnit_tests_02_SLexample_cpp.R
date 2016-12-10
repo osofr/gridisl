@@ -432,11 +432,12 @@ test.holdoutSL.GLM.GBM <- function() {
   ## Predicting the entire curve (grid)
   ## ------------------------------------------------------------------------------------------------
   cpp_all_train <- define_features_drop(cpp_holdout, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
-  cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2)
+  cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2, hold_column = "hold")
   preds_grid <- predict_SL(mfit_hold2, newdata = cpp_all_grid, grid = TRUE, add_subject_data = TRUE)
-  preds_grid[]
-  data.table::fwrite(preds_grid[, c("subjid", "agedays", "SL.preds")], file = "./mfit_cv2.csv")
 
+  preds_grid[, ("train_point") := cpp_all_grid[["train_point"]]][, ("hold") := cpp_all_grid[["hold"]]]
+  data.table::setcolorder(preds_grid, c(names(preds_grid)[-(ncol(preds_grid)-2)], "SL.preds"))
+  data.table::fwrite(preds_grid[, c("subjid", "agedays", "train_point", "hold", "SL.preds")], file = "./mfit_cv2.csv")
 
   ## Ask the fit function to determine random holdouts internally:
   mfit_hold3 <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
@@ -591,8 +592,8 @@ test.CV.SL <- function() {
   ## CV with manually defined fold column, no curve summary features are used as predictors
   ## -> Internal CV metrics must match all manual model scoring results
   ## ------------------------------------------------------------------------------------------------
-  mfit_cv1 <- fit_curveSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                          data = cpp_folds, params = GRIDparams, fold_column = "fold")
+  mfit_cv1 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                       data = cpp_folds, params = GRIDparams, fold_column = "fold")
 
   ## Best (re-trained) model predictions on data used for CV training (default):
   preds_alldat1 <- predict_SL(mfit_cv1, add_subject_data = FALSE)
@@ -633,7 +634,7 @@ test.CV.SL <- function() {
   ## ------------------------------------------------------------------------------------------------
   ## ADD SPECIAL curve FEATURES / summaries as predictors to CV evaluation
   ## ------------------------------------------------------------------------------------------------
-  mfit_cv2 <- fit_curveSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+  mfit_cv2 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                               data = cpp_folds, params = GRIDparams,
                               fold_column = "fold", use_new_features = TRUE)
 
@@ -680,7 +681,7 @@ test.CV.SL <- function() {
   ## ------------------------------------------------------------------------------------------------
   ## Internally define folds for CV
   ## ------------------------------------------------------------------------------------------------
-  mfit_cv3 <- fit_curveSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+  mfit_cv3 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                               data = cpp_holdout, params = GRIDparams,
                               nfolds = 5, use_new_features = TRUE)
   models <- mfit_cv3$get_best_models(K = 1)
@@ -689,7 +690,7 @@ test.CV.SL <- function() {
   ## CHECKING CV IMPLEMENTATION VS. INTERNAL H2O CV
   ## ------------------------------------------------------------------------------------
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
-  mfit_cv <- fit_curveSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+  mfit_cv <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                              data = cpp_folds, params = GRIDparams, fold_column = "fold", use_new_features = TRUE)
 
   train_dat <- get_train_data(mfit_cv)

@@ -8,7 +8,7 @@ predict_SL(modelfit, newdata, add_subject_data = FALSE, grid = FALSE,
   verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
-\item{modelfit}{Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_curveSL}}.}
+\item{modelfit}{Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.}
 
 \item{newdata}{Subject-specific data for which predictions should be obtained.}
 
