@@ -1,3 +1,50 @@
+#' Predict and save the entire growth curve (grid of time points).
+#'
+#' A thin wrapper for \code{define_features_drop}, \code{define_tgrid} and \code{predict_SL} functions.
+#' Evaluates predictions from the existing SuperLearner fit using an entire grid of time points.
+#' Optionally, when \code{file.name} is not \code{NULL}, the resulting dataset of predictions is saved as a csv file.
+#' @param SLfit SuperLearner fit returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.
+#' @param data Input data used for model training.
+#' @param ID A character string name of the column that contains the unique subject identifiers.
+#' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
+#' @param y A character string name of the column that represent the response variable in the model.
+#' @param tmin Min t value of the grid
+#' @param tmax Max t value of the grid
+#' @param incr Increment value for the grid of \code{t}'s
+#' @param hold_column Column name in \code{dataDT} indicating the holdout observations (if used). Leave as \code{NULL} if no \code{hold_column} is present.
+#' @param file.name A file name (without the .csv extension) in which the prediction dataset will be saved. Leave as NULL is no saving is necessary.
+#' @param file.path A directory path in which the predictions file should be saved.
+#' @return A \code{data.table} with subject IDs, grid of equally spaced time-points and the corresponding growth curve predictions.
+#' The relevant subject summaries and predictors used for training will be also included in the output data.
+#' In addition, the output dataset also contains an indicator column 'train_point', set to \code{TRUE} for all (ID,time-points) that also appear
+#' in the input data \code{dataDT}. That is 'train_point' indicates if the row might have been previously used for model training.
+#' Finally, if the argument 'hold_column' is not NULL, the output dataset will contain the indicator column of holdout observations
+#' (named according to hold_column argument).
+#' @export
+predict_save_tgrid <- function(SLfit, data, ID, t_name, y, tmin = 1, tmax = 500, incr = 2, hold_column = NULL,
+                               file.name = NULL,
+                               file.path = getOption('growthcurveSL.file.path')) {
+
+  inputDT_all_train <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
+  inputDT_tgrid <- define_tgrid(inputDT_all_train, ID = ID, t_name = t_name, y = y, tmin = tmin, tmax = tmax, incr = incr, hold_column = hold_column)
+  preds_tgrid <- predict_SL(SLfit, newdata = inputDT_tgrid, grid = TRUE, add_subject_data = TRUE)
+
+  preds_tgrid[, ("train_point") := inputDT_tgrid[["train_point"]]]
+  if (!is.null(hold_column))
+    preds_tgrid[, (hold_column) := inputDT_tgrid[[hold_column]]]
+
+  data.table::setcolorder(preds_tgrid, c(names(preds_tgrid)[-(ncol(preds_tgrid)-2)], names(preds_tgrid)[(ncol(preds_tgrid)-2)]))
+
+  if (!is.null(file.name)) {
+    full_path <- file.path(file.path, paste0(file.name, ".csv"))
+    message(paste0("...writing csv file with predictions to: ", full_path))
+    data.table::fwrite(preds_tgrid[, c(ID, t_name, "train_point", hold_column, "SL.preds"), with = FALSE],
+                       file = full_path)
+  }
+
+  return(preds_tgrid)
+}
+
 #' Define data with grids of time-points for growth curve prediction
 #'
 #' @param dataDT Input data with all the relevant summaries that were used for modeling being already defined.
@@ -70,102 +117,6 @@ define_tgrid <- function(dataDT, ID, t_name, y, tmin = 1, tmax = 500, incr = 2, 
   setkeyv(dataDT, cols = c(ID, t_name))
 
   return(gridDT)
-}
-
-# ---------------------------------------------------------------------------------------
-#' Define features (predictors) for training or testing (validation) data
-#'
-#' @param dataDT Input data.table
-#' @param nodes ...
-#' @param train_set ...
-#' @param holdout ...
-#' @param hold_column ...
-#' @param noNAs ...
-#' @param includeRLMIDind ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-#' @export
-#' @return ...
-define_features <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, hold_column = "hold", noNAs = FALSE, includeRLMIDind = FALSE, verbose = getOption("growthcurveSL.verbose")) {
-  # dataDT <- data.table(dataDT)
-  dataDT <- copy(dataDT) # Making sure nothing gets modified by reference:
-
-  # Define which observations are in the hold-out set (and thus should be ignored when creating predictors for training set)
-  if (train_set && holdout) {
-    # non_hold_idx <- !OData$dat.sVar[[hold_column]]
-    non_hold_idx <- !dataDT[[hold_column]]
-  } else {
-    # to define (Y.lt, Y.rt, lt, rt, l.obs, mid.obs, r.obs) for validation data points we use the entire observed data
-    non_hold_idx <- rep.int(TRUE, nrow(dataDT))
-  }
-
-  # ---------------------------------------------------------------------------------------
-  # When both train_set and holdout are TRUE the features / summaries will be defined for the training data (!holdout) only, after dropping the holdout observations
-  # When either train_set or holdout are FALSE then all observations will be used to define features / predictors.
-  #   - The predictors below turn out to be equivalent when defining validation data points as well as when training on ALL data
-  #   - This allows us to use every single observation as a test point for CV.MSE
-  # ---------------------------------------------------------------------------------------
-  # dataDT[, c("lt", "rt", "Y.lt", "Y.rt", "l.obs", "mid.obs", "r.obs") := list(NULL, NULL, NULL, NULL, NULL, NULL, NULL)]
-  # dataDT[, c("meanY", "sumYsq") := list(NULL, NULL)]
-  # 1. Left Y[lt], lt, if exists (otherwise lt = rt)
-  # 2. Right Y[rt], rt, if exists (otherwise rt = lt)
-  dataDT[non_hold_idx, c("lt", "rt") := list(shift(eval(as.name(nodes$tnode)), type = "lag"), shift(eval(as.name(nodes$tnode)), type = "lead")), by = eval(nodes$IDnode)]
-  dataDT[non_hold_idx, c("Y.lt", "Y.rt") := list(shift(eval(as.name(nodes$Ynode)), type = "lag", fill = NA), shift(eval(as.name(nodes$Ynode)), type = "lead", fill = NA)), by = eval(nodes$IDnode)]
-
-  if (includeRLMIDind) {
-    # Add dummy indicator column(s) of being left-most (l.obs) / middle (mid.obs) / right-most (r.obs) observation:
-    dataDT[non_hold_idx, c("l.obs", "mid.obs", "r.obs"):= list(0L, 0L, 0L)]
-    dataDT[non_hold_idx & is.na(lt), l.obs := 1L]
-    dataDT[non_hold_idx & !is.na(lt) & !is.na(rt), mid.obs := 1L]
-    dataDT[non_hold_idx & is.na(rt), r.obs := 1L]
-  }
-
-  if (noNAs) {
-    ##  If left (Y[lt], lt) does't exist then (Y[lt], lt) = (Y[rt], rt);
-    dataDT[non_hold_idx & is.na(Y.lt), Y.lt := Y.rt]
-    dataDT[non_hold_idx & is.na(lt),  lt  := rt]
-    ##  If left (Y[rt], rt) does't exist then (Y[rt], rt) = (Y[lt], lt);
-    dataDT[non_hold_idx & is.na(Y.rt), Y.rt := Y.lt]
-    dataDT[non_hold_idx & is.na(rt), rt := lt]
-  }
-
-  if (train_set) {
-    # Evaluate the summary (predictors) on a training set (for holdout=TRUE, this will evaluate the summaries among training data points (excluding the holdouts)):
-    dataDT <- dataDT[dataDT[non_hold_idx, {
-        nY = length(eval(as.name(nodes$Ynode)));
-        meanY = mean(eval(as.name(nodes$Ynode)));
-        sdY = sd(eval(as.name(nodes$Ynode)));
-        medianY = median(eval(as.name(nodes$Ynode)));
-        minY = min(eval(as.name(nodes$Ynode)));
-        maxY = max(eval(as.name(nodes$Ynode)));
-        list(nY = nY, meanY = meanY, sdY = sdY, medianY = medianY, minY = minY, maxY = maxY)
-      }, by = eval(nodes$IDnode)]]
-
-  } else {
-    # Evaluate the summary (predictors) for validation set. Treats each row of data as if it is a validation data point.
-    # Loop through every data-point row i, remove it, then evaluate the summary for that subject with row i removed.
-    # This will allow us to do validation set predictions when doing V-fold CV.
-    # NOTE: such summaries will allow us to use ANY observed data point as a validation point and do prediction ALL at once (rather than having to loop over each point)
-    dataDT[, c("Y_tmp") := list(eval(as.name(nodes$Ynode)))]
-    dataDT[, c("nY", "meanY", "sdY", "medianY", "minY", "maxY") := list(0.0,0.0,0.0,0.0,0.0,0.0)]
-    dataDT[, c("nY", "meanY", "sdY", "medianY", "minY", "maxY") := {
-            for (i in seq_len(.N)) {
-              nY[i] = length(Y_tmp)-1
-              meanY[i] = mean(Y_tmp[-i])
-              sdY[i] = sd(Y_tmp[-i])
-              medianY[i] = median(Y_tmp[-i])
-              minY[i] = min(Y_tmp[-i])
-              maxY[i] = max(Y_tmp[-i])
-            };
-          list(nY = nY, meanY = meanY, sdY = sdY, medianY = medianY, minY = minY, maxY = maxY)
-      }, by = eval(nodes$IDnode)]
-    dataDT[, ("Y_tmp") :=  NULL]
-    # dataDT <- dataDT[dataDT[, {meanY = eval(as.name(nodes$Ynode)); for (i in seq_len(.N)) {meanY[i] = mean(meanY[-i])};  list(meanY = meanY)}, by = eval(nodes$IDnode)]]
-  }
-
-#   # Add total sum of observed Y's and other summaries?
-#   # ...
-
-  return(dataDT)
 }
 
 # ---------------------------------------------------------------------------------------
@@ -275,6 +226,104 @@ define_features_drop <- function(dataDT, ID, t_name, y, train_set = TRUE, hold_c
     dataDT[, ("Y_tmp") :=  NULL]
     # dataDT <- dataDT[dataDT[, {meanY = eval(as.name(y)); for (i in seq_len(.N)) {meanY[i] = mean(meanY[-i])};  list(meanY = meanY)}, by = eval(ID)]]
     if (!missing(hold_column)) dataDT <- dataDT[dataDT[[hold_column]], ]
+  }
+
+#   # Add total sum of observed Y's and other summaries?
+#   # ...
+
+  return(dataDT)
+}
+
+# ---------------------------------------------------------------------------------------
+#' Define features (predictors) for training or testing (validation) data
+#'
+#' @param dataDT Input data.table
+#' @param nodes ...
+#' @param train_set ...
+#' @param holdout ...
+#' @param hold_column ...
+#' @param noNAs ...
+#' @param includeRLMIDind ...
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @export
+#' @return ...
+define_features <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, hold_column = "hold", noNAs = FALSE, includeRLMIDind = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+  warning("this function is deprecated")
+
+  # dataDT <- data.table(dataDT)
+  dataDT <- copy(dataDT) # Making sure nothing gets modified by reference:
+
+  # Define which observations are in the hold-out set (and thus should be ignored when creating predictors for training set)
+  if (train_set && holdout) {
+    # non_hold_idx <- !OData$dat.sVar[[hold_column]]
+    non_hold_idx <- !dataDT[[hold_column]]
+  } else {
+    # to define (Y.lt, Y.rt, lt, rt, l.obs, mid.obs, r.obs) for validation data points we use the entire observed data
+    non_hold_idx <- rep.int(TRUE, nrow(dataDT))
+  }
+
+  # ---------------------------------------------------------------------------------------
+  # When both train_set and holdout are TRUE the features / summaries will be defined for the training data (!holdout) only, after dropping the holdout observations
+  # When either train_set or holdout are FALSE then all observations will be used to define features / predictors.
+  #   - The predictors below turn out to be equivalent when defining validation data points as well as when training on ALL data
+  #   - This allows us to use every single observation as a test point for CV.MSE
+  # ---------------------------------------------------------------------------------------
+  # dataDT[, c("lt", "rt", "Y.lt", "Y.rt", "l.obs", "mid.obs", "r.obs") := list(NULL, NULL, NULL, NULL, NULL, NULL, NULL)]
+  # dataDT[, c("meanY", "sumYsq") := list(NULL, NULL)]
+  # 1. Left Y[lt], lt, if exists (otherwise lt = rt)
+  # 2. Right Y[rt], rt, if exists (otherwise rt = lt)
+  dataDT[non_hold_idx, c("lt", "rt") := list(shift(eval(as.name(nodes$tnode)), type = "lag"), shift(eval(as.name(nodes$tnode)), type = "lead")), by = eval(nodes$IDnode)]
+  dataDT[non_hold_idx, c("Y.lt", "Y.rt") := list(shift(eval(as.name(nodes$Ynode)), type = "lag", fill = NA), shift(eval(as.name(nodes$Ynode)), type = "lead", fill = NA)), by = eval(nodes$IDnode)]
+
+  if (includeRLMIDind) {
+    # Add dummy indicator column(s) of being left-most (l.obs) / middle (mid.obs) / right-most (r.obs) observation:
+    dataDT[non_hold_idx, c("l.obs", "mid.obs", "r.obs"):= list(0L, 0L, 0L)]
+    dataDT[non_hold_idx & is.na(lt), l.obs := 1L]
+    dataDT[non_hold_idx & !is.na(lt) & !is.na(rt), mid.obs := 1L]
+    dataDT[non_hold_idx & is.na(rt), r.obs := 1L]
+  }
+
+  if (noNAs) {
+    ##  If left (Y[lt], lt) does't exist then (Y[lt], lt) = (Y[rt], rt);
+    dataDT[non_hold_idx & is.na(Y.lt), Y.lt := Y.rt]
+    dataDT[non_hold_idx & is.na(lt),  lt  := rt]
+    ##  If left (Y[rt], rt) does't exist then (Y[rt], rt) = (Y[lt], lt);
+    dataDT[non_hold_idx & is.na(Y.rt), Y.rt := Y.lt]
+    dataDT[non_hold_idx & is.na(rt), rt := lt]
+  }
+
+  if (train_set) {
+    # Evaluate the summary (predictors) on a training set (for holdout=TRUE, this will evaluate the summaries among training data points (excluding the holdouts)):
+    dataDT <- dataDT[dataDT[non_hold_idx, {
+        nY = length(eval(as.name(nodes$Ynode)));
+        meanY = mean(eval(as.name(nodes$Ynode)));
+        sdY = sd(eval(as.name(nodes$Ynode)));
+        medianY = median(eval(as.name(nodes$Ynode)));
+        minY = min(eval(as.name(nodes$Ynode)));
+        maxY = max(eval(as.name(nodes$Ynode)));
+        list(nY = nY, meanY = meanY, sdY = sdY, medianY = medianY, minY = minY, maxY = maxY)
+      }, by = eval(nodes$IDnode)]]
+
+  } else {
+    # Evaluate the summary (predictors) for validation set. Treats each row of data as if it is a validation data point.
+    # Loop through every data-point row i, remove it, then evaluate the summary for that subject with row i removed.
+    # This will allow us to do validation set predictions when doing V-fold CV.
+    # NOTE: such summaries will allow us to use ANY observed data point as a validation point and do prediction ALL at once (rather than having to loop over each point)
+    dataDT[, c("Y_tmp") := list(eval(as.name(nodes$Ynode)))]
+    dataDT[, c("nY", "meanY", "sdY", "medianY", "minY", "maxY") := list(0.0,0.0,0.0,0.0,0.0,0.0)]
+    dataDT[, c("nY", "meanY", "sdY", "medianY", "minY", "maxY") := {
+            for (i in seq_len(.N)) {
+              nY[i] = length(Y_tmp)-1
+              meanY[i] = mean(Y_tmp[-i])
+              sdY[i] = sd(Y_tmp[-i])
+              medianY[i] = median(Y_tmp[-i])
+              minY[i] = min(Y_tmp[-i])
+              maxY[i] = max(Y_tmp[-i])
+            };
+          list(nY = nY, meanY = meanY, sdY = sdY, medianY = medianY, minY = minY, maxY = maxY)
+      }, by = eval(nodes$IDnode)]
+    dataDT[, ("Y_tmp") :=  NULL]
+    # dataDT <- dataDT[dataDT[, {meanY = eval(as.name(nodes$Ynode)); for (i in seq_len(.N)) {meanY[i] = mean(meanY[-i])};  list(meanY = meanY)}, by = eval(nodes$IDnode)]]
   }
 
 #   # Add total sum of observed Y's and other summaries?
