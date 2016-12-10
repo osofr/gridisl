@@ -1,4 +1,7 @@
 
+
+
+
 # ---------------------------------------------------------------------------------------
 # TO DO
 # **** ALLOW data to be an R6 object of class DataStorageClass. This will enable calling h2o SL from other pkgs *****
@@ -204,27 +207,31 @@ fit_curveSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column 
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 #' @export
-predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, grid = FALSE, verbose = getOption("growthcurveSL.verbose")) {
 # predict_holdoutSL <- function(modelfit, newdata, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_curveSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
+
   if (missing(newdata)) {
-    # newdata <- modelfit$OData_valid$dat.sVar
     newdata <- modelfit$OData_train$dat.sVar
-  } else {
-    # newdata <- define_features(newdata, nodes, train_set = TRUE, holdout = FALSE)
+  } else if (!grid) {
     newdata <- define_features_drop(newdata, ID = nodes$IDnode, t_name = nodes$tnode, y = nodes$Ynode, train_set = TRUE)
+  } else {
+    ## in the future might define the grid data internally, right now it is assumed the user correctly defines the grid data
   }
 
   ## will use the best model retrained on all data for prediction:
   modelfit$use_best_retrained_model <- TRUE
   preds <- predict_model(modelfit = modelfit, newdata = newdata, add_subject_data = add_subject_data)
+  data.table::setnames(preds, old = names(preds)[ncol(preds)], new = "SL.preds")
   modelfit$use_best_retrained_model <- FALSE
+
   ## will obtain predictions for all models in the ensemble that were trained on non-holdout observations only:
   # preds2 <- predict_model(modelfit = modelfit, newdata = newdata, add_subject_data = add_subject_data)
+
   return(preds)
 }
 

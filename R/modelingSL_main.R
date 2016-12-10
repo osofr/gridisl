@@ -70,6 +70,8 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
     stop("train_data arg must be either data.frame, data.table or DataStorageClass object")
   }
 
+  CheckVarNameExists(OData_train$dat.sVar, y)
+
   nodes <- OData_train$nodes ## Extract nodes list
 
   if (missing(x)) x <- nodes$Lnodes ## Assign predictors if missing (everything but ID and outcome in y)
@@ -84,6 +86,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
     # OData_valid <- importData(data = valid_data, ID = ID, t_name = t_name, covars = x, OUTCOME = y)
     OData_valid <- OData_train$clone()
     OData_valid$dat.sVar <- data.table::data.table(valid_data)
+    CheckVarNameExists(OData_valid$dat.sVar, y)
   } else {
     OData_valid <- NULL
   }
@@ -145,7 +148,10 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
 
   if (add_subject_data) {
     if (missing(newdata)) newdata <- modelfit$OData_train
-    predsDT <- newdata$dat.sVar[, c(nodes$IDnode, modelfit$predvars, modelfit$outvar), with = FALSE]
+    covars <- c(nodes$IDnode, modelfit$predvars, modelfit$outvar)
+    ## to protect against an error if some variables are dropped from new data
+    sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
+    predsDT <- newdata$dat.sVar[, sel_covars, with = FALSE]
     predsDT[, (colnames(modelfit$getprobA1)) := as.data.table(modelfit$getprobA1)]
     preds <- predsDT
   }

@@ -428,6 +428,16 @@ test.holdoutSL.GLM.GBM <- function() {
   print("5 best models among all learners: "); print(res_tab)
   make_report_rmd(mfit_hold2, data = cpp_holdout, K = 10, format = "html", openFile = FALSE)
 
+  ## ------------------------------------------------------------------------------------------------
+  ## Predicting the entire curve (grid)
+  ## ------------------------------------------------------------------------------------------------
+  cpp_all_train <- define_features_drop(cpp_holdout, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
+  cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2)
+  preds_grid <- predict_SL(mfit_hold2, newdata = cpp_all_grid, grid = TRUE, add_subject_data = TRUE)
+  preds_grid[]
+  data.table::fwrite(preds_grid[, c("subjid", "agedays", "SL.preds")], file = "./mfit_cv2.csv")
+
+
   ## Ask the fit function to determine random holdouts internally:
   mfit_hold3 <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                               data = cpp_holdout, params = GRIDparams,
@@ -603,6 +613,14 @@ test.CV.SL <- function() {
   train_dat <- get_train_data(mfit_cv1)
   valid_data <- get_validation_data(mfit_cv1)
 
+  ## ------------------------------------------------------------------------------------------------
+  ## Predicting the entire curve (grid)
+  ## ------------------------------------------------------------------------------------------------
+  cpp_all_train <- define_features_drop(cpp_folds, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
+  cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2)
+  preds_grid <- predict_SL(mfit_cv1, newdata = cpp_all_grid, grid = TRUE, add_subject_data = TRUE)
+  preds_grid[]
+
   ## Must all match:
   (MSE_1 <- unlist(eval_MSE_CV(mfit_cv1))) ## Use internally h2o-evaluated CV MSE
   (MSE_2 <- unlist(eval_MSE_CV(mfit_cv1, get_validation_data(mfit_cv1)))) ## Rescore on validation data, but use old saved y values
@@ -647,6 +665,17 @@ test.CV.SL <- function() {
   (MSE_2 <- unlist(eval_MSE_CV(mfit_cv2, get_validation_data(mfit_cv2)))) ## Rescore on validation data, but use old saved y values
   (MSE_3 <- unlist(eval_MSE_CV(mfit_cv2, get_validation_data(mfit_cv2), yvals = get_validation_data(mfit_cv2)[["haz"]])))
   checkTrue(abs(sum(MSE_2 - MSE_3)) <= 10^-5)
+
+  ## ------------------------------------------------------------------------------------------------
+  ## Predicting the entire curve (grid)
+  ## ------------------------------------------------------------------------------------------------
+  cpp_all_train <- define_features_drop(cpp_folds, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
+  cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2)
+  preds_grid <- predict_SL(mfit_cv2, newdata = cpp_all_grid, grid = TRUE, add_subject_data = TRUE)
+  preds_grid[]
+
+  # make_report_rmd(mfit_cv2, data = cpp_folds, K = 10, format = "html", openFile = TRUE)
+  # data.table::fwrite(preds_grid[, c("subjid", "agedays", "SL.preds")], file = "./mfit_cv2.csv")
 
   ## ------------------------------------------------------------------------------------------------
   ## Internally define folds for CV

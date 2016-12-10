@@ -93,20 +93,6 @@ score_h2o_CV_models <- function(m.fit, validation_data, fold_column, ...) {
   }
 }
 
-getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_idx) {
-  assert_that(!is.null(subset_idx))
-  if (!missing(DataStorageObject)) {
-    # rows_subset <- which(subset_idx)
-    data <- DataStorageObject
-    outvar <- m.fit$params$outvar
-    predvars <- m.fit$params$predvars
-    prediction_H2Oframe <- fast.load.to.H2O(data$dat.sVar[subset_idx, c(outvar, predvars), with = FALSE], destination_frame = "prediction_H2Oframe")
-  } else {
-    prediction_H2Oframe <- h2o::h2o.getFrame(ParentObject$get_train_H2Oframe_ID)
-  }
-  return(prediction_H2Oframe)
-}
-
 ## take a list of args, take a function body and return only the args that belong to function signature
 keep_only_fun_args <- function(Args, fun) {
   keepArgs <- intersect(names(Args), names(formals(fun))) # captures optional arguments given by user
@@ -241,6 +227,20 @@ fit.h2odeeplearning <- function(fit.class, params, training_frame, y, x, model_c
 ## ----------------------------------------------------------------
 ## Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
 ## ----------------------------------------------------------------
+getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_idx) {
+  assert_that(!is.null(subset_idx))
+  if (!missing(DataStorageObject)) {
+    # rows_subset <- which(subset_idx)
+    data <- DataStorageObject
+    # outvar <- m.fit$params$outvar
+    predvars <- m.fit$params$predvars
+    prediction_H2Oframe <- fast.load.to.H2O(data$dat.sVar[subset_idx, c(predvars), with = FALSE], destination_frame = "prediction_H2Oframe")
+  } else {
+    prediction_H2Oframe <- h2o::h2o.getFrame(ParentObject$get_train_H2Oframe_ID)
+  }
+  return(prediction_H2Oframe)
+}
+
 predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
   return(predictP1.H2Ogridmodel(m.fit, ParentObject, DataStorageObject, subset_idx, ...))
 }

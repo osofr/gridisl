@@ -245,8 +245,13 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (missing(newdata)) {
         private$probA1 <- self$ModelFitObject$predictP1(subset_idx = self$subset_train, predict_model_names = predict_model_names)
       } else {
-        if (!missing(subset_vars)) self$subset_vars <- subset_vars
+        if (!missing(subset_vars)) {
+          self$subset_vars <- subset_vars
+        } else {
+          self$subset_vars <- NULL
+        }
         if (!missing(subset_exprs)) self$subset_exprs <- subset_exprs
+
         self$define.subset.idx(newdata)
 
         if (!self$use_best_retrained_model) {

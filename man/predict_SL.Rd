@@ -4,7 +4,7 @@
 \alias{predict_SL}
 \title{Predict for holdout or curve SuperLearner fits}
 \usage{
-predict_SL(modelfit, newdata, add_subject_data = FALSE,
+predict_SL(modelfit, newdata, add_subject_data = FALSE, grid = FALSE,
   verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{

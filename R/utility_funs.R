@@ -79,8 +79,7 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
   #   OData$dat.sVar[,(logical.varnm) := as.integer(get(logical.varnm))]
   # }
 
-  # for (Nnode in nodes$Nnodes) CheckVarNameExists(OData$dat.sVar, Nnode)
-  for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
+  # for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
   return(OData)
 }

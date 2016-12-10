@@ -5,10 +5,17 @@
 \title{Define curve-based features and summaries for training or validation data}
 \usage{
 define_features_drop(dataDT, ID, t_name, y, train_set = TRUE, hold_column,
-  noNAs = FALSE, verbose = getOption("growthcurveSL.verbose"))
+  noNAs = FALSE, includeRLMIDind = FALSE,
+  verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
 \item{dataDT}{Input data.table}
+
+\item{ID}{A character string name of the column that contains the unique subject identifiers.}
+
+\item{t_name}{A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).}
+
+\item{y}{A character string name of the column that represent the response variable in the model.}
 
 \item{train_set}{Set to \code{TRUE} to define growth curve features and summaries for training data.
 Set to \code{FALSE} to define the summaries for validation data. In the latter case the summaries are defined for observation (X_i,Y_i) by first dropping that observation
@@ -22,9 +29,9 @@ To evaluate either training or validation data summaries FOR ALL observations th
 
 \item{noNAs}{...}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
+\item{includeRLMIDind}{...}
 
-\item{nodes}{...}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
 }
 \value{
 ...
@@ -64,6 +71,12 @@ test.holdout.features <- function() {
   cpp_all_train <- define_features(cpp_holdout, nodes = nodes, train_set = TRUE, holdout = FALSE)
   cpp_all_train2 <- define_features_drop(cpp_holdout, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
   checkTrue(all.equal(cpp_all_train, cpp_all_train2))
+
+  ## ------------------------------------------------------------------------------------
+  ## Define grid of predictors
+  ## ------------------------------------------------------------------------------------
+  cpp_all_train <- define_features_drop(cpp_holdout, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
+  cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2)
 
   ## ------------------------------------------------------------------------------------
   ## Define features for training rows excluding holdouts (summaries defined based on training points only while dropping the holdout observations)
