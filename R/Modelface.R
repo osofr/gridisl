@@ -154,7 +154,14 @@ faceModelClass <- R6Class(classname = "faceModelClass",
       nodes <- data$nodes
       IDnode <- nodes$IDnode
       tnode <- nodes$tnode
-      if (getoutvar) private$Yvals <- data$get.outvar(subset_idx, self$outvar) # Always a vector
+
+      if (getoutvar) {
+        if (self$outvar %in% data$names.sVar) {
+          private$Yvals <- data$get.outvar(subset_idx, self$outvar) # Always a vector
+        } else {
+          private$Yvals <- rep.int(NA, length(subset_idx))
+        }
+      }
       if (getXmat) {
         private$subj <- data$get.outvar(subset_idx, IDnode)
         private$argvals <- data$get.outvar(subset_idx, tnode) # Always a vector

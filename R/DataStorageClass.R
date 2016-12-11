@@ -266,7 +266,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       } else if ((var %in% self$nodes$Ynode) && !is.null(self$YnodeVals)) {
         out <- self$YnodeVals[rowsubset]
       } else {
-        stop("requested variable " %+% var %+% " does not exist in DataStorageClass!")
+        stop("requested variable " %+% var %+% " does not exist in the input data!")
       }
       if ((is.list(out) || is.data.table(out)) && (length(out)>1)) {
         stop("selecting regression outcome covariate resulted in more than one column: " %+% var)

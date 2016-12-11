@@ -46,6 +46,12 @@ test.holdoutfit_FACE_BS_h2o <- function() {
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   holdout_col <- cpp_holdout[["hold"]]
 
+  ID <- "subjid"
+  t_name <- "agedays"
+  x <- "agedays"
+  y <- "haz"
+
+
   run_algo <- function(fit.package, fit.algorithm) {
 
     # Fit, training on non-holdouts and using holdouts as validation set (for scoring only)
@@ -131,8 +137,8 @@ test.holdoutfit_FACE_BS_h2o <- function() {
   res_DRF <- run_algo("h2o", "randomForest")
   res_DP <- run_algo("h2o", "deeplearning")
 
-  mfits_stack <- make_PredictionStack(res_BS$mfit_useY_hold, res_BS$mfit_cor_hold,
-                                      res_FACE$mfit_useY_hold, res_FACE$mfit_cor_hold,
+  mfits_stack <- make_PredictionStack(res_FACE$mfit_useY_hold, res_FACE$mfit_cor_hold,
+                                      res_BS$mfit_useY_hold, res_BS$mfit_cor_hold,
                                       res_GLM3$mfit_cor_hold, res_GBM$mfit_cor_hold,
                                       res_DRF$mfit_cor_hold, res_DP$mfit_cor_hold
                                       )
@@ -151,6 +157,13 @@ test.holdoutfit_FACE_BS_h2o <- function() {
 
   train_dat <- get_train_data(res_GBM$mfit_cor_hold)
   val_dat <- get_validation_data(res_GBM$mfit_cor_hold)
+
+  preds_tgrid_FACE <- predict_save_tgrid(res_FACE$mfit_cor_hold, cpp_holdout, ID, t_name, y, tmin = 1, tmax = 500, incr = 50, "hold")
+  preds_tgrid_FACE[]
+  preds_tgrid_BS <- predict_save_tgrid(res_BS$mfit_cor_hold, cpp_holdout, ID, t_name, y, tmin = 1, tmax = 500, incr = 5, "hold")
+                                    # file.name = paste0(fname, "predictions"), file.path = report.path)
+  preds_tgrid_BS[]
+
 }
 
 ## ------------------------------------------------------------------------------------

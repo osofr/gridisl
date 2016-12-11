@@ -207,7 +207,14 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
       IDnode <- nodes$IDnode
       tnode <- nodes$tnode
 
-      if (getoutvar) private$Yvals <- data$get.outvar(subset_idx, self$outvar) # Always a vector
+      if (getoutvar) {
+        if (self$outvar %in% data$names.sVar) {
+          private$Yvals <- data$get.outvar(subset_idx, self$outvar) # Always a vector
+        } else {
+          private$Yvals <- rep.int(NA, length(subset_idx))
+        }
+      }
+
       if (getXmat) {
         # self$define.Xmat(data, subset_idx) # design matrix in normal sense is not used in face
         private$subject <- data$get.outvar(subset_idx, IDnode)
