@@ -4,15 +4,12 @@
 \alias{eval_MSE_CV}
 \title{Evaluate cross-validated MSE}
 \usage{
-eval_MSE_CV(modelfit, newdata, yvals,
-  verbose = getOption("growthcurveSL.verbose"))
+eval_MSE_CV(modelfit, newdata, verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit_model}} function.}
 
 \item{newdata}{...}
-
-\item{yvals}{...}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
 }

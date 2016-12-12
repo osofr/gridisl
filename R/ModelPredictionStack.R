@@ -54,6 +54,10 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       stop("...not implemented...")
       return(invisible(self))
     },
+    evalMSE_byID = function(test_values) {
+      stop("...not implemented...")
+      return(invisible(self))
+    },
     # ------------------------------------------------------------------------------
     # return a model object by name / ID
     # ------------------------------------------------------------------------------

@@ -25,6 +25,16 @@ get_validation_data <- function(modelfit) {
   return(modelfit$OData_valid$dat.sVar)
 }
 
+#' Get the combined out of sample predictions from V cross-validation models
+#'
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit_cvSL}.
+#' @return A vector of out-of-sample predictions from the best selected model (CV-MSE).
+#' @export
+get_out_of_sample_CV_predictions <- function(modelfit) {
+  assert_that(is.PredictionModel(modelfit))
+  return(modelfit$get_out_of_sample_CVpreds)
+}
+
 # ---------------------------------------------------------------------------------------
 #' Generic modeling function for any longitudinal data.
 #'
@@ -105,7 +115,8 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   ## If CV was used, then score the models based on CV out-of-sample predictions
   ## ------------------------------------------------------------------------------------------
   if (runCV) {
-    mse <- eval_MSE_CV(modelfit, yvals = OData_train$dat.sVar[[nodes$Ynode]])
+    mse <- eval_MSE_CV(modelfit)
+    # mse <- eval_MSE_CV(modelfit, yvals = OData_train$dat.sVar[[nodes$Ynode]])
     print("Mean CV MSE (for out of sample predictions) as evaluated by h2o: "); print(data.frame(mse))
   }
   return(modelfit)
@@ -144,7 +155,7 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
     modelfit$predict(newdata = newdata, MSE = evalMSE)
   }
 
-  preds <- modelfit$getprobA1 # actual matrix of predictions needs to be extracted
+  preds <- as.data.table(modelfit$getprobA1) # actual matrix of predictions needs to be extracted
 
   if (add_subject_data) {
     if (missing(newdata)) newdata <- modelfit$OData_train
@@ -152,7 +163,7 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
     ## to protect against an error if some variables are dropped from new data
     sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
     predsDT <- newdata$dat.sVar[, sel_covars, with = FALSE]
-    predsDT[, (colnames(modelfit$getprobA1)) := as.data.table(modelfit$getprobA1)]
+    predsDT[, (colnames(modelfit$getprobA1)) := preds]
     preds <- predsDT
   }
 
@@ -164,11 +175,11 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
 #'
 #' @param modelfit Model fit object returned by \code{\link{fit_model}} function.
 #' @param newdata ...
-#' @param yvals ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 #' @export
-eval_MSE_CV <- function(modelfit, newdata, yvals, verbose = getOption("growthcurveSL.verbose")) {
+eval_MSE_CV <- function(modelfit, newdata, verbose = getOption("growthcurveSL.verbose")) {
+# eval_MSE_CV <- function(modelfit, newdata, yvals, verbose = getOption("growthcurveSL.verbose")) {
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
   assert_that(is.PredictionModel(modelfit))
@@ -176,12 +187,12 @@ eval_MSE_CV <- function(modelfit, newdata, yvals, verbose = getOption("growthcur
   nodes <- modelfit$OData_train$nodes
 
   if (missing(newdata)) {
-    modelfit <- modelfit$score_CV(yvals = yvals)
+    modelfit <- modelfit$score_CV()
   } else {
     newOData <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
     ## Get predictions for each CV model based on external validation CV dataset:
     t_CV <- system.time(
-      modelfit <- modelfit$score_CV(validation_data = newOData, yvals = yvals)
+      modelfit <- modelfit$score_CV(validation_data = newOData)
     )
     print("t_CV: "); print(t_CV)
   }

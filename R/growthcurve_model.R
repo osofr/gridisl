@@ -137,6 +137,7 @@ fit_cvSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = N
   valid_data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = FALSE)
   ## old approach: valid_data <- define_features(data, nodes, train_set = FALSE, holdout = FALSE)
   OData_valid <- importData(data = valid_data, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
+
   modelfit <- modelfit$score_CV(validation_data = OData_valid) # returns the modelfit object intself, but does the scoring of each CV model
   print("CV MSE after manual CV model rescoring: "); print(unlist(modelfit$getMSE))
   # preds <- predict_CV(modelfit, valid_data) # will return the matrix of predicted cv values (one column per model)
@@ -161,7 +162,6 @@ fit_cvSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = N
 #' @return ...
 #' @export
 predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, grid = FALSE, verbose = getOption("growthcurveSL.verbose")) {
-# predict_holdoutSL <- function(modelfit, newdata, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))

@@ -67,7 +67,7 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
   if (is.null(grid.algorithm)) stop("must specify 'grid.algorithm' name when running 'h2o.grid'")
   if (!is.character(grid.algorithm)) stop("'grid.algorithm' must be a string naming the grid.algorithm for 'h2o.grid'")
   algo_fun_name <- "h2o."%+%grid.algorithm
-  if (!exists(algo_fun_name)) stop("could not locate the function %+% " %+% grid.algorithm)
+  if (!exists(algo_fun_name)) stop("could not locate the function " %+% grid.algorithm)
 
   if (!is.null(validation_frame)) mainArgs$validation_frame <- validation_frame
 

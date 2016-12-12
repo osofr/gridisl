@@ -268,7 +268,7 @@ test.generic.h2oSL <- function() {
   grid_mfit_cv$show(model_stats = TRUE, all_fits = TRUE)
   model_cv <- grid_mfit_cv$getfit$fitted_models_all[[1]]
 
-  eval_MSE_CV(grid_mfit_cv, yvals = cpp[,"haz"])
+  eval_MSE_CV(grid_mfit_cv)
 
   ## ----------------------------------------------------------------
   ## Perform fitting on a grid of algorithms w/ Vfold CV based on user-spec'ed fold_column
@@ -283,7 +283,7 @@ test.generic.h2oSL <- function() {
   fit_preds_best <- predict_model(grid_mfit_cv, newdata = cpp, predict_only_bestK_model = 1)
   head(fit_preds_best[])
 
-  # eval_MSE_CV(grid_mfit_cv, yvals = cpp[,"haz"])
+  # eval_MSE_CV(grid_mfit_cv)
 
   grid_mfit_cv$getmodel_ids
 
@@ -618,7 +618,7 @@ test.CV.SL <- function() {
   ## Predictions for best CV model (not re-trained), must match:
   preds_best_CV <- predict_model(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = FALSE)
   head(preds_best_CV[])
-  checkTrue(all.equal(as.vector(preds_alldat1), as.vector(preds_best_CV)))
+  checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
   ## Predict with new data (ONLY WORKS WHEN NO SPECIAL CURVE SUMMARIES ARE USED FOR PREDICTION)
   preds_best_CV_2 <- predict_model(mfit_cv1, newdata = cpp_folds, predict_only_bestK_models = 1, add_subject_data = FALSE)
   head(preds_best_CV_2[])
@@ -626,6 +626,7 @@ test.CV.SL <- function() {
 
   train_dat <- get_train_data(mfit_cv1)
   valid_data <- get_validation_data(mfit_cv1)
+  cv_preds <- get_out_of_sample_CV_predictions(mfit_cv1)
 
   ## ------------------------------------------------------------------------------------------------
   ## Predicting the entire curve (grid)
@@ -638,8 +639,8 @@ test.CV.SL <- function() {
   ## Must all match:
   (MSE_1 <- unlist(eval_MSE_CV(mfit_cv1))) ## Use internally h2o-evaluated CV MSE
   (MSE_2 <- unlist(eval_MSE_CV(mfit_cv1, get_validation_data(mfit_cv1)))) ## Rescore on validation data, but use old saved y values
-  (MSE_3 <- unlist(eval_MSE_CV(mfit_cv1, get_validation_data(mfit_cv1), yvals = get_validation_data(mfit_cv1)[["haz"]])))
-  (MSE_4 <- unlist(eval_MSE_CV(mfit_cv1, get_train_data(mfit_cv1), yvals = get_train_data(mfit_cv1)[["haz"]]))) # rescore on training data
+  (MSE_3 <- unlist(eval_MSE_CV(mfit_cv1, get_validation_data(mfit_cv1))))
+  (MSE_4 <- unlist(eval_MSE_CV(mfit_cv1, get_train_data(mfit_cv1)))) # rescore on training data
   checkTrue(abs(sum(MSE_1 - MSE_2)) <= 10^-5)
   checkTrue(abs(sum(MSE_1 - MSE_3)) <= 10^-5)
   checkTrue(abs(sum(MSE_1 - MSE_4)) <= 10^-5)
@@ -661,7 +662,7 @@ test.CV.SL <- function() {
   ## Predictions for best CV model (not re-trained), must match:
   preds_best_CV <- predict_model(mfit_cv2, predict_only_bestK_models = 1, add_subject_data = FALSE)
   head(preds_best_CV[])
-  checkTrue(all.equal(as.vector(preds_alldat1), as.vector(preds_best_CV)))
+  checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
 
   ## Not supposed to work anymore, since cpp_folds doesn't contain special curve summaries
   #preds_best_CV_2 <- predict_model(mfit_cv2, newdata = cpp_folds, predict_only_bestK_models = 1, add_subject_data = FALSE)
@@ -673,11 +674,11 @@ test.CV.SL <- function() {
   ## 1a. Use internally h2o-evaluated CV MSE (WILL LEAD TO INCORRECT MSE).
   (MSE_1 <- unlist(eval_MSE_CV(mfit_cv2)))
   ## 1b. Use training data to score CV models (should be the same as 1a)
-  (MSE_4 <- unlist(eval_MSE_CV(mfit_cv2, get_train_data(mfit_cv2), yvals = get_train_data(mfit_cv2)[["haz"]]))) # rescore on training data
+  (MSE_4 <- unlist(eval_MSE_CV(mfit_cv2, get_train_data(mfit_cv2)))) # rescore on training data
   checkTrue(abs(sum(MSE_1 - MSE_4)) <= 10^-5)
   ## 2. Use validation data for scoring that build curve summaries by leaving one obs out at a time (CORRECT)
   (MSE_2 <- unlist(eval_MSE_CV(mfit_cv2, get_validation_data(mfit_cv2)))) ## Rescore on validation data, but use old saved y values
-  (MSE_3 <- unlist(eval_MSE_CV(mfit_cv2, get_validation_data(mfit_cv2), yvals = get_validation_data(mfit_cv2)[["haz"]])))
+  (MSE_3 <- unlist(eval_MSE_CV(mfit_cv2, get_validation_data(mfit_cv2))))
   checkTrue(abs(sum(MSE_2 - MSE_3)) <= 10^-5)
 
   ## ------------------------------------------------------------------------------------------------
@@ -695,7 +696,7 @@ test.CV.SL <- function() {
   ## Internally define folds for CV
   ## ------------------------------------------------------------------------------------------------
   mfit_cv3 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                              data = cpp_holdout, params = GRIDparams,
+                              data = cpp_folds, params = GRIDparams,
                               nfolds = 5, use_new_features = TRUE)
   models <- mfit_cv3$get_best_models(K = 1)
 
@@ -719,7 +720,7 @@ test.CV.SL <- function() {
     # Internal H2O holdout CV predictions by fold:
     # cv_preds_fold <- h2o.cross_validation_predictions(check_model[[1]])
     # List of individual holdout predictions:
-    # Holdout (out of sample) predictions for all of training data:
+    # Holdout (out-of-sample) predictions for all of training data:
     cv_preds_all <- as.vector(h2o.cross_validation_holdout_predictions(check_model[[1]])) - preds_cv_check[[model_name]]
 
     # MUST BE TRUE FOR ALL MODELS

@@ -195,7 +195,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (inherits(model.fit, "try-error")) {
         message("running " %+% self$ModelFitObject$fit.class %+% " with h2o has failed, trying speedglm as a backup...")
         self$ModelFitObject <- glmModelClass$new(fit.algorithm = "GLM", fit.package = "speedglm", reg = reg, ...)
-        # self$outvar, self$predvars,
         model.fit <- self$ModelFitObject$fit(data, subset_idx = self$subset_idx, ...)
       }
 
@@ -223,7 +222,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       model.fit <- self$BestModelFitObject$fit(data, subset_idx = self$subset_idx, destination_frame = "alldata_H2Oframe", ...)
       if (inherits(model.fit, "try-error")) stop("refitting of the best model failed")
 
-      # browser()
       # self$getMSE
       # self$getmodel_byname("grid.gbm.5")
       # self$getmodel_byname("grid.gbm.5")[[1]]@parameters
@@ -241,7 +239,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     predict = function(newdata, subset_vars, subset_exprs, predict_model_names, MSE = TRUE, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to attempting to make predictions.")
 
-      # if (missing(newdata) && is.null(private$probA1)) {
       if (missing(newdata)) {
         private$probA1 <- self$ModelFitObject$predictP1(subset_idx = self$subset_train, predict_model_names = predict_model_names)
       } else {
@@ -262,14 +259,17 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       }
       if (MSE && !self$use_best_retrained_model) {
         test_values <- newdata$get.outvar(self$subset_idx, var = self$outvar)
-        private$MSE <- self$evalMSE(test_values)
+        IDs <- newdata$get.outvar(self$subset_idx, var = newdata$nodes$IDnode)
+        private$MSE <- self$evalMSE_byID(test_values, IDs)
       }
+      self$subset_idx <- self$subset_train
       return(invisible(self))
     },
 
     # Predict the response E[Y|newdata] based for CV fold models and using validation data;
-    score_CV = function(validation_data, MSE = TRUE, yvals, ...) {
+    score_CV = function(validation_data, MSE = TRUE, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
+
       if (missing(validation_data)) {
         private$probA1 <- self$ModelFitObject$score_CV()
       } else {
@@ -277,39 +277,56 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         self$OData_valid <- validation_data # save a pointer to last used validation data object
         private$probA1 <- self$ModelFitObject$score_CV(validation_data = validation_data$dat.sVar)
       }
+
       if (MSE) {
-        if (!missing(yvals)) {
-          test_values <- yvals
-        } else if (!missing(validation_data)) {
+        if (!missing(validation_data)) {
           test_values <- validation_data$get.outvar(self$subset_idx, var = self$outvar)
+          IDs <- validation_data$get.outvar(self$subset_idx, var = validation_data$nodes$IDnode)
         } else {
           test_values <- self$OData_train$get.outvar(self$subset_idx, var = self$outvar)
-          # stop("must provide either test values (yvals) or validation data with test values when evaluating MSE")
+          IDs <- self$OData_train$get.outvar(self$subset_idx, var = self$OData_train$nodes$IDnode)
         }
-        private$MSE <- self$evalMSE(test_values)
+        private$MSE <- self$evalMSE_byID(test_values, IDs)
+        # save out of sample CV predictions for the best model
+        private$out_of_sample_CVpreds <- private$probA1[, self$get_best_model_names(K = 1)]
       }
       return(invisible(self))
     },
 
-    evalMSE = function(test_values) {
+    # First evaluate the empirical loss by subject. Then average that loss across subjects
+    evalMSE_byID = function(test_values, IDs) {
+      loss_fun_MSE <- function(yhat, y0) (yhat - y0)^2
+
       if (!self$is.fitted) stop("Please fit the model prior to evaluating MSE.")
       if (!is.vector(test_values)) stop("test_values must be a vector of outcomes.")
 
-      n <- length(self$subset_idx)
+      # 1. Evaluate the empirical loss at each person-time prediction (apply loss function to each row):
+      timeDT <- system.time(resid_predsDT <- as.data.table(private$probA1[, ])[, lapply(.SD, loss_fun_MSE, test_values)][, ("subjID") := IDs])
+      print("timeDT"); print(timeDT)
+      resid_predsDT[1:100,]
+      NA_predictions <- resid_predsDT[, lapply(.SD, function(x) any(is.na(x)))]
+      nNA_predictions <- resid_predsDT[, lapply(.SD, function(x) sum(is.na(x)))]
+      # system.time(resid_predsDT2 <- as.data.table(private$probA1[, ] - test_values)[, ("subjID") := IDs])
+      setkeyv(resid_predsDT, cols = "subjID")
+      # 2. Evaluate the average loss for each person (average loss by rows within each subject)
+      resid_predsDT <- resid_predsDT[, lapply(.SD, mean, na.rm = TRUE), by = subjID]
+      resid_predsDT[, subjID := NULL]
 
-      MSE_mean <- MSE_var <- MSE_sd <- var <- vector(mode = "list", length = ncol(private$probA1));
-      names(MSE_mean) <- names(MSE_var) <- names(MSE_sd) <- names(var) <- colnames(private$probA1)
+      # 3. Evaluate the mean, var, sd loss across subjects, for each model
+      n <- nrow(resid_predsDT)
+      MSE_mean <- as.list(resid_predsDT[, lapply(.SD, mean, na.rm = TRUE)])
+      MSE_var <- as.list(resid_predsDT[, lapply(.SD, var, na.rm = TRUE)])
+      MSE_sd <- as.list(resid_predsDT[, lapply(.SD, sd, na.rm = TRUE)] * (1 / sqrt(n)))
 
-      for (idx in 1:ncol(private$probA1)) {
-        predVals <- private$probA1[self$subset_idx, idx]
-        MSE_mean[[idx]] <- mean((predVals - test_values)^2, na.rm = TRUE)
-        MSE_var[[idx]] <- var((predVals - test_values)^2, na.rm = TRUE)
-        MSE_sd[[idx]] <- 1 / sqrt(n) * sd((predVals - test_values)^2, na.rm = TRUE)
-        var[[idx]] <- var(predVals, na.rm = TRUE)
-        if (any(is.na(predVals)))
-          warning("Some of the predictions of the model id " %+% idx %+% " were missing (NA); these were excluded from MSE evaluation")
-      }
-      return(list(MSE_mean = MSE_mean, MSE_var = MSE_var, MSE_sd = MSE_sd, var = var))
+      if (any(as.logical(NA_predictions)))
+          warning("Some of the test set predictions of the following model fits were missing (NA) and hence were excluded from MSE evaluation.
+  Note that this may lead to misleading & erroneous assessment of the model performance.
+  These are the models with missing predictions: " %+%
+                    paste0(names(NA_predictions)[as.logical(NA_predictions)], collapse = ",") %+% ".
+  This is the number of missing (NA) test set predictions per model: " %+% paste0(as.integer(nNA_predictions)[as.logical(NA_predictions)], collapse = ",")
+                   )
+
+      return(list(MSE_mean = MSE_mean, MSE_var = MSE_var, MSE_sd = MSE_sd))
     },
 
     # ------------------------------------------------------------------------------
@@ -330,7 +347,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         K <- length(self$getmodel_ids)
       }
       if (is.null(self$getMSE)) stop("The validation / holdout MSE has not been evaluated, making model model ranking impossible.
-  Please call evalMSE() and provide a vector of validation / test values.")
+  Please call evalMSE_byID() and provide a vector of validation / test values.")
       return(sort(unlist(self$getMSE))[1:K])
     },
 
@@ -439,13 +456,14 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
     emptymodelfit = function() { self$ModelFitObject$emptymodelfit },
     getprobA1 = function() { private$probA1 },
+    get_out_of_sample_CVpreds = function() { private$out_of_sample_CVpreds },
     getsubset = function() { self$subset_idx },
     getoutvarnm = function() { self$outvar },
     getoutvarval = function() { self$ModelFitObject$getY },
     getMSE = function() { private$MSE[["MSE_mean"]] },
     getMSEvar = function() { private$MSE[["MSE_var"]] },
     getMSEsd = function() { private$MSE[["MSE_sd"]] },
-    getvar = function() { private$MSE[["var"]] },
+    # getEstVar = function() { private$MSE[["est_var"]] },
     getfit = function() { self$ModelFitObject$model.fit },
     getmodel_ids = function() { self$ModelFitObject$getmodel_ids },
     getmodel_algorithms = function() { self$ModelFitObject$getmodel_algorithms }
@@ -454,6 +472,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     # model.fit = list(),   # the model fit (either coefficients or the model fit object)
     MSE = list(),
     probA1 = NULL,    # Predicted probA^s=1 conditional on Xmat
+    out_of_sample_CVpreds = NULL,
     probAeqa = NULL   # Likelihood of observing a particular value A^s=a^s conditional on Xmat
   )
 )
