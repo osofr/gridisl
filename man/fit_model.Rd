@@ -5,7 +5,7 @@
 \title{Generic modeling function for any longitudinal data.}
 \usage{
 fit_model(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column,
-  seed, verbose = getOption("growthcurveSL.verbose"))
+  seed, useH2Oframe = FALSE, verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}

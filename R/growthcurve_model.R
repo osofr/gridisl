@@ -40,7 +40,6 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
   ## ------------------------------------------------------------------------------------------
   ## Define training data summaries (excludes holdouts, summaries are created without the holdout observations):
   ## ------------------------------------------------------------------------------------------
-  # train_data <- define_features(train_data, nodes, train_set = TRUE, holdout = TRUE, hold_column = hold_column)
   train_data <- define_features_drop(train_data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
   if (!is.null(expr_to_train)) train_data <- train_data[eval(parse(text=expr_to_train)), ]
 
@@ -49,9 +48,6 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
   ## ------------------------------------------------------------------------------------------
   # by giving the hold_column the non-holdout observations will be automatically dropped (could have also done it manually)
   valid_data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = FALSE, hold_column = hold_column)
-  ## old approach
-  # valid_data <- define_features(data, nodes, train_set = FALSE, hold_column = hold_column)
-  # valid_data <- valid_data[valid_data[[hold_column]], ]
 
   ## ------------------------------------------------------------------------------------------
   ## Add new features as predictors?

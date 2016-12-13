@@ -1,0 +1,236 @@
+## ------------------------------------------------------------------------------------
+## face / brokenstick without random holdouts
+## ------------------------------------------------------------------------------------
+test.genericfit_FACE_BS <- function() {
+  # library("growthcurveSL")
+  options(growthcurveSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  # covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+  # define holdout col:
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  holdout_col <- cpp_holdout[["hold"]]
+
+  run_algo <- function(fit.package, fit.algorithm) {
+    mfit_useY <- fit_model(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
+                               train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
+                               params  = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = TRUE, name = "useY"))
+    fit_preds_1 <- predict_model(mfit_useY, newdata = cpp)
+    # print(head(fit_preds_1[]))
+    print(mfit_useY$getMSE)
+
+    mfit_cor <- fit_model(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
+                               train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
+                               params  = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = FALSE, name = "correct"))
+    print(mfit_cor$getMSE)
+    fit_preds_2 <- predict_model(mfit_cor, newdata = cpp)
+    # print(head(fit_preds_2[]))
+  }
+
+  run_algo("face", "face")
+  run_algo("brokenstick", "brokenstick")
+  run_algo("speedglm", "glm")
+
+}
+
+
+## ----------------------------------------------------------------
+## Perform fitting using a single shared h2oFrame (loaded only once and shared by all models)
+## ----------------------------------------------------------------
+test.shared_h2o_database <- function() {
+  library("growthcurveSL")
+  require("h2o")
+  h2o::h2o.init(nthreads = -1)
+  # h2o::h2o.init(nthreads = 32, max_mem_size = "40G")
+  # h2o::h2o.shutdown(prompt = FALSE)
+  options(growthcurveSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  # define holdout col:
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  holdout_col <- cpp_holdout[["hold"]]
+
+  h2oFRAME_test <- fast.load.to.H2O(cpp_holdout, destination_frame = "")
+  h2oFRAME_ID <- h2o::h2o.getId(h2oFRAME_test)
+
+  ## ----------------------------------------------------------------
+  ## Define learners (glm, grid glm and grid gbm)
+  ## ----------------------------------------------------------------
+  ## glm grid learner:
+  alpha_opt <- c(0,1,seq(0.1,0.9,0.1))
+  lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
+  glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 3), alpha = alpha_opt, lambda = lambda_opt)
+  ## gbm grid learner:
+  gbm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
+                           ntrees = c(100, 200, 300, 500),
+                           learn_rate = c(0.005, 0.01, 0.03, 0.06),
+                           max_depth = c(3, 4, 5, 6, 9),
+                           sample_rate = c(0.7, 0.8, 0.9, 1.0),
+                           col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
+                           balance_classes = c(TRUE, FALSE))
+  ## ----------------------------------------------------------------
+  ## Perform fitting on a grid of algorithms w/ model scoring based on user-spec'ed validation data (valid_data)
+  ## ----------------------------------------------------------------
+  ## single glm learner:
+  # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
+  GRIDparams = list(fit.package = "h2o", fit.algorithm = "GridLearner", family = "gaussian",
+                    grid.algorithm = c("glm", "gbm"), seed = 23,
+                    glm = glm_hyper_params, gbm = gbm_hyper_params,
+                    # learner = "h2o.glm.reg03",
+                    stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
+  grid_mfit_val_h2o <- fit_model(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                                      train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
+                                      params  = GRIDparams, useH2Oframe = TRUE)
+  ## return predictions for all models in the ensemble for training data
+  fit_preds <- predict_model(grid_mfit_val_h2o); head(fit_preds[])
+  ## Same without newdata, predict for training data
+  fit_preds_best_nonew <- predict_model(grid_mfit_val_h2o, predict_only_bestK_models = 1); head(fit_preds_best_nonew[])
+  ## add subj-spec data
+  fit_preds_best_nonew <- predict_model(grid_mfit_val_h2o, predict_only_bestK_models = 1, add_subject_data = TRUE); fit_preds_best_nonew[]
+  ## return predictions for all models in the ensemble
+  fit_preds <- predict_model(grid_mfit_val_h2o, newdata = cpp); head(fit_preds[])
+  ## + add subject-level features to predictions
+  fit_preds <- predict_model(grid_mfit_val_h2o, newdata = cpp, add_subject_data = TRUE); fit_preds[]
+  ## ----------------------------------------------------------------
+  ## Perform fitting on a grid of algorithms w/ Vfold CV (can still specify validation data, model scoring will be based on CV though)
+  ## ----------------------------------------------------------------
+  grid_mfit_cv <- fit_model(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                                train_data = cpp, params  = GRIDparams, nfolds = 3, seed = 12345, useH2Oframe = TRUE)
+  ## ----------------------------------------------------------------
+  ## Perform fitting on a grid of algorithms w/ Vfold CV based on user-spec'ed fold_column
+  ## ----------------------------------------------------------------
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  grid_mfit_cv <- fit_model(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                            train_data = cpp_folds, params  = GRIDparams, fold_column = "fold", useH2Oframe = TRUE)
+
+}
+
+
+## ------------------------------------------------------------------------------------
+## generic functions for fitting / predicting using either single test set / validation set
+## or using internal h2o cross-validation
+## ------------------------------------------------------------------------------------
+test.generic.h2oSL <- function() {
+  library("growthcurveSL")
+  require("h2o")
+  h2o::h2o.init(nthreads = -1)
+  # h2o::h2o.init(nthreads = 32, max_mem_size = "40G")
+  # h2o::h2o.shutdown(prompt = FALSE)
+  options(growthcurveSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  # define holdout col:
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  holdout_col <- cpp_holdout[["hold"]]
+
+  ## ----------------------------------------------------------------
+  ## Define learners (glm, grid glm and grid gbm)
+  ## ----------------------------------------------------------------
+  ## glm grid learner:
+  alpha_opt <- c(0,1,seq(0.1,0.9,0.1))
+  lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
+  glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 3), alpha = alpha_opt, lambda = lambda_opt)
+  ## gbm grid learner:
+  gbm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
+                           ntrees = c(100, 200, 300, 500),
+                           learn_rate = c(0.005, 0.01, 0.03, 0.06),
+                           max_depth = c(3, 4, 5, 6, 9),
+                           sample_rate = c(0.7, 0.8, 0.9, 1.0),
+                           col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
+                           balance_classes = c(TRUE, FALSE))
+
+  ## ----------------------------------------------------------------
+  ## Perform fitting on a grid of algorithms w/ model scoring based on user-spec'ed validation data (valid_data)
+  ## ----------------------------------------------------------------
+  ## single glm learner:
+  h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
+  GRIDparams = list(fit.package = "h2o", fit.algorithm = "GridLearner", family = "gaussian",
+                    grid.algorithm = c("gbm"), seed = 23, # "glm",
+                    glm = glm_hyper_params, gbm = gbm_hyper_params,
+                    # , learner = "h2o.glm.reg03",
+                    stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
+
+  grid_mfit_val <- fit_model(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                             train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
+                             params  = GRIDparams)
+
+  ## return predictions for all models in the ensemble
+  fit_preds <- predict_model(grid_mfit_val, newdata = cpp)
+  head(fit_preds[])
+  ## + add subject-level features to predictions
+  fit_preds <- predict_model(grid_mfit_val, newdata = cpp, add_subject_data = TRUE)
+  fit_preds[]
+  ## Without newdata predictions for training data are returned:
+  fit_preds_nonew <- predict_model(grid_mfit_val)
+  head(fit_preds_nonew); nrow(fit_preds_nonew)
+  ## + subject spec data:
+  fit_preds_nonew <- predict_model(grid_mfit_val, add_subject_data = TRUE)
+  fit_preds_nonew[]
+
+  ## just return a K column matrix of predictions for top K models (ranked by validation MSE)
+  fit_preds_best <- predict_model(grid_mfit_val, newdata = cpp, predict_only_bestK_models = 1)
+  head(fit_preds_best[])
+  ## + subj-spec data
+  fit_preds_best <- predict_model(grid_mfit_val, newdata = cpp, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  fit_preds_best[]
+
+  ## Same without newdata, predict for training data
+  fit_preds_best_nonew <- predict_model(grid_mfit_val, predict_only_bestK_models = 1)
+  head(fit_preds_best_nonew[])
+  ## + subj-spec data
+  fit_preds_best_nonew <- predict_model(grid_mfit_val, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  fit_preds_best_nonew[]
+
+  ## get the model objects for top K models:
+  top_model <- grid_mfit_val$get_best_models(K = 1)
+
+  grid_mfit_val$show(model_stats = TRUE, all_fits = TRUE)
+
+  ## fetch the model fits directly:
+  model_1 <- grid_mfit_val$getfit$fitted_models_all[[1]]
+
+  ## ----------------------------------------------------------------
+  ## Perform fitting on a grid of algorithms w/ Vfold CV (can still specify validation data, model scoring will be based on CV though)
+  ## ----------------------------------------------------------------
+  grid_mfit_cv <- fit_model(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                            train_data = cpp, params  = GRIDparams, nfolds = 3, seed = 12345)
+
+  fit_preds_all <- predict_model(grid_mfit_cv, newdata = cpp)
+  head(fit_preds_all[])
+
+  fit_preds_best <- predict_model(grid_mfit_cv, newdata = cpp, predict_only_bestK_model = 1)
+  head(fit_preds_best[])
+
+  fit_preds_best <- predict_model(grid_mfit_cv, predict_only_bestK_model = 1)
+  head(fit_preds_best[]); nrow(fit_preds_best)
+
+  grid_mfit_cv$show(model_stats = TRUE, all_fits = TRUE)
+  model_cv <- grid_mfit_cv$getfit$fitted_models_all[[1]]
+
+  eval_MSE_CV(grid_mfit_cv)
+
+  ## ----------------------------------------------------------------
+  ## Perform fitting on a grid of algorithms w/ Vfold CV based on user-spec'ed fold_column
+  ## ----------------------------------------------------------------
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  grid_mfit_cv <- fit_model(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                            train_data = cpp_folds, params  = GRIDparams, fold_column = "fold")
+
+  fit_preds_all <- predict_model(grid_mfit_cv, newdata = cpp)
+  head(fit_preds_all[])
+
+  fit_preds_best <- predict_model(grid_mfit_cv, newdata = cpp, predict_only_bestK_model = 1)
+  head(fit_preds_best[])
+
+  # eval_MSE_CV(grid_mfit_cv)
+
+  grid_mfit_cv$getmodel_ids
+
+  grid_mfit_cv$show(model_stats = TRUE, all_fits = TRUE)
+  # model_cv <- grid_mfit_cv$getfit$fitted_models_all$h2o.glm.reg03
+  model_cv <- grid_mfit_cv$getfit$fitted_models_all[[1]]
+}

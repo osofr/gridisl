@@ -104,6 +104,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     fit.package = character(),
     fit.algorithm = character(),
     model_contrl = list(),
+    useH2Oframe = FALSE,
 
     subset_vars = NULL,     # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
     subset_exprs = NULL,     # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
@@ -111,8 +112,9 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     subset_train = NULL,
     ReplMisVal0 = logical(),
 
-    initialize = function(reg, ...) {
+    initialize = function(reg, useH2Oframe = FALSE, ...) {
       self$model_contrl <- reg$model_contrl
+      self$useH2Oframe <- useH2Oframe
 
       if ("fit.package" %in% names(self$model_contrl)) {
         self$fit.package <- self$model_contrl[['fit.package']]
@@ -142,7 +144,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (is.null(reg$subset_vars)) {self$subset_vars <- TRUE}
       assert_that(is.logical(self$subset_vars) || is.character(self$subset_vars)) # is.call(self$subset_vars) ||
 
-      self$ModelFitObject <- self$define_model_fit_object(self$fit.package, self$fit.algorithm, reg, ...)
+      self$ModelFitObject <- self$define_model_fit_object(self$fit.package, self$fit.algorithm, reg, self$useH2Oframe, ...)
 
       if (gvars$verbose) {
         print("New instance of " %+% class(self)[1] %+% " :"); self$show()
@@ -150,18 +152,18 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       invisible(self)
     },
 
-    define_model_fit_object = function(fit.package, fit.algorithm, reg, ...) {
+    define_model_fit_object = function(fit.package, fit.algorithm, reg, useH2Oframe, ...) {
       # ***************************************************************************
       # Add any additional options passed on to modeling functions as extra args
       # ****** NOTE: This needs to be changed to S3 dispatch for greater flexibility ******
       # ***************************************************************************
       if (fit.package %in% c("h2o", "h2oEnsemble")) {
         if (fit.algorithm %in% "GridLearner") {
-          ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+          ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
         } else if (fit.algorithm %in% "ResidGridLearner") {
-          ModelFitObject <- h2oResidualModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+          ModelFitObject <- h2oResidualModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
         } else {
-          ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+          ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
         }
       } else if (fit.package %in% c("face")) {
         ModelFitObject <- faceModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
@@ -210,24 +212,11 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     refit_best_model = function(data, ...) {
       if (gvars$verbose) print("refitting the best model: "); self$show()
       self$define.subset.idx(data)
-      ## reset the training data to be all data for future prediction with missing newdata
-      # self$OData_train <- data
-      ## reset the subset to include all data that was used for retraining (for automatic future prediction with missing newdata)
-      # self$subset_train <- self$subset_idx
-
       top_model_params <- self$get_best_model_params()
       best_reg <- RegressionClass$new(outvar = self$outvar, predvars = self$predvars, model_contrl = top_model_params)
-      self$BestModelFitObject <- self$define_model_fit_object(top_model_params$fit.package, top_model_params$fit.algorithm, best_reg)
-      # self$outvar, self$predvars,
+      self$BestModelFitObject <- self$define_model_fit_object(top_model_params$fit.package, top_model_params$fit.algorithm, best_reg, useH2Oframe = self$useH2Oframe)
       model.fit <- self$BestModelFitObject$fit(data, subset_idx = self$subset_idx, destination_frame = "alldata_H2Oframe", ...)
       if (inherits(model.fit, "try-error")) stop("refitting of the best model failed")
-
-      # self$getMSE
-      # self$getmodel_byname("grid.gbm.5")
-      # self$getmodel_byname("grid.gbm.5")[[1]]@parameters
-      # self$ModelFitObject$model.fit$fitted_models_all[[1]]
-      # self$BestModelFitObject$model.fit$fitted_models_all[[1]]@parameters
-
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       # **********************************************************************
@@ -301,9 +290,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (!is.vector(test_values)) stop("test_values must be a vector of outcomes.")
 
       # 1. Evaluate the empirical loss at each person-time prediction (apply loss function to each row):
-      timeDT <- system.time(resid_predsDT <- as.data.table(private$probA1[, ])[, lapply(.SD, loss_fun_MSE, test_values)][, ("subjID") := IDs])
-      print("timeDT"); print(timeDT)
-      resid_predsDT[1:100,]
+      resid_predsDT <- as.data.table(private$probA1)[, lapply(.SD, loss_fun_MSE, test_values)][, ("subjID") := IDs]
+
       NA_predictions <- resid_predsDT[, lapply(.SD, function(x) any(is.na(x)))]
       nNA_predictions <- resid_predsDT[, lapply(.SD, function(x) sum(is.na(x)))]
       # system.time(resid_predsDT2 <- as.data.table(private$probA1[, ] - test_values)[, ("subjID") := IDs])
@@ -346,6 +334,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         message("K value exceeds the total number of models; K is being truncated to " %+% length(self$getmodel_ids))
         K <- length(self$getmodel_ids)
       }
+
       if (is.null(self$getMSE)) stop("The validation / holdout MSE has not been evaluated, making model model ranking impossible.
   Please call evalMSE_byID() and provide a vector of validation / test values.")
       return(sort(unlist(self$getMSE))[1:K])

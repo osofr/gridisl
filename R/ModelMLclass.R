@@ -234,18 +234,25 @@ fit.h2odeeplearning <- function(fit.class, params, training_frame, y, x, model_c
 ## ----------------------------------------------------------------
 getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_idx) {
   assert_that(!is.null(subset_idx))
-  if (!missing(DataStorageObject)) {
-    # rows_subset <- which(subset_idx)
-    data <- DataStorageObject
-    predvars <- m.fit$params$predvars
-    newdat <- data$dat.sVar[subset_idx, c(predvars), with = FALSE]
-    ####### Temporary fix to avoid the current bug in h2o  ######
-    newdat[, ("fold") := factor(sample(c(1:10), nrow(newdat), TRUE))]
-    prediction_H2Oframe <- fast.load.to.H2O(newdat, destination_frame = "prediction_H2Oframe")
+  if (missing(DataStorageObject)) {
+    return(h2o::h2o.getFrame(ParentObject$get_train_H2Oframe_ID))
+
   } else {
-    prediction_H2Oframe <- h2o::h2o.getFrame(ParentObject$get_train_H2Oframe_ID)
+
+    data <- DataStorageObject
+
+    if (ParentObject$useH2Oframe) {
+      prediction_H2Oframe <- data$H2Oframe[subset_idx, ]
+    } else {
+      newdat <- data$dat.sVar[subset_idx, m.fit$params$predvars, with = FALSE]
+
+      ####### Temporary fix to avoid the current bug in h2o  ######
+      newdat[, ("fold") := factor(sample(c(1:10), nrow(newdat), TRUE))]
+
+      prediction_H2Oframe <- fast.load.to.H2O(newdat, destination_frame = "prediction_H2Oframe")
+    }
+    return(prediction_H2Oframe)
   }
-  return(prediction_H2Oframe)
 }
 
 predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
@@ -268,8 +275,6 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   return(pAoutMat)
 }
 
-# IMPLEMENTING NEW CLASS FOR BINARY REGRESSION THAT USES h2o
-# NEEDS TO be able to pass on THE REGRESSION SETTINGS FOR h2o-specific functions
 h2oModelClass  <- R6Class(classname = "h2oModelClass",
   cloneable = TRUE,
   portable = TRUE,
@@ -282,22 +287,21 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     model_contrl = list(),
     classify = FALSE,
     fit.class = c("glm", "randomForest", "gbm", "deeplearning", "GridLearner"),
-    # model.fit = list(coef = NA, fitfunname = NA, linkfun = NA, nobs = NA, params = NA, H2O.model.object = NA, model_algorithms = NA),
     model.fit = list(),
     outfactors = NA,
     nfolds = 5,
+    useH2Oframe = FALSE,
 
-    initialize = function(fit.algorithm, fit.package, reg, ...) {
+    initialize = function(fit.algorithm, fit.package, reg, useH2Oframe = FALSE, ...) {
       self$reg <- reg
       self$params <- create_fit_params(reg)
       self$outvar <- reg$outvar
       self$predvars <- reg$predvars
       self$model_contrl <- reg$model_contrl
 
+      self$useH2Oframe <- useH2Oframe
       assert_that("h2o" %in% fit.package)
-      # if (fit.algorithm %in% "SuperLearner") {
-      #   if (!"package:h2oEnsemble" %in% search()) stop("must load 'h2oEnsemble' package prior to using the SuperLearner: require('h2oEnsemble') or library('h2oEnsemble')")
-      # }
+
       self$fit.class <- fit.algorithm
       class(self$fit.class) <- c(class(self$fit.class), "h2o" %+% self$fit.class)
       invisible(self)
@@ -307,7 +311,9 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     fit = function(data, subset_idx, validation_data = NULL, destination_frame, ...) {
       assert_that(is.DataStorageClass(data))
       if (missing(destination_frame)) destination_frame <- "train_H2Oframe"
+
       train_H2Oframe <- self$setdata(data, subset_idx, self$classify, destination_frame = destination_frame, ...)
+
       private$train_H2Oframe <- train_H2Oframe
       private$train_H2Oframe_ID <- h2o::h2o.getId(train_H2Oframe)
 
@@ -407,29 +413,37 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     setdata = function(data, subset_idx, classify = FALSE, destination_frame = "newH2Osubset", ...) {
       outvar <- self$outvar
       predvars <- self$predvars
-      if (missing(subset_idx)) subset_idx <- (1:data$nobs)
 
-      load_var_names <- c(outvar, predvars)
+      if (self$useH2Oframe) {
 
-      if (!is.null(data$fold_column)) load_var_names <- c(load_var_names, data$fold_column)
-      if (!is.null(data$hold_column)) load_var_names <- c(load_var_names, data$hold_column)
+        if (missing(subset_idx)) {
+          subsetH2Oframe <- data$H2Oframe
+        } else {
+          subset_t <- system.time(subsetH2Oframe <- data$H2Oframe[subset_idx, ])
+          # if (gvars$verbose) {
+          print("time to subset H2OFRAME: "); print(subset_t)
+          # }
+        }
 
-      # 1. works on single core but fails in parallel:
-      load_subset_t <- system.time(
-        subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[subset_idx, load_var_names, with = FALSE], destination_frame = destination_frame)
-      )
-      if (gvars$verbose) {
-        print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
+      } else {
+
+        load_var_names <- c(outvar, predvars)
+        if (!is.null(data$fold_column)) load_var_names <- c(load_var_names, data$fold_column)
+        if (!is.null(data$hold_column)) load_var_names <- c(load_var_names, data$hold_column)
+        if (missing(subset_idx)) subset_idx <- (1:data$nobs)
+        load_subset_t <- system.time(subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[subset_idx, load_var_names, with = FALSE], destination_frame = destination_frame))
+        # if (gvars$verbose) {
+          print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
+        # }
       }
 
       self$outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
       # Below being TRUE implies that the conversion to H2O.FRAME produced errors, since there should be no NAs in the source subset data
-      if (any(is.na(self$outfactors))) stop("FOUND NA OUTCOMES IN H2OFRAME WHEN THERE WERE NOT SUPPOSED TO BE ANY")
+      if (any(is.na(self$outfactors))) stop("Found NA outcomes in h2oframe when there were not supposed to be any")
+      if (classify && length(self$outfactors) > 2L) stop("Cannot run binary regression/classification for outcome with more than 2 categories")
 
-      if (classify) {
-        if (length(self$outfactors) > 2L) stop("cannot run binary regression/classification for outcome with more than 2 categories")
-        subsetH2Oframe[, outvar] <- h2o::as.factor(subsetH2Oframe[, outvar])
-      }
+      if (classify) subsetH2Oframe[, outvar] <- h2o::as.factor(subsetH2Oframe[, outvar])
+
       return(subsetH2Oframe)
     },
 
@@ -459,11 +473,6 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       }
       return(invisible(NULL))
     },
-
-    # show = function(all_fits = FALSE, ...) {
-    #   print(self$model.fit)
-    #   return(invisible(NULL))
-    # }
 
     summary = function(all_fits = FALSE, ...) {
       print("...")

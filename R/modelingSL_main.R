@@ -56,6 +56,19 @@ save_best_h2o_model <- function(modelfit, file.path = getOption('growthcurveSL.f
   return(invisible(NULL))
 }
 
+validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Oframe = FALSE, dest_frame = "all_train_H2Oframe") {
+  if (is.DataStorageClass(input_data)) {
+    OData_input <- input_data
+    # if (useH2Oframe && is.null(OData_input$H2Oframe)) stop("fatal error: useH2Oframe was set to TRUE, but the H2Oframe could not be located in the input data.")
+  } else if (is.data.frame(input_data) || data.table::is.data.table(input_data)) {
+    OData_input <- importData(data = input_data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
+  } else {
+    stop("input training / validation data must be either data.frame, data.table or DataStorageClass object")
+  }
+  if (useH2Oframe && is.null(OData_input$H2Oframe)) OData_input$fast.load.to.H2O(saveH2O = TRUE, destination_frame = dest_frame)
+  return(OData_input)
+}
+
 # ---------------------------------------------------------------------------------------
 #' Generic modeling function for any longitudinal data.
 #'
@@ -69,12 +82,13 @@ save_best_h2o_model <- function(modelfit, file.path = getOption('growthcurveSL.f
 #' @param nfolds ...
 #' @param fold_column ...
 #' @param seed ...
+#' @param useH2Oframe
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 # @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
-fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column, seed, verbose = getOption("growthcurveSL.verbose")) {
+fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column, seed, useH2Oframe = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
 
   if (missing(train_data)) stop("train_data arg must be specified")
@@ -82,8 +96,6 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   if (!missing(nfolds) && missing(fold_column)) {
     fold_column <- "fold"
     train_data <- add_CVfolds_ind(train_data, ID, nfolds = nfolds, fold_column = fold_column, seed = seed)
-    ## **** If we wanted to define folds manually, this would be one way to do it:****
-    # OData_train$define_CVfolds(nfolds = 3, fold_column = "fold_id", seed = 12345)
     params$fold_column <- fold_column
     runCV <- TRUE
   } else if (missing(nfolds) && !missing(fold_column)) {
@@ -93,14 +105,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
     runCV <- FALSE
   }
 
-  if (is.DataStorageClass(train_data)) {
-    OData_train <- train_data
-  } else if (is.data.frame(train_data) || data.table::is.data.table(train_data)) {
-    OData_train <- importData(data = train_data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
-  } else {
-    stop("train_data arg must be either data.frame, data.table or DataStorageClass object")
-  }
-
+  OData_train <- validate_convert_input_data(train_data, ID = ID, t_name = t_name, x = x, y = y, useH2Oframe = useH2Oframe, dest_frame = "all_train_H2Oframe")
   CheckVarNameExists(OData_train$dat.sVar, y)
 
   nodes <- OData_train$nodes ## Extract nodes list
@@ -114,9 +119,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
 
   ## Define R6 object with validation data:
   if (!missing(valid_data)) {
-    # OData_valid <- importData(data = valid_data, ID = ID, t_name = t_name, covars = x, OUTCOME = y)
-    OData_valid <- OData_train$clone()
-    OData_valid$dat.sVar <- data.table::data.table(valid_data)
+    OData_valid <- validate_convert_input_data(valid_data, ID = ID, t_name = t_name, x = x, y = y, useH2Oframe = useH2Oframe, dest_frame = "all_valid_H2Oframe")
     CheckVarNameExists(OData_valid$dat.sVar, y)
   } else {
     OData_valid <- NULL
@@ -126,7 +129,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, model_contrl = params)
   # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, subset_exprs = list("!hold"), model_contrl = params)
   ## Define a modeling object, perform fitting (real data is being passed for the first time here):
-  modelfit <- PredictionModel$new(reg = regobj)$fit(data = OData_train, validation_data = OData_valid)
+  modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)$fit(data = OData_train, validation_data = OData_valid)
   ## ------------------------------------------------------------------------------------------
   ## If validation data supplied, score the models based on validation set as well
   ## ------------------------------------------------------------------------------------------
@@ -137,7 +140,6 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   ## ------------------------------------------------------------------------------------------
   if (runCV) {
     mse <- eval_MSE_CV(modelfit)
-    # mse <- eval_MSE_CV(modelfit, yvals = OData_train$dat.sVar[[nodes$Ynode]])
     print("Mean CV MSE (for out of sample predictions) as evaluated by h2o: "); print(data.frame(mse))
   }
   return(modelfit)
@@ -164,7 +166,10 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
   nodes <- modelfit$OData_train$nodes
 
   if (!missing(newdata))
-    newdata <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
+    newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,
+                                           x = modelfit$predvars, y = modelfit$outvar,
+                                           useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
+    # newdata <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
 
   if (!missing(predict_only_bestK_models)) {
     assert_that(is.integerish(predict_only_bestK_models))

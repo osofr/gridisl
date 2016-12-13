@@ -77,31 +77,38 @@ fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar") {
   tmpf <- tempfile(fileext = ".csv")
   assertthat::assert_that(is.data.table(dat.sVar))
 
-  data.table::fwrite(dat.sVar, tmpf, verbose = TRUE, na = "NA_h2o")
+  devDTvs <- exists("fwrite", where = "package:data.table")
 
-  types <- sapply(dat.sVar, class)
-  types <- gsub("integer64", "numeric", types)
-  types <- gsub("integer", "numeric", types)
-  types <- gsub("double", "numeric", types)
-  types <- gsub("complex", "numeric", types)
-  types <- gsub("logical", "enum", types)
-  types <- gsub("factor", "enum", types)
-  types <- gsub("character", "string", types)
-  types <- gsub("Date", "Time", types)
+  if (!devDTvs) {
+    message("For optimal performance please install the most recent version of data.table package.")
+    H2O.dat.sVar <- h2o::as.h2o(data.frame(dat.sVar), destination_frame = destination_frame)
+  } else {
+    data.table::fwrite(dat.sVar, tmpf, verbose = TRUE, na = "NA_h2o")
 
-  # replace all irregular characters to conform with destination_frame regular exprs format:
-  tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
-  tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
-  tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
+    types <- sapply(dat.sVar, class)
+    types <- gsub("integer64", "numeric", types)
+    types <- gsub("integer", "numeric", types)
+    types <- gsub("double", "numeric", types)
+    types <- gsub("complex", "numeric", types)
+    types <- gsub("logical", "enum", types)
+    types <- gsub("factor", "enum", types)
+    types <- gsub("character", "string", types)
+    types <- gsub("Date", "Time", types)
 
-  H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
-                                      header = TRUE,
-                                      col.types = types,
-                                      na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
-                                      destination_frame = destination_frame)
+    # replace all irregular characters to conform with destination_frame regular exprs format:
+    tmpf.dest1 <- gsub('/', 'X', tmpf, fixed = TRUE)
+    tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
+    tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
 
-  file.remove(tmpf)
-  return(H2O.dat.sVar)
+    H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
+                                        header = TRUE,
+                                        col.types = types,
+                                        na.strings = rep(c("NA_h2o"), ncol(dat.sVar)),
+                                        destination_frame = destination_frame)
+
+    file.remove(tmpf)
+  }
+  return(invisible(H2O.dat.sVar))
 }
 
 ## ---------------------------------------------------------------------
@@ -152,6 +159,8 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     fold_column = NULL,
     nfolds = NULL,
     hold_column = NULL,
+    H2Oframe = NULL,
+    H2Oframe_ID = NULL,
 
     initialize = function(Odata, nodes, YnodeVals, det.Y, ...) {
       assert_that(is.data.frame(Odata) | is.data.table(Odata))
@@ -174,10 +183,12 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # -----------------------------------------------------------------------------
     fast.load.to.H2O = function(dat.sVar, saveH2O = TRUE, destination_frame = "H2O.dat.sVar") {
       if (missing(dat.sVar)) dat.sVar <- self$dat.sVar
-      H2O.dat.sVar <- fast.load.to.H2O(dat.sVar, destination_frame = "H2O.dat.sVar")
-      if (saveH2O) self$H2O.dat.sVar <- H2O.dat.sVar
-      file.remove(tmpf)
-      return(H2O.dat.sVar)
+      H2Oframe <- fast.load.to.H2O(dat.sVar, destination_frame = destination_frame)
+      if (saveH2O) {
+        self$H2Oframe <- H2Oframe
+        self$H2Oframe_ID <- h2o::h2o.getId(H2Oframe)
+      }
+      return(invisible(H2Oframe))
     },
 
     # add protected Y nodes to private field and set to NA all determinisitc Y values for public field YnodeVals
@@ -313,6 +324,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       }
       invisible(self)
     },
+
     set.sVar.type = function(name.sVar, new.type) { private$.type.sVar[[name.sVar]] <- new.type },
     get.sVar.type = function(name.sVar) { if (missing(name.sVar)) { private$.type.sVar } else { private$.type.sVar[[name.sVar]] } },
     is.sVar.bin = function(name.sVar) { self$get.sVar.type(name.sVar) %in% gvars$sVartypes$bin },
@@ -364,14 +376,14 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
         private$.mat.sVar <- dat.sVar
       }
     },
-   H2O.dat.sVar = function(dat.sVar) {
-      if (missing(dat.sVar)) {
-        return(private$.H2O.mat.sVar)
-      } else {
-        assert_that(is.H2OFrame(dat.sVar))
-        private$.H2O.mat.sVar <- dat.sVar
-      }
-    },
+   # H2O.dat.sVar = function(dat.sVar) {
+   #    if (missing(dat.sVar)) {
+   #      return(private$.H2O.mat.sVar)
+   #    } else {
+   #      assert_that(is.H2OFrame(dat.sVar))
+   #      private$.H2O.mat.sVar <- dat.sVar
+   #    }
+   #  },
     emptydat.sVar = function() { private$.mat.sVar <- NULL },         # wipe out mat.sVar
     # wipe out binirized .mat.sVar:
     noNA.Ynodevals = function(noNA.Yvals) {
@@ -393,7 +405,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     .nodes = list(),              # names of the important nodes in the data (ID, t, outcome)
     .protected.YnodeVals = NULL,  # Actual observed values of the binary outcome (Ynode), along with deterministic vals
     .mat.sVar = NULL,             # pointer to data.table object storing the entire dataset
-    .H2O.mat.sVar = NULL,         # pointer to H2OFrame object that stores equivalent data to private$.mat.sVar
+    # .H2O.mat.sVar = NULL,         # pointer to H2OFrame object that stores equivalent data to private$.mat.sVar
     .type.sVar = NULL,            # Named list with sVar types: list(names.sVar[i] = "binary"/"categor"/"contin"), can be overridden
     # Replace all missing (NA) values with a default integer (0) for matrix
     fixmiss_sVar_mat = function() {
