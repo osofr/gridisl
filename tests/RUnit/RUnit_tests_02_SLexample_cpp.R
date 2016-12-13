@@ -21,8 +21,8 @@ test.holdoutfit_FACE_BS_h2o <- function() {
 
     # Fit, training on non-holdouts and using holdouts as validation set (for scoring only)
     mfit_useY_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
-                                     data = cpp_holdout, hold_column = "hold",
-                                     params = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = TRUE, name = "useY"))
+                                    data = cpp_holdout, hold_column = "hold",
+                                    params = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = TRUE, name = "useY"))
     print("Holdout MSE, using the holdout Y for prediction"); print(mfit_useY_hold$getMSE)
     # FACE MSE: [1] 0.2271609
     # BS MSE: [1] 0.02650036
@@ -451,22 +451,54 @@ test.CV.SL <- function() {
   ## Best (re-trained) model predictions on data used for CV training (default):
   preds_alldat1 <- predict_SL(mfit_cv1, add_subject_data = FALSE)
   head(preds_alldat1[])
+
   ## Best model predictions for new data, must match:
   preds_alldat2 <- predict_SL(mfit_cv1, newdata = cpp_folds, add_subject_data = FALSE)
   head(preds_alldat2[])
   checkTrue(all.equal(preds_alldat1, preds_alldat2))
-  ## Predictions for best CV model (not re-trained), must match:
+
+  ## Predictions for best CV model (not re-trained, trained only on non-holdouts), must match:
   preds_best_CV <- predict_model(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = FALSE)
   head(preds_best_CV[])
   checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
-  ## Predict with new data (ONLY WORKS WHEN NO SPECIAL CURVE SUMMARIES ARE USED FOR PREDICTION)
+
+  ## Predict with new data (WORKS ONLY WHEN NO SPECIAL CURVE SUMMARIES ARE USED FOR PREDICTION, OTHERWISE HAVE TO USE predict_SL)
   preds_best_CV_2 <- predict_model(mfit_cv1, newdata = cpp_folds, predict_only_bestK_models = 1, add_subject_data = FALSE)
   head(preds_best_CV_2[])
   checkTrue(all.equal(as.vector(preds_best_CV_2), as.vector(preds_best_CV)))
 
+  # return training data used (as data.table)
   train_dat <- get_train_data(mfit_cv1)
+  # return validation data used (as data.table)
   valid_data <- get_validation_data(mfit_cv1)
+  # Obtain out of sample CV predictions for all training data-points
   cv_preds <- get_out_of_sample_CV_predictions(mfit_cv1)
+
+  ## Make report, save grid predictions and out of sample predictions
+  # fname <- paste0(data.name, "_", "CV_gridSL_")
+  make_report_rmd(mfit_cv1, K = 10, data = cpp_folds,
+                  # file.name = paste0(fname, getOption("growthcurveSL.file.name")),
+                  title = paste0("Growth Curve Imputation with cpp Data"),
+                  format = "html", keep_md = TRUE, openFile = FALSE)
+
+  ## Save out of sample CV predictions from the best model
+  cv_valid_preds <- get_validation_data(mfit_cv1)
+  cv_valid_preds[, ("out_of_sample_cv_preds") := get_out_of_sample_CV_predictions(mfit_cv1)]
+  # data.table::fwrite(cv_valid_preds, file = file.path(report.path, paste0(fname, "out_of_sample_cv_preds", ".csv")))
+  ## Predicting and saving the entire curve (grid)
+  preds_tgrid_new <- predict_save_tgrid(mfit_cv1, cpp_folds, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 20)
+                                        # file.name = paste0(fname, "all_preds"), file.path = report.path)
+
+  all_trjs_CVgridSL_cpp <- create_all_fittedTrajectory(cpp_folds, preds_tgrid_new, cv_valid_preds, ID_var = "subjid",
+    t_var = "agedays", y_var = "haz", sex_var ="sex", method = "cvSL", holdout_fits_var = "out_of_sample_cv_preds")
+
+  all_trjs_CVgridSL_cpp_20 <- subset(all_trjs_CVgridSL_cpp)[1:20]
+  drSubset(all_trjs_CVgridSL_cpp, subset = 1:20)
+  class(all_trjs_CVgridSL_cpp_20)
+  trscope_trajectories(all_trjs_CVgridSL_cpp, z = TRUE)
+
+
+
 
   ## ------------------------------------------------------------------------------------------------
   ## Predicting the entire curve (grid)
@@ -489,8 +521,8 @@ test.CV.SL <- function() {
   ## ADD SPECIAL curve FEATURES / summaries as predictors to CV evaluation
   ## ------------------------------------------------------------------------------------------------
   mfit_cv2 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                              data = cpp_folds, params = GRIDparams,
-                              fold_column = "fold", use_new_features = TRUE)
+                       data = cpp_folds, params = GRIDparams,
+                       fold_column = "fold", use_new_features = TRUE)
 
   ## Best (re-trained) model predictions on data used for CV training (default):
   preds_alldat1 <- predict_SL(mfit_cv2, add_subject_data = FALSE)

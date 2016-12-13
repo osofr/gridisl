@@ -27,13 +27,9 @@ create_all_fittedTrajectory <- function(subj_dat, grid_fits_dat, holdout_fits_da
                                         fun_y_to_raw = hbgd::who_zscore2htcm,
                                         fun_y_to_z = function(x, y, ...) return(y)) {
 
-    # subj_dat_1subj <- as.data.table(subj_dat)[(eval(as.name(ID_var)) %in% ID), ]
-    # grid_1subj <- as.data.table(grid_fits_dat)[(eval(as.name(ID_var)) %in% ID), ]
-    # if (!is.null(holdout_fits_dat)) {
-    #     holdout_fits_dat_1subj <- as.data.table(holdout_fits_dat)[(eval(as.name(ID_var)) %in% ID), ]
-    # } else {
-    #     holdout_fits_dat_1subj <- NULL
-    # }
+    subj_dat <- as.data.table(subj_dat)
+    grid_fits_dat <- as.data.table(grid_fits_dat)
+    if (!is.null(holdout_fits_dat)) holdout_fits_dat <- as.data.table(holdout_fits_dat)
 
     # Divide a dataset into subsets by subject
     by_subject <- function(dat, ID_var, newID = "subjid") {
@@ -96,9 +92,9 @@ create_fittedTrajectory_1subj <- function(subj_dat_1subj, grid_fits_dat_1subj, h
                                           fun_y_to_raw = hbgd::who_zscore2htcm,
                                           fun_y_to_z = function(x, y, ...) return(y)) {
 
-    subj_dat_1subj <- copy(as.data.table(subj_dat_1subj))
-    grid_fits_dat_1subj <- copy(as.data.table(grid_fits_dat_1subj))
-    if (!is.null(holdout_fits_dat_1subj)) holdout_fits_dat_1subj <- copy(as.data.table(holdout_fits_dat_1subj))
+    subj_dat_1subj <- as.data.table(subj_dat_1subj)
+    grid_fits_dat_1subj <- as.data.table(grid_fits_dat_1subj)
+    if (!is.null(holdout_fits_dat_1subj)) holdout_fits_dat_1subj <- as.data.table(holdout_fits_dat_1subj)
 
     sex_val <- subj_dat_1subj[[sex_var]][1]
 
@@ -111,6 +107,7 @@ create_fittedTrajectory_1subj <- function(subj_dat_1subj, grid_fits_dat_1subj, h
         z    := fun_y_to_z(x, subj_dat_1subj[[y_var]], sex = sex_val)][,
         yfit := fun_y_to_raw(x, grid_fits_dat_1subj[train_point == TRUE,][[grid_fits_var]], sex = sex_val)][,
         zfit := fun_y_to_z(x, grid_fits_dat_1subj[train_point == TRUE,][[grid_fits_var]], sex = sex_val)]
+    data.table::setDF(res$xy)
 
     ## a vector of fitted values (predictions) for each data-points in xy
     res$fit <- fun_y_to_raw(res$xy$x, grid_fits_dat_1subj[train_point == TRUE,][[grid_fits_var]], sex = sex_val)
@@ -124,6 +121,7 @@ create_fittedTrajectory_1subj <- function(subj_dat_1subj, grid_fits_dat_1subj, h
     res$fitgrid[,
         y := fun_y_to_raw(x, grid_pts_only[[grid_fits_var]], sex = sex_val)][,
         z := fun_y_to_z(x, grid_pts_only[[grid_fits_var]], sex = sex_val)]
+    data.table::setDF(res$fitgrid)
 
     ## add derivative on original and z-score scale
     if (!is.null(res$fitgrid$y)) res$fitgrid$dy <- hbgd::grid_deriv(res$fitgrid$x, res$fitgrid$y)
@@ -134,6 +132,7 @@ create_fittedTrajectory_1subj <- function(subj_dat_1subj, grid_fits_dat_1subj, h
         res$holdout[,
             y := fun_y_to_raw(x, holdout_fits_dat_1subj[[holdout_fits_var]], sex = sex_val)][,
             z := fun_y_to_z(x, holdout_fits_dat_1subj[[holdout_fits_var]], sex = sex_val)]
+        data.table::setDF(res$holdout)
     }
 
     res$checkpoint <- data.frame(x = checkpoints, y = NA, z = NA, zcat = NA)
