@@ -35,6 +35,27 @@ get_out_of_sample_CV_predictions <- function(modelfit) {
   return(modelfit$get_out_of_sample_CVpreds)
 }
 
+#' Save the best performing h2o model
+#'
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
+#' @export
+save_best_h2o_model <- function(modelfit, file.path = getOption('growthcurveSL.file.path')) {
+  assert_that(is.PredictionModel(modelfit))
+  best_model_name <- modelfit$get_best_model_names(K = 1)
+  message("saving the best model fit: " %+% best_model_name)
+  ## Will obtain the best model object trained on TRAINING data only
+  ## If CV SL was used this model is equivalent to the best model trained on all data
+  ## However, for holdout SL this model will be trained only on non-holdout observations
+  best_model_traindat <- modelfit$get_best_models(K = 1)[[1]]
+  h2o.saveModel(best_model_traindat, file.path, force = TRUE)
+  ## This model is always trained on all data (if exists)
+  best_model_alldat <- modelfit$BestModelFitObject$model.fit$fitted_models_all
+  if (!is.null(best_model_alldat))
+    h2o.saveModel(best_model_alldat[[1]], file.path, force = TRUE)
+
+  return(invisible(NULL))
+}
+
 # ---------------------------------------------------------------------------------------
 #' Generic modeling function for any longitudinal data.
 #'

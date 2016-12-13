@@ -460,8 +460,10 @@ test.holdoutSL.GLM.GBM <- function() {
   preds_holdout3 <- growthcurveSL:::predict_holdouts_only(mfit_hold3)
   head(preds_holdout3[])
 
-  ## get 3 top performing models:
+  ## get top performing model:
   models <- mfit_hold3$get_best_models(K = 1)
+  ## Save the best performing h2o model fit to disk:
+  save_best_h2o_model(mfit_hold3, file.path = "/Users/olegsofrygin/GoogleDrive/HBGDki/ImputationSL/sofware")
 
   ## Fit, training on non-holdouts and using holdouts as validation set (for scoring only). No additional summaries are used
   mfit_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
