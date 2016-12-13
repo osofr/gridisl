@@ -330,7 +330,6 @@ test.holdoutSL.GLM.GBM <- function() {
   ## Obtain predictions from the best holdout model for all data (trained on non-holdouts only):
   preds_best_train <- predict_model(mfit_hold, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_best_train[]
-
 }
 
 ## ------------------------------------------------------------------------------------
