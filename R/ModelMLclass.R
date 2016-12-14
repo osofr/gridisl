@@ -1,5 +1,5 @@
 predict_h2o_new <- function(model_id, frame_id, returnVector = TRUE) {
-  h2o.no_progress()
+  # h2o.no_progress()
   # waitOnJob = FALSE,
   url <- paste0('Predictions/models/', model_id, '/frames/',  frame_id)
   res <- h2o:::.h2o.__remoteSend(url, method = "POST", h2oRestApiVersion = 4)
@@ -30,15 +30,17 @@ predict_h2o_new <- function(model_id, frame_id, returnVector = TRUE) {
 ## where k is the total number of models trained by this ensemble (with h2o.grid, etc) and is equal to length(m.fit$fitted_models_all)
 ## ----------------------------------------------------------------------------------------------------------------------------------
 score_h2o_CV_models <- function(m.fit, validation_data, fold_column, ...) {
-  h2o.no_progress()
+  # h2o.no_progress()
 
   ## Grab the internallly stored h2o out of sample predictions for each CV model (cross-validation predictions are combined into a single vector of length n)
   if (missing(validation_data)) {
+    message("Obtaining the out-of-sample CV predictions for h2o-stored training data")
     pAoutMat <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
     return(pAoutMat)
 
   } else {
     assert_that(data.table::is.data.table(validation_data))
+    message("Obtaining the out-of-sample CV predictions for new data")
     pAoutMat <- matrix(gvars$misval, nrow = nrow(validation_data), ncol = length(m.fit$fitted_models_all))
     colnames(pAoutMat) <- names(m.fit$model_ids)
     outvar <- m.fit$params$outvar
@@ -53,11 +55,11 @@ score_h2o_CV_models <- function(m.fit, validation_data, fold_column, ...) {
     vfolds_cat <- sort(unique(fold$fold_assignment))
 
     for (vfold_idx in seq_along(vfolds_cat)) {
+      message("Obtaining the out-of-sample CV predictions for all models and validation fold: " %+% vfolds_cat[vfold_idx])
       fold_idx_cv.i <- which(fold$fold_assignment %in% vfolds_cat[vfold_idx])
       ## Define validation frame for this fold:
       # subset_frame_t <- system.time(
         valid_H2Oframe_cv.i <- valid_H2Oframe[fold_idx_cv.i, ]
-        # valid_H2Oframe_cv.i <- valid_H2Oframe[which(fold_idx_cv.i),]
         # )
       # print("subset_frame_t: "); print(subset_frame_t)
 
@@ -307,7 +309,6 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       invisible(self)
     },
 
-    # fit = function(data, outvar, predvars, subset_idx, validation_data = NULL, destination_frame, ...) {
     fit = function(data, subset_idx, validation_data = NULL, destination_frame, ...) {
       assert_that(is.DataStorageClass(data))
       if (missing(destination_frame)) destination_frame <- "train_H2Oframe"

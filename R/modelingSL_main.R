@@ -136,7 +136,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   if (!is.null(OData_valid)) preds <- modelfit$predict(newdata = OData_valid)
 
   ## ------------------------------------------------------------------------------------------
-  ## If CV was used, then score the models based on CV out-of-sample predictions
+  ## If CV was used, then score the models based on out-of-sample predictions on the training data (automatically done by h2o)
   ## ------------------------------------------------------------------------------------------
   if (runCV) {
     mse <- eval_MSE_CV(modelfit)
@@ -205,7 +205,6 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
 #' @return ...
 #' @export
 eval_MSE_CV <- function(modelfit, newdata, verbose = getOption("growthcurveSL.verbose")) {
-# eval_MSE_CV <- function(modelfit, newdata, yvals, verbose = getOption("growthcurveSL.verbose")) {
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
   assert_that(is.PredictionModel(modelfit))
@@ -213,10 +212,11 @@ eval_MSE_CV <- function(modelfit, newdata, verbose = getOption("growthcurveSL.ve
   nodes <- modelfit$OData_train$nodes
 
   if (missing(newdata)) {
+    ## Use out-of-sample predictions from original training data (automatically done by h2o) to evaluate the CV MSE
     modelfit <- modelfit$score_CV()
   } else {
     newOData <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
-    ## Get predictions for each CV model based on external validation CV dataset:
+    ## Get predictions for each CV model based on external validation CV dataset, then use those predictions and outcome in newdata to evalute the CV MSE
     t_CV <- system.time(
       modelfit <- modelfit$score_CV(validation_data = newOData)
     )
