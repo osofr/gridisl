@@ -18,25 +18,25 @@ create_fittedTrajectory_1subj(subj_dat_1subj, grid_fits_dat_1subj,
 
 \item{holdout_fits_dat_1subj}{Data with model predictions for holdout datapoints for a single subject (optional)}
 
-\item{t_var}{A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).}
+\item{t_var}{A character name of the column in \code{subj_dat}, \code{grid_fits_dat} and \code{holdout_fits_dat} with integer-valued time measurements (e.g., days, weeks, months).}
 
-\item{y_var}{A character string name of the column that represent the response variable in the model.}
+\item{y_var}{A character name of the column that represent the response variable in the model (the outcome).}
 
-\item{sex_var}{A character string name identifying the subject's gender in \code{subj_dat_1subj}.}
+\item{sex_var}{A character name of the column that represent the response variable in the model (the outcome).}
 
-\item{method}{A fitting method.}
+\item{method}{A name of the modeling approach for future model comparison.}
 
-\item{xy_pair_name}{...}
+\item{xy_pair_name}{... Same as in hbgd package...}
 
-\item{grid_fits_var}{...}
+\item{grid_fits_var}{The column name in \code{grid_fits_dat} that contains the modeling predictions for each subject-time row.}
 
-\item{holdout_fits_var}{...}
+\item{holdout_fits_var}{The column name in \code{holdout_fits_dat} that contains the modeling predictions for each holdout subject-time row.}
 
-\item{checkpoints}{...}
+\item{fun_y_to_raw}{The function to convert the scale of the observed outcome and predictions into the raw scale (height / weight).
+If the fits are already on the raw scale then specify this argument as \code{function(x, y, ...) return(y)}.}
 
-\item{fun_y_to_raw}{...}
-
-\item{fun_y_to_z}{...}
+\item{fun_y_to_z}{The function to convert the scale of the observed outcome and predictions into the z-scale.
+If the fits are already on the z-scale then specify this argument as \code{function(x, y, ...) return(y)}.}
 }
 \value{
 An object of class \code{fittedTrajectory} for further downstream analysis.

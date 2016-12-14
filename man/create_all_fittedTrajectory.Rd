@@ -11,33 +11,38 @@ create_all_fittedTrajectory(subj_dat, grid_fits_dat, holdout_fits_dat = NULL,
   fun_y_to_z = function(x, y, ...) return(y))
 }
 \arguments{
-\item{subj_dat}{...}
+\item{subj_dat}{Subject specific data to be added to the final object. This must also contain the observed outcome on each subect under
+the column name specified by the \code{y_var} argument.
+Note that this data doesn't contain any modeling fits.}
 
-\item{grid_fits_dat}{...}
+\item{grid_fits_dat}{The dataset containing the predictions for equally spaced time intervals,
+along with the predictions for all data points in the training data (observed data).
+The two types of predictions must be distinguished with the column indicator named \code{"train_point"}.
+The training data fits are then selected based on all rows that satisfy \code{train_point==TRUE} in \code{grid_fits_dat}.}
 
-\item{holdout_fits_dat}{...}
+\item{holdout_fits_dat}{Optional dataset containing the model predictions for holdout data-points (or equivalently out-of-sample predictions in cross-validation).}
 
-\item{ID_var}{A character string name of the column in \code{grid_fits_dat} that contains the unique subject identifiers.}
+\item{ID_var}{A character name of the column in \code{subj_dat}, \code{grid_fits_dat} and \code{holdout_fits_dat}  containing the unique subject identifiers.}
 
-\item{t_var}{A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).}
+\item{t_var}{A character name of the column in \code{subj_dat}, \code{grid_fits_dat} and \code{holdout_fits_dat} with integer-valued time measurements (e.g., days, weeks, months).}
 
-\item{y_var}{A character string name of the column that represent the response variable in the model.}
+\item{y_var}{A character name of the column that represent the response variable in the model (the outcome).}
 
-\item{sex_var}{...}
+\item{sex_var}{A character name of the column that represent the response variable in the model (the outcome).}
 
-\item{method}{...}
+\item{method}{A name of the modeling approach for future model comparison.}
 
-\item{xy_pair_name}{...}
+\item{xy_pair_name}{... Same as in hbgd package...}
 
-\item{grid_fits_var}{...}
+\item{grid_fits_var}{The column name in \code{grid_fits_dat} that contains the modeling predictions for each subject-time row.}
 
-\item{holdout_fits_var}{...}
+\item{holdout_fits_var}{The column name in \code{holdout_fits_dat} that contains the modeling predictions for each holdout subject-time row.}
 
-\item{fun_y_to_raw}{...}
+\item{fun_y_to_raw}{The function to convert the scale of the observed outcome and predictions into the raw scale (height / weight).
+If the fits are already on the raw scale then specify this argument as \code{function(x, y, ...) return(y)}.}
 
-\item{fun_y_to_z}{...}
-
-\item{ID}{The value of the subject ID for which the trajectory object will be created.}
+\item{fun_y_to_z}{The function to convert the scale of the observed outcome and predictions into the z-scale.
+If the fits are already on the z-scale then specify this argument as \code{function(x, y, ...) return(y)}.}
 }
 \value{
 ...

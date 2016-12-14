@@ -3,20 +3,26 @@
 #' Creates objects of class \code{fittedTrajectory} with growth curve predictions, one object for subject ID in the data.
 #' This can be used for further growth curve analysis with hbgd R package.
 #' Requires the the dataset containing the predicted growth curves for all subjects \code{grid_fits_dat}.
-#' @param ID The value of the subject ID for which the trajectory object will be created.
-#' @param subj_dat ...
-#' @param grid_fits_dat ...
-#' @param holdout_fits_dat ...
-#' @param ID_var A character string name of the column in \code{grid_fits_dat} that contains the unique subject identifiers.
-#' @param t_var A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
-#' @param y_var A character string name of the column that represent the response variable in the model.
-#' @param sex_var ...
-#' @param method ...
-#' @param xy_pair_name ...
-#' @param grid_fits_var ...
-#' @param holdout_fits_var ...
-#' @param fun_y_to_raw ...
-#' @param fun_y_to_z ...
+#' @param subj_dat Subject specific data to be added to the final object. This must also contain the observed outcome on each subect under
+#' the column name specified by the \code{y_var} argument.
+#' Note that this data doesn't contain any modeling fits.
+#' @param grid_fits_dat The dataset containing the predictions for equally spaced time intervals,
+#' along with the predictions for all data points in the training data (observed data).
+#' The two types of predictions must be distinguished with the column indicator named \code{"train_point"}.
+#' The training data fits are then selected based on all rows that satisfy \code{train_point==TRUE} in \code{grid_fits_dat}.
+#' @param holdout_fits_dat Optional dataset containing the model predictions for holdout data-points (or equivalently out-of-sample predictions in cross-validation).
+#' @param ID_var A character name of the column in \code{subj_dat}, \code{grid_fits_dat} and \code{holdout_fits_dat}  containing the unique subject identifiers.
+#' @param t_var A character name of the column in \code{subj_dat}, \code{grid_fits_dat} and \code{holdout_fits_dat} with integer-valued time measurements (e.g., days, weeks, months).
+#' @param y_var A character name of the column that represent the response variable in the model (the outcome).
+#' @param sex_var A character name of the column that represent the response variable in the model (the outcome).
+#' @param method A name of the modeling approach for future model comparison.
+#' @param xy_pair_name ... Same as in hbgd package...
+#' @param grid_fits_var The column name in \code{grid_fits_dat} that contains the modeling predictions for each subject-time row.
+#' @param holdout_fits_var The column name in \code{holdout_fits_dat} that contains the modeling predictions for each holdout subject-time row.
+#' @param fun_y_to_raw The function to convert the scale of the observed outcome and predictions into the raw scale (height / weight).
+#' If the fits are already on the raw scale then specify this argument as \code{function(x, y, ...) return(y)}.
+#' @param fun_y_to_z The function to convert the scale of the observed outcome and predictions into the z-scale.
+#' If the fits are already on the z-scale then specify this argument as \code{function(x, y, ...) return(y)}.
 #' @return ...
 #' @export
 create_all_fittedTrajectory <- function(subj_dat, grid_fits_dat, holdout_fits_dat = NULL, ID_var, t_var, y_var, sex_var, method,
@@ -71,16 +77,17 @@ create_all_fittedTrajectory <- function(subj_dat, grid_fits_dat, holdout_fits_da
 #' @param subj_dat_1subj Data on a single subject
 #' @param grid_fits_dat_1subj Grid of equally spaced model predictions for a single subject
 #' @param holdout_fits_dat_1subj Data with model predictions for holdout datapoints for a single subject (optional)
-#' @param t_var A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
-#' @param y_var A character string name of the column that represent the response variable in the model.
-#' @param sex_var A character string name identifying the subject's gender in \code{subj_dat_1subj}.
-#' @param method A fitting method.
-#' @param xy_pair_name ...
-#' @param grid_fits_var ...
-#' @param holdout_fits_var ...
-#' @param checkpoints ...
-#' @param fun_y_to_raw ...
-#' @param fun_y_to_z ...
+#' @param t_var A character name of the column in \code{subj_dat}, \code{grid_fits_dat} and \code{holdout_fits_dat} with integer-valued time measurements (e.g., days, weeks, months).
+#' @param y_var A character name of the column that represent the response variable in the model (the outcome).
+#' @param sex_var A character name of the column that represent the response variable in the model (the outcome).
+#' @param method A name of the modeling approach for future model comparison.
+#' @param xy_pair_name ... Same as in hbgd package...
+#' @param grid_fits_var The column name in \code{grid_fits_dat} that contains the modeling predictions for each subject-time row.
+#' @param holdout_fits_var The column name in \code{holdout_fits_dat} that contains the modeling predictions for each holdout subject-time row.
+#' @param fun_y_to_raw The function to convert the scale of the observed outcome and predictions into the raw scale (height / weight).
+#' If the fits are already on the raw scale then specify this argument as \code{function(x, y, ...) return(y)}.
+#' @param fun_y_to_z The function to convert the scale of the observed outcome and predictions into the z-scale.
+#' If the fits are already on the z-scale then specify this argument as \code{function(x, y, ...) return(y)}.
 #' @return An object of class \code{fittedTrajectory} for further downstream analysis.
 #' @export
 create_fittedTrajectory_1subj <- function(subj_dat_1subj, grid_fits_dat_1subj, holdout_fits_dat_1subj = NULL,
