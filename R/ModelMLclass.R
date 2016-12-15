@@ -56,20 +56,22 @@ getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_id
   }
 }
 
-check_out_of_sample_consistency <- function(m.fit, valid_H2Oframe, predvars, fold_column) {
+check_out_of_sample_consistency <- function(models_list, valid_H2Oframe, predvars, fold_column) {
+  all_folds_h2o <- lapply(models_list, h2o.cross_validation_fold_assignment)
+  train_frame_ID_1 <- models_list[[1]]@parameters$training_frame
 
-  ## 1. Test that the exactly the same fold assignments were used by all CV models in the ensemble.
-  all_folds_h2o <- lapply(m.fit$fitted_models_all, h2o.cross_validation_fold_assignment)
-  for (idx in 2:length(all_folds_h2o) ) {
-    if (!h2o.all(all_folds_h2o[[1]]==all_folds_h2o[[idx]])  )
-      stop("Out-of-sample (holdout) predictions for new data has failed. The fold assignmets of the following CV model do not match to others: " %+% names(m.fit$fitted_models_all)[idx])
-  }
+  if (length(all_folds_h2o) > 1) {
+    ## 1. Test that the exactly the same fold assignments were used by all CV models in the ensemble.
+    for (idx in 2:length(all_folds_h2o) ) {
+      if (!h2o.all(all_folds_h2o[[1]]==all_folds_h2o[[idx]])  )
+        stop("Out-of-sample (holdout) predictions for new data has failed. The fold assignmets of the following CV model do not match to others: " %+% names(models_list)[idx])
+    }
 
-  ## 2. Test that same training h2oFrame was used for all models in the ensemble (just in case).
-  train_frame_ID_1 <- m.fit$fitted_models_all[[1]]@parameters$training_frame
-  for (idx in 2:length(all_folds_h2o) ) {
-    if (!all.equal(train_frame_ID_1, m.fit$fitted_models_all[[idx]]@parameters$training_frame))
-      stop("Out-of-sample (holdout) predictions for new data has failed. It appears that some of the CV models in ensemble used different training frames.")
+    ## 2. Test that same training h2oFrame was used for all models in the ensemble (just in case).
+    for (idx in 2:length(all_folds_h2o) ) {
+      if (!all.equal(train_frame_ID_1, models_list[[idx]]@parameters$training_frame))
+        stop("Out-of-sample (holdout) predictions for new data has failed. It appears that some of the CV models in ensemble used different training frames.")
+    }
   }
 
   ## 3. Test that the validation and training data have exactly the same fold assignments (in h2oFrame)
@@ -93,16 +95,22 @@ check_out_of_sample_consistency <- function(m.fit, valid_H2Oframe, predvars, fol
 ## (i.e., predictions in validation_data will be only made for rows that were not used for training the model V_i)
 ## In the end we generate a vector of n=nrow(validation_data) predictions by combining predictions from all models V=(V_1,...,V_v)
 ## This procedure is repeated for each cross-validated model in the ensemble, resulting in a matrix of predictions (n,k),
-## where k is the total number of models trained by this ensemble (with h2o.grid, etc) and is equal to length(m.fit$fitted_models_all)
+## where k is the total number of models trained by this ensemble (with h2o.grid, etc) and is equal to length(models_list)
 ## ----------------------------------------------------------------------------------------------------------------------------------
-predict_out_of_sample_CV <- function(m.fit, ParentObject, validation_data, subset_idx, predict_model_names) {
+predict_out_of_sample_CV <- function(m.fit, ParentObject, validation_data, subset_idx, predict_model_names, ...) {
   # h2o.no_progress()
+  models_list <- m.fit$fitted_models_all
+  if (!missing(predict_model_names)) models_list <- models_list[predict_model_names]
 
   ## Grab the internallly stored h2o out of sample predictions for each CV model (cross-validation predictions are combined into a single vector of length n)
   if (missing(validation_data)) {
+
     message("Obtaining the out-of-sample CV predictions for h2o-stored training data")
-    pAoutMat <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
-    return(pAoutMat)
+    # pAoutDT <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
+    pAoutDT <- lapply(models_list, function(h2omodel) h2o.cross_validation_holdout_predictions(h2omodel))
+    pAoutDT <- as.data.table(h2o.cbind(pAoutDT))
+    setnames(pAoutDT, names(models_list))
+    return(pAoutDT)
 
   } else {
 
@@ -114,10 +122,10 @@ predict_out_of_sample_CV <- function(m.fit, ParentObject, validation_data, subse
     valid_H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, validation_data, subset_idx)
 
     message("Obtaining the out-of-sample CV predictions for new data")
-    res <- check_out_of_sample_consistency(m.fit, valid_H2Oframe, predvars, fold_column)
+    res <- check_out_of_sample_consistency(models_list, valid_H2Oframe, predvars, fold_column)
 
     ## Get the fold assignments for the 1st model in ensemble:
-    h2o_model_1 <- m.fit$fitted_models_all[[1]]
+    h2o_model_1 <- models_list[[1]]
     fold_h2o <- h2o.cross_validation_fold_assignment(h2o_model_1)
     vfolds_cat_h2o <- sort(h2o.levels(fold_h2o)) # # vfolds_ncat_h2o <- h2o.nlevels(fold_h2o)
 
@@ -132,12 +140,12 @@ predict_out_of_sample_CV <- function(m.fit, ParentObject, validation_data, subse
       valid_H2Oframe_CV.i <- valid_H2Oframe[fold_CV_i_logical, ]
       cv.i_foldframeID <- h2o.getId(valid_H2Oframe_CV.i)
 
-      dest_key_LIST <- vector(mode = "list", length = length(m.fit$fitted_models_all))
+      dest_key_LIST <- vector(mode = "list", length = length(models_list))
 
-      for (idx in seq_along(m.fit$fitted_models_all)) {
+      for (idx in seq_along(models_list)) {
         # h2o.predict(h2o.getModel(cv_models_IDs[[vfold_idx]]), newdata = h2o.getFrame(cv.i_foldframeID))
-        # print("idx: "); print(idx); print("model: "); print(names(m.fit$model_ids)[idx])
-        h2o_model <- m.fit$fitted_models_all[[idx]]
+        # print("idx: "); print(idx); print("model: "); print(names(models_list)[idx])
+        h2o_model <- models_list[[idx]]
         cv_models_IDs <- lapply(h2o_model@model$cross_validation_models, "[[", "name")
         ## Submit a job for prediction on a fold using internal REST API.
         ## Don't pull the prediction results until all of these jobs were submitted.
@@ -163,81 +171,42 @@ predict_out_of_sample_CV <- function(m.fit, ParentObject, validation_data, subse
 
     print("CV_loop_t"); print(CV_loop_t)
 
-    t_convert_to_DT <- system.time(pAoutDT <- as.data.table(pAoutMat_h2o))
-    print("t_convert_to_DT"); print(t_convert_to_DT)
-    setnames(pAoutDT, names(m.fit$model_ids))
+    pAoutDT <- as.data.table(pAoutMat_h2o)
+    setnames(pAoutDT, names(models_list))
 
     return(pAoutDT)
   }
 }
 
-predict_out_of_sample_CV_DF <- function(m.fit, ParentObject, validation_data, subset_idx, predict_model_names) {
-  # h2o.no_progress()
+## ----------------------------------------------------------------
+## Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
+## ----------------------------------------------------------------
+predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
+  return(predictP1.H2Ogridmodel(m.fit, ParentObject, DataStorageObject, subset_idx, ...))
+}
+predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict_model_names, ...) {
+  H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
+  models_list <- m.fit$fitted_models_all
+  if (!missing(predict_model_names)) models_list <- models_list[predict_model_names]
 
-  ## Grab the internallly stored h2o out of sample predictions for each CV model (cross-validation predictions are combined into a single vector of length n)
-  if (missing(validation_data)) {
-    message("Obtaining the out-of-sample CV predictions for h2o-stored training data")
-    pAoutMat <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
-    return(pAoutMat)
+  # pAoutMat <- matrix(gvars$misval, nrow = nrow(H2Oframe), ncol = length(models_list))
+  # colnames(pAoutMat) <- names(models_list)
 
-  } else {
+  pAoutDT <- rep.int(list(numeric()), length(models_list))
+  names(pAoutDT) <- names(models_list)
+  pAoutDT <- as.data.table(pAoutDT)
 
-    outvar <- m.fit$params$outvar
-    predvars <- m.fit$params$predvars
-    fold_column <- ParentObject$fold_column
-
-    ## **** Allows re-using existing h2oFrame is it was already pre-loaded in validation_data object ****
-    valid_H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, validation_data, subset_idx)
-    message("Obtaining the out-of-sample CV predictions for new data")
-    res <- check_out_of_sample_consistency(m.fit, valid_H2Oframe, predvars, fold_column)
-    ## Get the fold assignments for the 1st model in ensemble:
-    h2o_model_1 <- m.fit$fitted_models_all[[1]]
-
-    fold_h2o <- h2o.cross_validation_fold_assignment(h2o_model_1)
-    fold_df <- as.data.frame(fold_h2o)
-    vfolds_cat <- sort(unique(fold_df$fold_assignment))
-
-    pAoutMat <- matrix(gvars$misval, nrow = nrow(valid_H2Oframe), ncol = length(m.fit$fitted_models_all))
-    colnames(pAoutMat) <- names(m.fit$model_ids)
-
-    CV_loop_t <- system.time({
-    for (vfold_idx in seq_along(vfolds_cat)) {
-
-      message("Obtaining out-of-sample CV predictions for all models and validation fold: " %+% vfolds_cat[vfold_idx])
-      fold_idx_cv.i <- which(fold_df$fold_assignment %in% vfolds_cat[vfold_idx])
-      valid_H2Oframe_CV.i <- valid_H2Oframe[fold_idx_cv.i, ]
-      cv.i_foldframeID <- h2o.getId(valid_H2Oframe_CV.i)
-
-      dest_key_LIST <- vector(mode = "list", length = length(m.fit$fitted_models_all))
-
-      for (idx in seq_along(m.fit$fitted_models_all)) {
-        # h2o.predict(h2o.getModel(cv_models_IDs[[vfold_idx]]), newdata = h2o.getFrame(cv.i_foldframeID))
-        # print("idx: "); print(idx); print("model: "); print(names(m.fit$model_ids)[idx])
-        h2o_model <- m.fit$fitted_models_all[[idx]]
-        cv_models_IDs <- lapply(h2o_model@model$cross_validation_models, "[[", "name")
-        ## Submit a job for prediction on a fold using internal REST API.
-        ## Don't pull the prediction results until all of these jobs were submitted.
-        url <- paste0('Predictions/models/', cv_models_IDs[[vfold_idx]], '/frames/',  cv.i_foldframeID)
-        res <- h2o:::.h2o.__remoteSend(url, method = "POST", h2oRestApiVersion = 4)
-        job_key <- res$key$name
-        dest_key <- res$dest$name
-        dest_key_LIST[[idx]] <- dest_key
-      }
-
-      h2o:::.h2o.__waitOnJob(job_key, pollInterval = 0.01)
-      for (idx in seq_along(dest_key_LIST)) {
-        newpreds <- h2o.getFrame(dest_key_LIST[[idx]])
-        if ("p1" %in% colnames(newpreds)) {
-          pAoutMat[fold_idx_cv.i, idx] <- as.vector(newpreds[,"p1"])
-        } else {
-          pAoutMat[fold_idx_cv.i, idx] <- as.vector(newpreds[,"predict"])
-        }
-      }
+  if (length(subset_idx) > 0) {
+    pAout_h2o <- NULL
+    for (idx in seq_along(models_list)) {
+      # pAoutMat[, idx] <- predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe))
+      pAout_h2o <- h2o.cbind(pAout_h2o,
+                             predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe), returnVector = FALSE))
     }
-    })
-    print("CV_loop_t"); print(CV_loop_t)
-    return(pAoutMat)
+    pAoutDT <- as.data.table(pAout_h2o)
+    setnames(pAoutDT, names(models_list))
   }
+  return(pAoutDT)
 }
 
 ## take a list of args, take a function body and return only the args that belong to function signature
@@ -398,29 +367,6 @@ fit.h2odeeplearning <- function(fit.class, params, training_frame, y, x, fold_co
   return(create_fit_object(model.fit, model_alg = "deeplearning", fitfunname = "h2o.deeplearning", params = params, coef = NULL, nobs = nobs, model_contrl = model_contrl))
 }
 
-## ----------------------------------------------------------------
-## Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
-## ----------------------------------------------------------------
-predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
-  return(predictP1.H2Ogridmodel(m.fit, ParentObject, DataStorageObject, subset_idx, ...))
-}
-predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict_model_names, ...) {
-  H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
-  models_list <- m.fit$fitted_models_all
-  if (!missing(predict_model_names)) models_list <- models_list[predict_model_names]
-
-  pAoutMat <- matrix(gvars$misval, nrow = max(subset_idx), ncol = length(models_list))
-  colnames(pAoutMat) <- names(models_list)
-
-  if (length(subset_idx) > 0) {
-    for (idx in seq_along(models_list)) {
-      pAoutMat[subset_idx, idx] <- predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe))
-      m.fit$fitted_models_all
-    }
-  }
-  return(pAoutMat)
-}
-
 h2oModelClass  <- R6Class(classname = "h2oModelClass",
   cloneable = TRUE,
   portable = TRUE,
@@ -497,35 +443,34 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     },
 
     predictP1 = function(data, subset_idx, predict_model_names) {
-      P1 <- predictP1(self$model.fit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx, predict_model_names = predict_model_names)
-      if (!is.matrix(P1)) {
-        P1 <- matrix(P1, byrow = TRUE)
-      }
-      if (!missing(predict_model_names)) {
-        colnames(P1) <- predict_model_names
-      } else {
-        colnames(P1) <- names(self$getmodel_ids)
-      }
-      return(P1)
+      P1_DT <- predictP1(self$model.fit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx, predict_model_names = predict_model_names)
+      # if (!is.matrix(P1)) {
+      #   P1 <- matrix(P1, byrow = TRUE)
+      # }
+      # if (!missing(predict_model_names)) {
+      #   colnames(P1_DT) <- predict_model_names
+      # } else {
+      #   colnames(P1_DT) <- names(self$getmodel_ids)
+      # }
+      return(P1_DT)
     },
 
     # score_CV = function(validation_data) {
     predictP1_out_of_sample_CV = function(validation_data, subset_idx, predict_model_names) {
-      # P1 <- predict_out_of_sample_CV(self$model.fit, validation_data, fold_column = self$fold_column)
       P1_DT <- predict_out_of_sample_CV(self$model.fit, ParentObject = self, validation_data = validation_data, subset_idx = subset_idx, predict_model_names = predict_model_names)
 
+      # P1 <- predict_out_of_sample_CV(self$model.fit, validation_data, fold_column = self$fold_column)
       # P1 <- predict_out_of_sample_CV_DF(self$model.fit, ParentObject = self, validation_data = validation_data, subset_idx = subset_idx, predict_model_names = predict_model_names)
       # for (col_idx in seq_along(P1_DT)) {
       #   print(all.equal(P1_DT[[col_idx]],P1[, col_idx]))
       # }
       #
-
-      if (is.data.table(P1_DT)) {
-        P1_DT <- as.matrix(P1_DT)
-      } else if (!is.matrix(P1_DT)) {
-        P1_DT <- matrix(P1_DT, byrow = TRUE)
-      }
-      colnames(P1_DT) <- names(self$getmodel_ids)
+      # if (is.data.table(P1_DT)) {
+      #   P1_DT <- as.matrix(P1_DT)
+      # } else if (!is.matrix(P1_DT)) {
+      #   P1_DT <- matrix(P1_DT, byrow = TRUE)
+      # }
+      # colnames(P1_DT) <- names(self$getmodel_ids)
       return(P1_DT)
     },
 

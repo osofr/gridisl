@@ -248,6 +248,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         } else {
           private$probA1 <- self$BestModelFitObject$predictP1(data = newdata, subset_idx = self$subset_idx)
         }
+        private$probA1 <- as.data.table(private$probA1)
       }
 
       if (MSE && !self$use_best_retrained_model) {
@@ -278,6 +279,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         self$define.subset.idx(newdata)
 
         private$probA1 <- self$ModelFitObject$predictP1_out_of_sample_CV(validation_data = newdata, subset_idx = self$subset_idx, predict_model_names = predict_model_names)
+        private$probA1 <- as.data.table(private$probA1)
       }
 
       self$subset_idx <- self$subset_train
@@ -287,14 +289,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     # Predict the response E[Y|newdata] based for CV fold models and using validation data;
     score_CV = function(validation_data, MSE = TRUE, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
-
-      # if (missing(validation_data)) {
-      #   private$probA1 <- self$ModelFitObject$predictP1_out_of_sample_CV()
-      # } else {
-      #   self$define.subset.idx(validation_data)
-      #   self$OData_valid <- validation_data # save a pointer to last used validation data object
-      #   private$probA1 <- self$ModelFitObject$predictP1_out_of_sample_CV(validation_data = validation_data$dat.sVar)
-      # }
 
       self$predict_out_of_sample_CV(validation_data)
 
@@ -307,8 +301,9 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
           IDs <- self$OData_train$get.outvar(self$subset_idx, var = self$OData_train$nodes$IDnode)
         }
         private$MSE <- self$evalMSE_byID(test_values, IDs)
+
         # save out of sample CV predictions for the best model
-        private$out_of_sample_CVpreds <- private$probA1[, self$get_best_model_names(K = 1)]
+        private$out_of_sample_CVpreds <- private$probA1[, self$get_best_model_names(K = 1), with = FALSE]
       }
       return(invisible(self))
     },

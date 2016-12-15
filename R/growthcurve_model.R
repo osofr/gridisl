@@ -189,7 +189,7 @@ predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, grid = FALSE
 }
 
 # ---------------------------------------------------------------------------------------
-#' Predict for holdout observations only
+#' Prediction for holdout (out-of-sample) model
 #'
 #' @param modelfit Model fit object returned by \code{\link{fit_holdoutSL}} function.
 #' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.

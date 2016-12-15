@@ -45,9 +45,9 @@ test.holdoutfit_FACE_BS_h2o <- function() {
     # [5,]        1.1366634
     # [6,]        0.5201101
 
-    ## Obtain predictions for model trained on non-holdout obs:
-    preds_holdout_train <- predict_model(mfit_useY_hold, newdata = cpp_holdout, add_subject_data = TRUE)
-    preds_holdout_train[]
+    ## Obtain predictions for model trained on non-holdout obs only:
+    preds_train <- predict_model(mfit_useY_hold, newdata = cpp_holdout, add_subject_data = TRUE)
+    preds_train[]
     ## Obtain predictions for a model trained on all data:
     preds_alldat_train <- predict_SL(mfit_useY_hold, newdata = cpp_holdout, add_subject_data = TRUE)
     preds_alldat_train[]
@@ -84,8 +84,8 @@ test.holdoutfit_FACE_BS_h2o <- function() {
     # [6,]           0.8009358
 
     ## Obtain predictions for model trained on non-holdout obs:
-    preds_holdout_train <- predict_model(mfit_cor_hold, newdata = cpp_holdout, add_subject_data = TRUE)
-    preds_holdout_train[]
+    preds_train <- predict_model(mfit_cor_hold, newdata = cpp_holdout, add_subject_data = TRUE)
+    preds_train[]
     ## Obtain predictions for a model trained on all data:
     preds_alldat_train <- predict_SL(mfit_cor_hold, newdata = cpp_holdout, add_subject_data = TRUE)
     preds_alldat_train[]
@@ -259,10 +259,10 @@ test.holdoutSL.GLM.GBM <- function() {
   preds_holdout2[]
 
   ## Predictions for training data from models trained on non-holdout data (default):
-  preds_holdout_train <- predict_model(mfit_hold2, add_subject_data = TRUE)
-  preds_holdout_train[]
-  preds_holdout_train <- predict_model(mfit_hold2, predict_only_bestK_models = 2, add_subject_data = TRUE)
-  preds_holdout_train[]
+  preds_train <- predict_model(mfit_hold2, add_subject_data = TRUE)
+  preds_train[]
+  preds_train <- predict_model(mfit_hold2, predict_only_bestK_models = 2, add_subject_data = TRUE)
+  preds_train[]
 
   ## does not work right now, since it doesn't know how to define the special features!!!!!
   # preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
@@ -324,8 +324,8 @@ test.holdoutSL.GLM.GBM <- function() {
   head(preds_holdout_best[])
 
   ## Obtain predictions from the best holdout model for training data only (default in predict_model when newdata is missing):
-  preds_holdout_train <- predict_model(mfit_hold, predict_only_bestK_models = 1, add_subject_data = TRUE)
-  preds_holdout_train[]
+  preds_train <- predict_model(mfit_hold, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  preds_train[]
 
   ## Obtain predictions from the best holdout model for all data (trained on non-holdouts only):
   preds_best_train <- predict_model(mfit_hold, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
@@ -419,7 +419,7 @@ test.CV.SL <- function() {
   lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
   glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 3), alpha = alpha_opt, lambda = lambda_opt)
   ## gbm grid learner:
-  gbm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 10, max_runtime_secs = 60*60),
+  gbm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
                            ntrees = c(100, 200, 300, 500),
                            learn_rate = c(0.005, 0.01, 0.03, 0.06),
                            max_depth = c(3, 4, 5, 6, 9),
@@ -459,6 +459,8 @@ test.CV.SL <- function() {
   checkTrue(all.equal(preds_alldat1, preds_alldat2))
 
   ## Predictions for best CV model (not re-trained, trained only on non-holdouts), must match:
+  preds_best_CV <- predict_model(mfit_cv1, add_subject_data = FALSE)
+  preds_best_CV <- predict_model(mfit_cv1, add_subject_data = TRUE)
   preds_best_CV <- predict_model(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = FALSE)
   head(preds_best_CV[])
   checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
