@@ -34,7 +34,9 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
     message("...selecting holdout observations...")
     data <- add_holdout_ind(data, ID, hold_column = hold_column, random = random, seed = seed)
   }
-  params$hold_column <- hold_column
+
+  # params$hold_column <- hold_column
+
   train_data <- data[!data[[hold_column]], ]
 
   ## ------------------------------------------------------------------------------------------
@@ -104,7 +106,8 @@ fit_cvSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = N
     fold_column <- "fold"
     data <- add_CVfolds_ind(data, ID, nfolds = nfolds, fold_column = fold_column, seed = seed)
   }
-  params$fold_column <- fold_column
+
+  # params$fold_column <- fold_column
 
   ## ------------------------------------------------------------------------------------------
   ## Define training data summaries (using all observations):
@@ -174,8 +177,9 @@ predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, grid = FALSE
 
   ## will use the best model retrained on all data for prediction:
   modelfit$use_best_retrained_model <- TRUE
+  best_fit_name <- names(modelfit$getRetrainedfit$model_ids)
   preds <- predict_model(modelfit = modelfit, newdata = newdata, add_subject_data = add_subject_data)
-  data.table::setnames(preds, old = names(preds)[ncol(preds)], new = "SL.preds")
+  data.table::setnames(preds, old = best_fit_name, new = "SL.preds")
   modelfit$use_best_retrained_model <- FALSE
 
   ## will obtain predictions for all models in the ensemble that were trained on non-holdout observations only:
@@ -194,12 +198,15 @@ predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, grid = FALSE
 #' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
-predict_holdouts_only <- function(modelfit, predict_only_bestK_models, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+predict_holdouts <- function(modelfit, predict_only_bestK_models, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   if (is.null(modelfit)) stop("must call fit_holdoutSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
-  valid_data <- modelfit$OData_valid$dat.sVar
-  return(predict_model(modelfit = modelfit, newdata = valid_data, predict_only_bestK_models, evalMSE = FALSE, add_subject_data = add_subject_data))
+  valid_data <- modelfit$OData_valid
+
+  preds <- predict_model(modelfit = modelfit, newdata = valid_data, predict_only_bestK_models, evalMSE = FALSE, add_subject_data = add_subject_data)
+
+  return(preds)
 }

@@ -15,7 +15,13 @@ add_CVfolds_ind = function(data, ID, nfolds = 5, fold_column = "fold", seed = NU
   if (fold_column %in% names(data)) data[, (fold_column) := NULL]
   nuniqueIDs <- nuniqueIDs()
   if (!is.null(seed)) set.seed(as.numeric(seed))  #If seed is specified, set seed prior to next step
-  fold_id <- as.factor(sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds
+  x <- sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs]
+
+  # format fold IDs as characters with leading 0. That way the ordering of the factor levels remains consistent betweeen R and h2oFRAME
+  fold_IDs <- sprintf("%02d", seq(nfolds))
+  fold_id <- as.factor(sample(rep(fold_IDs, ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds
+
+
   foldsDT <- data.table::data.table("ID" = unique(data[[ID]]), fold_column = fold_id)
   data.table::setnames(foldsDT, old = names(foldsDT), new = c(ID, fold_column))
   data.table::setkeyv(foldsDT, cols = ID)

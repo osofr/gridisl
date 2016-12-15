@@ -94,16 +94,23 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   if (missing(train_data)) stop("train_data arg must be specified")
 
   if (!missing(nfolds) && missing(fold_column)) {
+    runCV <- TRUE
+    train_data <- add_CVfolds_ind(train_data, ID, nfolds = nfolds, fold_column = "fold", seed = seed)
     fold_column <- "fold"
-    train_data <- add_CVfolds_ind(train_data, ID, nfolds = nfolds, fold_column = fold_column, seed = seed)
-    params$fold_column <- fold_column
-    runCV <- TRUE
+    nfolds <- NULL
+    # params$fold_column <- fold_column
   } else if (missing(nfolds) && !missing(fold_column)) {
-    params$fold_column <- fold_column
     runCV <- TRUE
+    # params$fold_column <- fold_column
+    nfolds <- NULL
   } else {
     runCV <- FALSE
+    fold_column <- NULL
+    nfolds <- NULL
   }
+
+  if (any(c("nfolds","fold_column") %in% names(params))) stop("Cannot have fields named 'nfolds' or 'fold_column' inside  params argument." %+%
+                                                              "To perform V fold cross-validation use the corresponding arguments 'nfolds' or 'fold_column' of this function.")
 
   OData_train <- validate_convert_input_data(train_data, ID = ID, t_name = t_name, x = x, y = y, useH2Oframe = useH2Oframe, dest_frame = "all_train_H2Oframe")
   CheckVarNameExists(OData_train$dat.sVar, y)
@@ -113,9 +120,13 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   if (missing(x)) x <- nodes$Lnodes ## Assign predictors if missing (everything but ID and outcome in y)
 
   ## If fold_column specified in the model parameters, add it to the data object:
-  if (!is.null(params$fold_column)) OData_train$fold_column <- params$fold_column
-  ## Same for hold_column
-  if (!is.null(params$hold_column)) OData_train$hold_column <- params$hold_column
+  if (!is.null(fold_column)) OData_train$fold_column <- fold_column
+
+  # ## If hold_column specified in the model parameters, add it to the data object:
+  # if (!is.null(params$hold_column)) {
+  #   OData_train$hold_column <- params$hold_column
+  #   params$hold_column <- NULL
+  # }
 
   ## Define R6 object with validation data:
   if (!missing(valid_data)) {
@@ -126,10 +137,11 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   }
 
   ## Define R6 regression class (specify subset_exprs to select only specific obs during fitting, e.g., only non-holdouts)
-  regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, model_contrl = params)
+  regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, model_contrl = params, runCV = runCV, fold_column = fold_column)
   # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, subset_exprs = list("!hold"), model_contrl = params)
   ## Define a modeling object, perform fitting (real data is being passed for the first time here):
   modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)$fit(data = OData_train, validation_data = OData_valid)
+
   ## ------------------------------------------------------------------------------------------
   ## If validation data supplied, score the models based on validation set as well
   ## ------------------------------------------------------------------------------------------
@@ -166,10 +178,10 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
   nodes <- modelfit$OData_train$nodes
 
   if (!missing(newdata))
+    # newdata <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
     newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,
                                            x = modelfit$predvars, y = modelfit$outvar,
                                            useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
-    # newdata <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
 
   if (!missing(predict_only_bestK_models)) {
     assert_that(is.integerish(predict_only_bestK_models))
@@ -185,7 +197,10 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
 
   if (add_subject_data) {
     if (missing(newdata)) newdata <- modelfit$OData_train
-    covars <- c(nodes$IDnode, modelfit$predvars, modelfit$outvar)
+
+    covars <- c(nodes$IDnode, nodes$tnode, modelfit$outvar)
+    # covars <- c(nodes$IDnode, modelfit$predvars, modelfit$outvar)
+
     ## to protect against an error if some variables are dropped from new data
     sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
     predsDT <- newdata$dat.sVar[, sel_covars, with = FALSE]
@@ -197,8 +212,12 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
 }
 
 # ---------------------------------------------------------------------------------------
-#' Evaluate cross-validated MSE
+#' Evaluate cross-validated MSE for all h2o model fits
 #'
+#' By default this function will extract out-of-sample predictions from original training data (automatically done by h2o) to evaluate the cross-validated MSE.
+#' However, when \code{newdata} is supplied, the predictions for each CV model will be based on this external validation dataset.
+#' These predictions and the outcome stored in \code{newdata} are then used to re-evalute the CV MSE. Note that \code{newdata} must be of the same
+#' dimensionality as the original training data used for fitting the h2o models.
 #' @param modelfit Model fit object returned by \code{\link{fit_model}} function.
 #' @param newdata ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
@@ -212,11 +231,13 @@ eval_MSE_CV <- function(modelfit, newdata, verbose = getOption("growthcurveSL.ve
   nodes <- modelfit$OData_train$nodes
 
   if (missing(newdata)) {
+
     ## Use out-of-sample predictions from original training data (automatically done by h2o) to evaluate the CV MSE
     modelfit <- modelfit$score_CV()
   } else {
-    newOData <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
+
     ## Get predictions for each CV model based on external validation CV dataset, then use those predictions and outcome in newdata to evalute the CV MSE
+    newOData <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
     t_CV <- system.time(
       modelfit <- modelfit$score_CV(validation_data = newOData)
     )

@@ -13,15 +13,15 @@ test.genericfit_FACE_BS <- function() {
 
   run_algo <- function(fit.package, fit.algorithm) {
     mfit_useY <- fit_model(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
-                               train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
-                               params  = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = TRUE, name = "useY"))
+                           train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
+                           params  = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = TRUE, name = "useY"))
     fit_preds_1 <- predict_model(mfit_useY, newdata = cpp)
     # print(head(fit_preds_1[]))
     print(mfit_useY$getMSE)
 
     mfit_cor <- fit_model(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
-                               train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
-                               params  = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = FALSE, name = "correct"))
+                          train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
+                          params  = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = FALSE, name = "correct"))
     print(mfit_cor$getMSE)
     fit_preds_2 <- predict_model(mfit_cor, newdata = cpp)
     # print(head(fit_preds_2[]))
@@ -81,8 +81,8 @@ test.shared_h2o_database <- function() {
                     # learner = "h2o.glm.reg03",
                     stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
   grid_mfit_val_h2o <- fit_model(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                                      train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
-                                      params  = GRIDparams, useH2Oframe = TRUE)
+                                 train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
+                                 params  = GRIDparams, useH2Oframe = TRUE)
   ## return predictions for all models in the ensemble for training data
   fit_preds <- predict_model(grid_mfit_val_h2o); head(fit_preds[])
   ## Same without newdata, predict for training data
@@ -104,6 +104,19 @@ test.shared_h2o_database <- function() {
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
   grid_mfit_cv <- fit_model(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                             train_data = cpp_folds, params  = GRIDparams, fold_column = "fold", useH2Oframe = TRUE)
+
+  # get_train_data(grid_mfit_cv)
+  OData_valid <- validate_convert_input_data(cpp_folds, ID = grid_mfit_cv$nodes$IDnode,
+                                             t_name = grid_mfit_cv$nodes$tnode,
+                                             x = grid_mfit_cv$predvars,
+                                             y = grid_mfit_cv$outvar,
+                                             useH2Oframe = TRUE,
+                                             dest_frame = "all_validation_H2Oframe")
+  # OData_valid <- importData(data = cpp_folds, ID = grid_mfit_cv$nodes$IDnode, t_name = grid_mfit_cv$nodes$tnode, covars = grid_mfit_cv$predvars, OUTCOME = grid_mfit_cv$outvar)
+
+  modelfit <- grid_mfit_cv$score_CV(validation_data = OData_valid) # returns the modelfit object intself, but does the scoring of each CV model
+  print("CV MSE after manual CV model rescoring: "); print(unlist(modelfit$getMSE))
+
 
 }
 

@@ -107,7 +107,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     useH2Oframe = FALSE,
 
     subset_vars = NULL,     # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
-    subset_exprs = NULL,     # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
+    subset_exprs = NULL,    # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
     subset_idx = NULL,      # Logical vector of length n (TRUE = include the obs)
     subset_train = NULL,
     ReplMisVal0 = logical(),
@@ -213,9 +213,12 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (gvars$verbose) print("refitting the best model: "); self$show()
       self$define.subset.idx(data)
       top_model_params <- self$get_best_model_params()
+      top_model_name <- self$get_best_model_names(1)
       best_reg <- RegressionClass$new(outvar = self$outvar, predvars = self$predvars, model_contrl = top_model_params)
       self$BestModelFitObject <- self$define_model_fit_object(top_model_params$fit.package, top_model_params$fit.algorithm, best_reg, useH2Oframe = self$useH2Oframe)
+
       model.fit <- self$BestModelFitObject$fit(data, subset_idx = self$subset_idx, destination_frame = "alldata_H2Oframe", ...)
+
       if (inherits(model.fit, "try-error")) stop("refitting of the best model failed")
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
@@ -246,11 +249,37 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
           private$probA1 <- self$BestModelFitObject$predictP1(data = newdata, subset_idx = self$subset_idx)
         }
       }
+
       if (MSE && !self$use_best_retrained_model) {
         test_values <- newdata$get.outvar(self$subset_idx, var = self$outvar)
         IDs <- newdata$get.outvar(self$subset_idx, var = newdata$nodes$IDnode)
         private$MSE <- self$evalMSE_byID(test_values, IDs)
       }
+
+      self$subset_idx <- self$subset_train
+      return(invisible(self))
+    },
+
+    # Predict the response E[Y|newdata];
+    predict_out_of_sample_CV = function(newdata, subset_vars, subset_exprs, predict_model_names, ...) {
+      if (!self$is.fitted) stop("Please fit the model prior to attempting to make predictions.")
+
+      if (missing(newdata)) {
+        private$probA1 <- self$ModelFitObject$predictP1_out_of_sample_CV(subset_idx = self$subset_train, predict_model_names = predict_model_names)
+      } else {
+        if (!missing(subset_vars)) {
+          self$subset_vars <- subset_vars
+        } else {
+          self$subset_vars <- NULL
+        }
+
+        if (!missing(subset_exprs)) self$subset_exprs <- subset_exprs
+
+        self$define.subset.idx(newdata)
+
+        private$probA1 <- self$ModelFitObject$predictP1_out_of_sample_CV(validation_data = newdata, subset_idx = self$subset_idx, predict_model_names = predict_model_names)
+      }
+
       self$subset_idx <- self$subset_train
       return(invisible(self))
     },
@@ -259,13 +288,15 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     score_CV = function(validation_data, MSE = TRUE, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
 
-      if (missing(validation_data)) {
-        private$probA1 <- self$ModelFitObject$score_CV()
-      } else {
-        self$define.subset.idx(validation_data)
-        self$OData_valid <- validation_data # save a pointer to last used validation data object
-        private$probA1 <- self$ModelFitObject$score_CV(validation_data = validation_data$dat.sVar)
-      }
+      # if (missing(validation_data)) {
+      #   private$probA1 <- self$ModelFitObject$predictP1_out_of_sample_CV()
+      # } else {
+      #   self$define.subset.idx(validation_data)
+      #   self$OData_valid <- validation_data # save a pointer to last used validation data object
+      #   private$probA1 <- self$ModelFitObject$predictP1_out_of_sample_CV(validation_data = validation_data$dat.sVar)
+      # }
+
+      self$predict_out_of_sample_CV(validation_data)
 
       if (MSE) {
         if (!missing(validation_data)) {
@@ -454,6 +485,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     getMSEsd = function() { private$MSE[["MSE_sd"]] },
     # getEstVar = function() { private$MSE[["est_var"]] },
     getfit = function() { self$ModelFitObject$model.fit },
+    getRetrainedfit = function() { self$BestModelFitObject$model.fit },
     getmodel_ids = function() { self$ModelFitObject$getmodel_ids },
     getmodel_algorithms = function() { self$ModelFitObject$getmodel_algorithms }
   ),

@@ -17,8 +17,9 @@ SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial",
       mainArgs$fold_column <- fold_column
     }
   }
-  if (!is.null(model_contrl$nfolds)) mainArgs$nfolds <- model_contrl$nfolds
-  if (!is.null(model_contrl$fold_assignment)) mainArgs$fold_assignment <- model_contrl$fold_assignment
+
+  # if (!is.null(model_contrl$nfolds)) mainArgs$nfolds <- model_contrl$nfolds
+  # if (!is.null(model_contrl$fold_assignment)) mainArgs$fold_assignment <- model_contrl$fold_assignment
 
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = learner_fun)
 
@@ -69,7 +70,15 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
   algo_fun_name <- "h2o."%+%grid.algorithm
   if (!exists(algo_fun_name)) stop("could not locate the function " %+% grid.algorithm)
 
+  # Is there a validation frame for model scoring?
   if (!is.null(validation_frame)) mainArgs$validation_frame <- validation_frame
+
+  # Is there a fold_column for cross-validation based model scoring?
+  if (!missing(fold_column)) {
+    if (!is.null(fold_column) && is.character(fold_column) && (fold_column != "")) {
+      mainArgs$fold_column <- fold_column
+    }
+  }
 
   algo_fun <- get0(algo_fun_name, mode = "function", inherits = TRUE)
   mainArgs <- keep_only_fun_args(mainArgs, fun = algo_fun)   # Keep only the relevant args in mainArgs list:
@@ -130,7 +139,6 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
 
 #' @export
 fit.h2oGridLearner <- function(fit.class, params, training_frame, y, x, model_contrl, fold_column, ...) {
-# fit.h2oGridLearner <- function(fit.class, fit, training_frame, y, x, model_contrl, fold_column, ...) {
   # if (is.null(fold_column)) stop("must define the column of CV fold IDs using data$define_CVfolds()")
   family <- model_contrl$family
   grid.algorithms <- model_contrl$grid.algorithm
@@ -140,17 +148,17 @@ fit.h2oGridLearner <- function(fit.class, params, training_frame, y, x, model_co
   # Will put all fitted models in a single list for stacking:
   fitted_models_all <- NULL
   ngridmodels <- 0
-  nfolds <- model_contrl$nfolds
-  fold_assignment <- model_contrl$fold_assignment
 
+  # nfolds <- model_contrl$nfolds
+  # fold_assignment <- model_contrl$fold_assignment
   # When fold_column is passed as an external arg, then null nfolds as it should no longer be used.
   # Note that fold_column name could have still been specified separately in model_contrl
-  if (!missing(fold_column)) {
-    if (!is.null(fold_column) && is.character(fold_column) && (fold_column != "")) {
-      model_contrl$nfolds <- NULL
-      model_contrl$fold_assignment <- NULL
-    }
-  }
+  # if (!missing(fold_column)) {
+  #   if (!is.null(fold_column) && is.character(fold_column) && (fold_column != "")) {
+  #     model_contrl$nfolds <- NULL
+  #     model_contrl$fold_assignment <- NULL
+  #   }
+  # }
 
   if (is.null(grid.algorithms) && is.null(learners)) {
     stop("must specify either 'grid.algorithm' or 'learner' when performing estimation with GridLearner")
@@ -188,11 +196,11 @@ fit.h2oGridLearner <- function(fit.class, params, training_frame, y, x, model_co
     fitted_models_all <- c(fitted_models_all, fitted_models_l)
   }
 
-  # to by-pass error check in h2o.stack:
-  for (idx in seq_along(fitted_models_all)) {
-    fitted_models_all[[idx]]@allparameters$fold_assignment <- "Modulo"
-    fitted_models_all[[idx]]@allparameters$nfolds <- nfolds
-  }
+  # ## to by-pass error check in h2o.stack:
+  # for (idx in seq_along(fitted_models_all)) {
+  #   fitted_models_all[[idx]]@allparameters$fold_assignment <- "Modulo"
+  #   fitted_models_all[[idx]]@allparameters$nfolds <- nfolds
+  # }
 
   # ----------------------------------------------------------------------------------------------------
   # Saving the fits:

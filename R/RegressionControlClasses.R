@@ -11,6 +11,8 @@ RegressionClass <- R6Class("RegressionClass",
     fit.algorithm = character(),
     outvar = character(),          # vector of regression outcome variable names
     predvars = character(),        # vector of predictor names
+    runCV = FALSE,
+    fold_column = NULL,
     subset_vars = list(),          # Named LIST for subset vars, one list item per outcome in outvar, each list item can be a character vector.
                                    # Later these are tested for missing values, which forms the basis of the logical subset vector)
     subset_exprs = list(),         # Named LIST of subset expressions (as strings), one list item per outcome in outvar.
@@ -20,16 +22,28 @@ RegressionClass <- R6Class("RegressionClass",
     initialize = function(ReplMisVal0 = TRUE,
                           fit.package = getopt("fit.package"),
                           fit.algorithm = getopt("fit.algorithm"),
-                          outvar, predvars, subset_vars = NULL, subset_exprs = NULL, model_contrl = NULL) {
+                          outvar,
+                          predvars,
+                          runCV = FALSE,
+                          fold_column = NULL,
+                          subset_vars = NULL,
+                          subset_exprs = NULL,
+                          model_contrl = NULL) {
 
+# browser()
+## Confirm the args are of the same type as the initials
       self$ReplMisVal0 <- ReplMisVal0
       self$fit.package <- fit.package
       self$fit.algorithm <- fit.algorithm
 
       assert_that(is.character(outvar))
       assert_that(is.character(predvars) || is.null(predvars))
+
       self$outvar <- outvar
       self$predvars <- predvars
+
+      self$runCV <- runCV
+      self$fold_column <- fold_column
 
       if (!is.null(subset_vars)) {
         self$subset_vars <- self$checkInputList(subset_vars)
@@ -73,6 +87,8 @@ RegressionClass <- R6Class("RegressionClass",
            predvars = self$predvars,
            subset_vars = self$subset_vars,
            subset_exprs = self$subset_exprs,
+           runCV = self$runCV,
+           fold_column = self$fold_column,
            model_contrl = self$model_contrl
            )
     }

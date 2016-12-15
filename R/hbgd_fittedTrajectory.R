@@ -28,7 +28,7 @@
 create_all_fittedTrajectory <- function(subj_dat, grid_fits_dat, holdout_fits_dat = NULL, ID_var, t_var, y_var, sex_var, method,
                                         xy_pair_name = c("agedays","htcm"),
                                         grid_fits_var = "SL.preds",
-                                        holdout_fits_var = "holdout_fit",
+                                        holdout_fits_var = "holdout.preds",
                                         checkpoints = c(50, 100),
                                         fun_y_to_raw = hbgd::who_zscore2htcm,
                                         fun_y_to_z = function(x, y, ...) return(y)) {

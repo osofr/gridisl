@@ -2,7 +2,7 @@
 % Please edit documentation in R/modelingSL_main.R
 \name{eval_MSE_CV}
 \alias{eval_MSE_CV}
-\title{Evaluate cross-validated MSE}
+\title{Evaluate cross-validated MSE for all h2o model fits}
 \usage{
 eval_MSE_CV(modelfit, newdata, verbose = getOption("growthcurveSL.verbose"))
 }
@@ -17,6 +17,9 @@ eval_MSE_CV(modelfit, newdata, verbose = getOption("growthcurveSL.verbose"))
 ...
 }
 \description{
-Evaluate cross-validated MSE
+By default this function will extract out-of-sample predictions from original training data (automatically done by h2o) to evaluate the cross-validated MSE.
+However, when \code{newdata} is supplied, the predictions for each CV model will be based on this external validation dataset.
+These predictions and the outcome stored in \code{newdata} are then used to re-evalute the CV MSE. Note that \code{newdata} must be of the same
+dimensionality as the original training data used for fitting the h2o models.
 }
 
