@@ -92,8 +92,10 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
   class = TRUE,
   public = list(
     # classify = FALSE,
+    reg = NULL,
     outvar = character(),   # outcome name(s)
     predvars = character(), # names of predictor vars
+    runCV = logical(),
     is.fitted = FALSE,
     nodes = NULL,
     OData_train = NULL, # object of class DataStorageClass used for training
@@ -106,15 +108,17 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     model_contrl = list(),
     useH2Oframe = FALSE,
 
-    subset_vars = NULL,     # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
+    # subset_vars = NULL,     # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
     subset_exprs = NULL,    # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
-    subset_idx = NULL,      # Logical vector of length n (TRUE = include the obs)
-    subset_train = NULL,
+    # subset_idx = NULL,      # Logical vector of length n (TRUE = include the obs)
+    # subset_train = NULL,
     ReplMisVal0 = logical(),
 
     initialize = function(reg, useH2Oframe = FALSE, ...) {
       self$model_contrl <- reg$model_contrl
       self$useH2Oframe <- useH2Oframe
+      self$reg <- reg
+      self$runCV <- reg$runCV
 
       if ("fit.package" %in% names(self$model_contrl)) {
         self$fit.package <- self$model_contrl[['fit.package']]
@@ -136,13 +140,13 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       self$outvar <- reg$outvar
       assert_that(is.character(reg$predvars))
       self$predvars <- reg$predvars
-      self$subset_vars <- reg$subset_vars[[1]]
+      # self$subset_vars <- reg$subset_vars[[1]]
       self$subset_exprs <- reg$subset_exprs[[1]]
       assert_that(length(self$subset_exprs) <= 1)
       self$ReplMisVal0 <- reg$ReplMisVal0
 
-      if (is.null(reg$subset_vars)) {self$subset_vars <- TRUE}
-      assert_that(is.logical(self$subset_vars) || is.character(self$subset_vars)) # is.call(self$subset_vars) ||
+      # if (is.null(reg$subset_vars)) {self$subset_vars <- TRUE}
+      # assert_that(is.logical(self$subset_vars) || is.character(self$subset_vars)) # is.call(self$subset_vars) ||
 
       self$ModelFitObject <- self$define_model_fit_object(self$fit.package, self$fit.algorithm, reg, self$useH2Oframe, ...)
 
@@ -190,14 +194,16 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       ## save a pointer to validation data class used for scoring
       if (!is.null(validation_data)) self$OData_valid <- validation_data
 
-      self$define.subset.idx(data)
-      self$subset_train <- self$subset_idx
-      model.fit <- self$ModelFitObject$fit(data, subset_idx = self$subset_idx, validation_data = validation_data, ...)
+      # self$define.subset.idx(data)
+      subset_idx <- data$evalsubst(subset_exprs = self$subset_exprs)
+
+      # self$subset_train <- self$subset_idx
+      model.fit <- self$ModelFitObject$fit(data, subset_idx = subset_idx, validation_data = validation_data, ...)
 
       if (inherits(model.fit, "try-error")) {
         message("running " %+% self$ModelFitObject$fit.class %+% " with h2o has failed, trying speedglm as a backup...")
         self$ModelFitObject <- glmModelClass$new(fit.algorithm = "GLM", fit.package = "speedglm", reg = reg, ...)
-        model.fit <- self$ModelFitObject$fit(data, subset_idx = self$subset_idx, ...)
+        model.fit <- self$ModelFitObject$fit(data, subset_idx = subset_idx, ...)
       }
 
       self$is.fitted <- TRUE
@@ -211,112 +217,108 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
     refit_best_model = function(data, ...) {
       if (gvars$verbose) print("refitting the best model: "); self$show()
-      self$define.subset.idx(data)
+
+      # self$define.subset.idx(data)
+      subset_idx <- data$evalsubst(subset_exprs = self$subset_exprs)
+
       top_model_params <- self$get_best_model_params()
       top_model_name <- self$get_best_model_names(1)
       best_reg <- RegressionClass$new(outvar = self$outvar, predvars = self$predvars, model_contrl = top_model_params)
       self$BestModelFitObject <- self$define_model_fit_object(top_model_params$fit.package, top_model_params$fit.algorithm, best_reg, useH2Oframe = self$useH2Oframe)
 
-      model.fit <- self$BestModelFitObject$fit(data, subset_idx = self$subset_idx, destination_frame = "alldata_H2Oframe", ...)
+      model.fit <- self$BestModelFitObject$fit(data, subset_idx = subset_idx, destination_frame = "alldata_H2Oframe", ...)
 
       if (inherits(model.fit, "try-error")) stop("refitting of the best model failed")
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       # **********************************************************************
-      # self$wipe.alldat
+      self$wipe.alldat
       return(invisible(model.fit))
     },
 
     # Predict the response E[Y|newdata];
-    predict = function(newdata, subset_vars, subset_exprs, predict_model_names, MSE = TRUE, ...) {
+    predict = function(newdata, subset_exprs, predict_model_names, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to attempting to make predictions.")
 
       if (missing(newdata)) {
-        private$probA1 <- self$ModelFitObject$predictP1(subset_idx = self$subset_train, predict_model_names = predict_model_names)
+        ## When missing newdata the predictions are for the training frame
+        probA1 <- self$ModelFitObject$predictP1(predict_model_names = predict_model_names)
       } else {
-        if (!missing(subset_vars)) {
-          self$subset_vars <- subset_vars
-        } else {
-          self$subset_vars <- NULL
-        }
-        if (!missing(subset_exprs)) self$subset_exprs <- subset_exprs
-
-        self$define.subset.idx(newdata)
-
+        if (missing(subset_exprs)) subset_exprs <- self$subset_exprs
+        subset_idx <- newdata$evalsubst(subset_exprs = subset_exprs)
         if (!self$use_best_retrained_model) {
-          private$probA1 <- self$ModelFitObject$predictP1(data = newdata, subset_idx = self$subset_idx, predict_model_names = predict_model_names)
+          probA1 <- self$ModelFitObject$predictP1(data = newdata, subset_idx = subset_idx, predict_model_names = predict_model_names)
         } else {
-          private$probA1 <- self$BestModelFitObject$predictP1(data = newdata, subset_idx = self$subset_idx)
+          probA1 <- self$BestModelFitObject$predictP1(data = newdata, subset_idx = subset_idx)
         }
-        private$probA1 <- as.data.table(private$probA1)
+        probA1 <- as.data.table(probA1)
       }
-
-      if (MSE && !self$use_best_retrained_model) {
-        test_values <- newdata$get.outvar(self$subset_idx, var = self$outvar)
-        IDs <- newdata$get.outvar(self$subset_idx, var = newdata$nodes$IDnode)
-        private$MSE <- self$evalMSE_byID(test_values, IDs)
-      }
-
-      self$subset_idx <- self$subset_train
-      return(invisible(self))
+      return(probA1)
     },
 
-    # Predict the response E[Y|newdata];
-    predict_out_of_sample_CV = function(newdata, subset_vars, subset_exprs, predict_model_names, ...) {
+    # Predict the response E[Y|newdata] for out of sample observations  (validation set / holdouts);
+    predict_out_of_sample = function(newdata, subset_exprs, predict_model_names, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to attempting to make predictions.")
 
-      if (missing(newdata)) {
-        private$probA1 <- self$ModelFitObject$predictP1_out_of_sample_CV(subset_idx = self$subset_train, predict_model_names = predict_model_names)
+      if (missing(newdata) && self$runCV) {
+        ## For CV without missing data use the default h2o out-of-sample (holdout) predictions
+        probA1 <- self$ModelFitObject$predictP1_out_of_sample_cv(predict_model_names = predict_model_names)
+
+      } else if (missing(newdata) && !self$runCV) {
+        ## For holdouts use the validation data (if it was used)
+        newdata <- self$OData_valid
+        if (!is.null(newdata)) stop("Must supply the validation data for making holdout predictions")
+        probA1 <- self$predict(newdata, subset_exprs, predict_model_names, ...)
       } else {
-        if (!missing(subset_vars)) {
-          self$subset_vars <- subset_vars
+        if (missing(subset_exprs)) subset_exprs <- self$subset_exprs
+        subset_idx <- newdata$evalsubst(subset_exprs = subset_exprs) # self$define.subset.idx(newdata)
+        if (self$runCV) {
+          probA1 <- self$ModelFitObject$predictP1_out_of_sample_cv(validation_data = newdata, subset_idx = subset_idx, predict_model_names = predict_model_names)
         } else {
-          self$subset_vars <- NULL
+          probA1 <- self$ModelFitObject$predictP1(data = newdata, subset_idx = subset_idx, predict_model_names = predict_model_names)
         }
-
-        if (!missing(subset_exprs)) self$subset_exprs <- subset_exprs
-
-        self$define.subset.idx(newdata)
-
-        private$probA1 <- self$ModelFitObject$predictP1_out_of_sample_CV(validation_data = newdata, subset_idx = self$subset_idx, predict_model_names = predict_model_names)
-        private$probA1 <- as.data.table(private$probA1)
       }
-
-      self$subset_idx <- self$subset_train
-      return(invisible(self))
+      probA1 <- as.data.table(probA1)
+      return(probA1)
     },
 
     # Predict the response E[Y|newdata] based for CV fold models and using validation data;
-    score_CV = function(validation_data, MSE = TRUE, ...) {
+    score_models = function(validation_data, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
 
-      self$predict_out_of_sample_CV(validation_data)
+      out_of_sample_preds_DT <- self$predict_out_of_sample(validation_data, ...)
 
-      if (MSE) {
-        if (!missing(validation_data)) {
-          test_values <- validation_data$get.outvar(self$subset_idx, var = self$outvar)
-          IDs <- validation_data$get.outvar(self$subset_idx, var = validation_data$nodes$IDnode)
-        } else {
-          test_values <- self$OData_train$get.outvar(self$subset_idx, var = self$outvar)
-          IDs <- self$OData_train$get.outvar(self$subset_idx, var = self$OData_train$nodes$IDnode)
-        }
-        private$MSE <- self$evalMSE_byID(test_values, IDs)
-
-        # save out of sample CV predictions for the best model
-        private$out_of_sample_CVpreds <- private$probA1[, self$get_best_model_names(K = 1), with = FALSE]
+      if (!missing(validation_data)) {
+        subset_idx <- validation_data$evalsubst(subset_exprs = self$subset_exprs)
+        test_values <- validation_data$get.outvar(subset_idx, var = self$outvar)
+        IDs <- validation_data$get.outvar(subset_idx, var = validation_data$nodes$IDnode)
+      } else if (self$runCV) {
+        subset_idx <- self$OData_train$evalsubst(subset_exprs = self$subset_exprs)
+        test_values <- self$OData_train$get.outvar(subset_idx, var = self$outvar)
+        IDs <- self$OData_train$get.outvar(subset_idx, var = self$OData_train$nodes$IDnode)
+      } else if (!self$runCV) {
+        if (is.null(self$OData_valid)) stop("Must provide validation data to scoring the holdout models")
+        subset_idx <- self$OData_valid$evalsubst(subset_exprs = self$subset_exprs)
+        test_values <- self$OData_valid$get.outvar(subset_idx, var = self$outvar)
+        IDs <- self$OData_valid$get.outvar(subset_idx, var = self$OData_valid$nodes$IDnode)
       }
+
+      private$MSE <- self$evalMSE_byID(out_of_sample_preds_DT, test_values, IDs)
+      # save out of sample CV predictions for the best model
+      private$out_of_sample_preds <- out_of_sample_preds_DT[, self$get_best_model_names(K = 1), with = FALSE]
+
       return(invisible(self))
     },
 
     # First evaluate the empirical loss by subject. Then average that loss across subjects
-    evalMSE_byID = function(test_values, IDs) {
+    evalMSE_byID = function(predsDT, test_values, IDs) {
       loss_fun_MSE <- function(yhat, y0) (yhat - y0)^2
 
       if (!self$is.fitted) stop("Please fit the model prior to evaluating MSE.")
       if (!is.vector(test_values)) stop("test_values must be a vector of outcomes.")
 
       # 1. Evaluate the empirical loss at each person-time prediction (apply loss function to each row):
-      resid_predsDT <- as.data.table(private$probA1)[, lapply(.SD, loss_fun_MSE, test_values)][, ("subjID") := IDs]
+      resid_predsDT <- as.data.table(predsDT)[, lapply(.SD, loss_fun_MSE, test_values)][, ("subjID") := IDs]
 
       NA_predictions <- resid_predsDT[, lapply(.SD, function(x) any(is.na(x)))]
       nNA_predictions <- resid_predsDT[, lapply(.SD, function(x) sum(is.na(x)))]
@@ -412,32 +414,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       return(datMSE)
     },
 
-    define.subset.idx = function(data) {
-      if (is.logical(self$subset_vars)) {
-        subset_idx <- self$subset_vars
-      } else if (is.call(self$subset_vars)) {
-        stop("calls aren't allowed in ModelFitObject$subset_vars")
-      } else if (is.character(self$subset_vars)) {
-        subset_idx <- data$evalsubst(subset_vars = self$subset_vars, subset_exprs = self$subset_exprs)
-      } else if (is.null(self$subset_vars)) {
-        subset_idx <- data$evalsubst(subset_exprs = self$subset_exprs)
-      }
-      assert_that(is.logical(subset_idx))
-
-      if ((length(subset_idx) < data$nobs) && (length(subset_idx) > 1L)) {
-        stop("ModelFitObject$define.subset.idx: subset_idx must be logical vector of length 1 or length nobs; current length:" %+% length(subset_idx))
-      }
-
-      if (length(subset_idx) == 1L) {
-        subset_idx <- rep.int(subset_idx, data$nobs)
-        if (gvars$verbose) message("subset_idx has length 1; repeating subset_idx nobs times, for nobs: " %+% data$nobs)
-      }
-      assert_that(length(subset_idx) == data$nobs)
-      self$subset_idx <- which(subset_idx)
-
-      return(invisible(self))
-    },
-
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE, model_stats = FALSE, all_fits = FALSE) {
       if (print_format) {
@@ -462,17 +438,19 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
   active = list(
     wipe.alldat = function() {
-      # private$probA1 <- NULL
-      # private$probAeqa <- NULL
-      # self$subset_idx <- NULL
+      private$probA1 <- NULL
       self$ModelFitObject$emptydata
       self$ModelFitObject$emptyY
+      if (!is.null(self$BestModelFitObject)) {
+        self$BestModelFitObject$emptydata
+        self$BestModelFitObject$emptyY
+      }
       return(self)
     },
     emptymodelfit = function() { self$ModelFitObject$emptymodelfit },
     getprobA1 = function() { private$probA1 },
-    get_out_of_sample_CVpreds = function() { private$out_of_sample_CVpreds },
-    getsubset = function() { self$subset_idx },
+    get_out_of_sample_preds = function() { private$out_of_sample_preds },
+    # getsubset = function() { self$subset_idx },
     getoutvarnm = function() { self$outvar },
     getoutvarval = function() { self$ModelFitObject$getY },
     getMSE = function() { private$MSE[["MSE_mean"]] },
@@ -488,7 +466,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     # model.fit = list(),   # the model fit (either coefficients or the model fit object)
     MSE = list(),
     probA1 = NULL,    # Predicted probA^s=1 conditional on Xmat
-    out_of_sample_CVpreds = NULL,
+    out_of_sample_preds = NULL,
     probAeqa = NULL   # Likelihood of observing a particular value A^s=a^s conditional on Xmat
   )
 )

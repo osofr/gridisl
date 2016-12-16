@@ -27,7 +27,7 @@ test.holdoutfit_FACE_BS_h2o <- function() {
     # FACE MSE: [1] 0.2271609
     # BS MSE: [1] 0.02650036
     # predict for previously used holdout / validation set:
-    preds_holdout_1 <- growthcurveSL:::predict_holdouts(mfit_useY_hold)
+    preds_holdout_1 <- growthcurveSL:::predict_holdout(mfit_useY_hold)
     print(nrow(preds_holdout_1))     # [1] 453
     print(head(preds_holdout_1[]))
     #       face.useY
@@ -65,7 +65,7 @@ test.holdoutfit_FACE_BS_h2o <- function() {
     # deeplearning MSE [1] 1.543277
 
     # predict for previously used holdout / validation set:
-    preds_holdout_2 <- growthcurveSL:::predict_holdouts(mfit_cor_hold)
+    preds_holdout_2 <- growthcurveSL:::predict_holdout(mfit_cor_hold)
     print(nrow(preds_holdout_2)) # [1] 453
     print(head(preds_holdout_2[]))
     #      face.correct
@@ -162,7 +162,7 @@ test.holdoutSL.GLM <- function() {
                               hold_column = "hold") # , use_new_features = TRUE
 
     # print("Holdout MSE, using the holdout Y for prediction"); print(mfit_holdGLM$getMSE)
-    holdPredDT <- growthcurveSL:::predict_holdouts(mfit_holdGLM, predict_only_bestK_models = 5, add_subject_data = TRUE)
+    holdPredDT <- growthcurveSL:::predict_holdout(mfit_holdGLM, predict_only_bestK_models = 5, add_subject_data = TRUE)
     print("GLM holdPredDT"); print(holdPredDT[])
     preds_best_train <- predict_model(mfit_holdGLM, predict_only_bestK_models = 1, add_subject_data = TRUE)
     print("GLM preds_best_train"); print(preds_best_train[])
@@ -228,7 +228,6 @@ test.holdoutSL.GLM.GBM <- function() {
                               data = cpp_holdout, params = GRIDparams,
                               hold_column = "hold", use_new_features = TRUE)
 
-
   train_dat <- get_train_data(mfit_hold2)
   print(train_dat)
   checkTrue(nrow(train_dat)==sum(!cpp_holdout[["hold"]]))
@@ -255,7 +254,7 @@ test.holdoutSL.GLM.GBM <- function() {
   preds_alldat[]
 
   ## Predictions for all holdout data points for all models trained on non-holdout data:
-  preds_holdout2 <- growthcurveSL:::predict_holdouts(mfit_hold2, add_subject_data = TRUE)
+  preds_holdout2 <- growthcurveSL:::predict_holdout(mfit_hold2, add_subject_data = TRUE)
   preds_holdout2[]
 
   ## Predictions for training data from models trained on non-holdout data (default):
@@ -272,7 +271,7 @@ test.holdoutSL.GLM.GBM <- function() {
   preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp_plus, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_holdout2_alldat[]
 
-  holdPredDT <- growthcurveSL:::predict_holdouts(mfit_hold2, predict_only_bestK_models = 5, add_subject_data = TRUE)
+  holdPredDT <- growthcurveSL:::predict_holdout(mfit_hold2, predict_only_bestK_models = 5, add_subject_data = TRUE)
   print("10 best MSEs among all learners: "); print(mfit_hold2$get_best_MSEs(K = 5))
   models <- mfit_hold2$get_best_models(K = 5)
   print("Top 5 models: "); print(models)
@@ -296,7 +295,7 @@ test.holdoutSL.GLM.GBM <- function() {
                               data = cpp_holdout, params = GRIDparams,
                               random = TRUE, use_new_features = TRUE)
 
-  preds_holdout3 <- growthcurveSL:::predict_holdouts(mfit_hold3)
+  preds_holdout3 <- growthcurveSL:::predict_holdout(mfit_hold3)
   head(preds_holdout3[])
 
   ## get top performing model:
@@ -306,21 +305,21 @@ test.holdoutSL.GLM.GBM <- function() {
 
   ## Fit, training on non-holdouts and using holdouts as validation set (for scoring only). No additional summaries are used
   mfit_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                                    data = cpp_holdout, params = GRIDparams,
-                                    hold_column = "hold")
+                             data = cpp_holdout, params = GRIDparams,
+                             hold_column = "hold")
 
   ## Obtain predictions from the best holdout model for all data (re-trained on all observations):
   preds_best_all <- predict_SL(mfit_hold, newdata = cpp_holdout, add_subject_data = TRUE)
   preds_best_all[]
 
   ## predict for previously used holdout / validation set:
-  preds_holdout_all <- growthcurveSL:::predict_holdouts(mfit_hold)
+  preds_holdout_all <- growthcurveSL:::predict_holdout(mfit_hold)
   head(preds_holdout_all[])
   ## Predict for best model only (based on prev. holdouts)
-  preds_holdout_best <- growthcurveSL:::predict_holdouts(mfit_hold, predict_only_bestK_models = 1)
+  preds_holdout_best <- growthcurveSL:::predict_holdout(mfit_hold, predict_only_bestK_models = 1)
   head(preds_holdout_best[])
   ## add subject-level data to prediction data
-  preds_holdout_best <- growthcurveSL:::predict_holdouts(mfit_hold, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  preds_holdout_best <- growthcurveSL:::predict_holdout(mfit_hold, predict_only_bestK_models = 1, add_subject_data = TRUE)
   head(preds_holdout_best[])
 
   ## Obtain predictions from the best holdout model for training data only (default in predict_model when newdata is missing):
@@ -391,7 +390,7 @@ test.residual.holdoutSL <- function() {
   # [1] 1.776226
 
   ## Predictions for all holdout data points for all models trained on non-holdout data only:
-  preds_holdout_all <- growthcurveSL:::predict_holdouts(mfit_resid_hold, add_subject_data = TRUE)
+  preds_holdout_all <- growthcurveSL:::predict_holdout(mfit_resid_hold, add_subject_data = TRUE)
   preds_holdout_all[]
   ## Predictions for new data based on best SL model re-trained on all data:
   preds_alldat <- predict_SL(mfit_resid_hold, newdata = cpp_holdout, add_subject_data = TRUE)
@@ -460,10 +459,14 @@ test.CV.SL <- function() {
 
   ## Predictions for best CV model (not re-trained, trained only on non-holdouts), must match:
   preds_best_CV <- predict_model(mfit_cv1, add_subject_data = FALSE)
+  preds_best_CV[]
   preds_best_CV <- predict_model(mfit_cv1, add_subject_data = TRUE)
+  preds_best_CV[]
   preds_best_CV <- predict_model(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = FALSE)
-  head(preds_best_CV[])
+  preds_best_CV[]
   checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
+  preds_best_CV_subj <- predict_model(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  preds_best_CV_subj[]
 
   ## Predict with new data (WORKS ONLY WHEN NO SPECIAL CURVE SUMMARIES ARE USED FOR PREDICTION, OTHERWISE HAVE TO USE predict_SL)
   preds_best_CV_2 <- predict_model(mfit_cv1, newdata = cpp_folds, predict_only_bestK_models = 1, add_subject_data = FALSE)
@@ -472,10 +475,13 @@ test.CV.SL <- function() {
 
   # return training data used (as data.table)
   train_dat <- get_train_data(mfit_cv1)
+  train_dat[]
   # return validation data used (as data.table)
   valid_data <- get_validation_data(mfit_cv1)
+  valid_data[]
   # Obtain out of sample CV predictions for all training data-points
-  cv_preds <- get_out_of_sample_CV_predictions(mfit_cv1)
+  cv_preds <- get_out_of_sample_predictions(mfit_cv1)
+  cv_preds[]
 
   ## Make report, save grid predictions and out of sample predictions
   # fname <- paste0(data.name, "_", "CV_gridSL_")
@@ -485,39 +491,41 @@ test.CV.SL <- function() {
                   format = "html", keep_md = TRUE, openFile = FALSE)
 
   ## Save out of sample CV predictions from the best model
-  cv_valid_preds <- get_validation_data(mfit_cv1)
-  cv_valid_preds[, ("out_of_sample_cv_preds") := get_out_of_sample_CV_predictions(mfit_cv1)]
+  # cv_valid_preds <- get_validation_data(mfit_cv1)
+  # cv_valid_preds[, ("out_of_sample_cv_preds") := get_out_of_sample_CV_predictions(mfit_cv1)]
+  cv_valid_preds <- get_out_of_sample_predictions(mfit_cv1)
+  cv_valid_preds_2 <- predict_holdout(mfit_cv1)
+  cv_valid_preds_2[]
+  cv_valid_preds_2 <- predict_holdout(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = FALSE)
+  cv_valid_preds_2[]
+  checkTrue(all.equal(cv_valid_preds, cv_valid_preds_2))
+  cv_valid_preds_2 <- predict_holdout(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  cv_valid_preds_2[]
   # data.table::fwrite(cv_valid_preds, file = file.path(report.path, paste0(fname, "out_of_sample_cv_preds", ".csv")))
   ## Predicting and saving the entire curve (grid)
   preds_tgrid_new <- predict_save_tgrid(mfit_cv1, cpp_folds, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 20)
                                         # file.name = paste0(fname, "all_preds"), file.path = report.path)
+  preds_tgrid_new[]
 
-  all_trjs_CVgridSL_cpp <- create_all_fittedTrajectory(cpp_folds, preds_tgrid_new, cv_valid_preds, ID_var = "subjid",
-    t_var = "agedays", y_var = "haz", sex_var ="sex", method = "cvSL", holdout_fits_var = "out_of_sample_cv_preds")
+  all_trjs_CVgridSL_cpp <- create_all_fittedTrajectory(cpp_folds, preds_tgrid_new, cv_valid_preds_2, ID_var = "subjid",
+    t_var = "agedays", y_var = "haz", sex_var ="sex", method = "cvSL", holdout_fits_var = names(cv_valid_preds_2)[ncol(cv_valid_preds_2)])
 
-  all_trjs_CVgridSL_cpp_20 <- subset(all_trjs_CVgridSL_cpp)[1:20]
-  drSubset(all_trjs_CVgridSL_cpp, subset = 1:20)
-  class(all_trjs_CVgridSL_cpp_20)
-  trscope_trajectories(all_trjs_CVgridSL_cpp, z = TRUE)
-
-
-
+  # trscope_trajectories(all_trjs_CVgridSL_cpp, z = TRUE)
 
   ## ------------------------------------------------------------------------------------------------
   ## Predicting the entire curve (grid)
   ## ------------------------------------------------------------------------------------------------
   cpp_all_train <- define_features_drop(cpp_folds, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
   cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2)
+  cpp_all_grid[, ("fold") := NULL]
   preds_grid <- predict_SL(mfit_cv1, newdata = cpp_all_grid, grid = TRUE, add_subject_data = TRUE)
   preds_grid[]
 
   ## Must all match:
-  (MSE_1 <- unlist(eval_MSE_CV(mfit_cv1))) ## Use internally h2o-evaluated CV MSE
-  (MSE_2 <- unlist(eval_MSE_CV(mfit_cv1, get_validation_data(mfit_cv1)))) ## Rescore on validation data, but use old saved y values
-  (MSE_3 <- unlist(eval_MSE_CV(mfit_cv1, get_validation_data(mfit_cv1))))
-  (MSE_4 <- unlist(eval_MSE_CV(mfit_cv1, get_train_data(mfit_cv1)))) # rescore on training data
+  (MSE_1 <- unlist(eval_MSE(mfit_cv1))) ## Use internally h2o-evaluated CV MSE
+  (MSE_2 <- unlist(eval_MSE(mfit_cv1, get_validation_data(mfit_cv1)))) ## Rescore on validation data, but use old saved y values
+  (MSE_4 <- unlist(eval_MSE(mfit_cv1, get_train_data(mfit_cv1)))) # rescore on training data
   checkTrue(abs(sum(MSE_1 - MSE_2)) <= 10^-5)
-  checkTrue(abs(sum(MSE_1 - MSE_3)) <= 10^-5)
   checkTrue(abs(sum(MSE_1 - MSE_4)) <= 10^-5)
 
   ## ------------------------------------------------------------------------------------------------
@@ -534,6 +542,8 @@ test.CV.SL <- function() {
   preds_alldat2 <- predict_SL(mfit_cv2, newdata = cpp_folds, add_subject_data = FALSE)
   head(preds_alldat2[])
   checkTrue(all.equal(preds_alldat1, preds_alldat2))
+  preds_alldat2 <- predict_SL(mfit_cv2, newdata = cpp_folds[, ("fold") := NULL], add_subject_data = FALSE)
+
   ## Predictions for best CV model (not re-trained), must match:
   preds_best_CV <- predict_model(mfit_cv2, predict_only_bestK_models = 1, add_subject_data = FALSE)
   head(preds_best_CV[])
@@ -545,16 +555,14 @@ test.CV.SL <- function() {
   train_dat <- get_train_data(mfit_cv2)
   valid_data <- get_validation_data(mfit_cv2)
 
-  ## NO LONGER NEED TO MATCH SINCE THE MANUAL SCORING IS BASED ON SUMMARIES THAT LEAVE OUT 1 OBS AT A TIME:
   ## 1a. Use internally h2o-evaluated CV MSE (WILL LEAD TO INCORRECT MSE).
-  (MSE_1 <- unlist(eval_MSE_CV(mfit_cv2)))
+  (MSE_1 <- unlist(eval_MSE(mfit_cv2)))
   ## 1b. Use training data to score CV models (should be the same as 1a)
-  (MSE_4 <- unlist(eval_MSE_CV(mfit_cv2, get_train_data(mfit_cv2)))) # rescore on training data
+  (MSE_4 <- unlist(eval_MSE(mfit_cv2, get_train_data(mfit_cv2)))) # rescore on training data
   checkTrue(abs(sum(MSE_1 - MSE_4)) <= 10^-5)
   ## 2. Use validation data for scoring that build curve summaries by leaving one obs out at a time (CORRECT)
-  (MSE_2 <- unlist(eval_MSE_CV(mfit_cv2, get_validation_data(mfit_cv2)))) ## Rescore on validation data, but use old saved y values
-  (MSE_3 <- unlist(eval_MSE_CV(mfit_cv2, get_validation_data(mfit_cv2))))
-  checkTrue(abs(sum(MSE_2 - MSE_3)) <= 10^-5)
+  ## NO LONGER NEED TO MATCH SINCE THE MANUAL SCORING IS BASED ON SUMMARIES THAT LEAVE OUT 1 OBS AT A TIME:
+  (MSE_2 <- unlist(eval_MSE(mfit_cv2, get_validation_data(mfit_cv2)))) ## Rescore on validation data
 
   ## ------------------------------------------------------------------------------------------------
   ## Predicting the entire curve (grid)
@@ -571,9 +579,9 @@ test.CV.SL <- function() {
   ## Internally define folds for CV
   ## ------------------------------------------------------------------------------------------------
   mfit_cv3 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                              data = cpp_folds, params = GRIDparams,
-                              nfolds = 5, use_new_features = TRUE)
-  models <- mfit_cv3$get_best_models(K = 1)
+                       data = cpp_folds, params = GRIDparams,
+                       nfolds = 5, use_new_features = TRUE)
+  (models <- mfit_cv3$get_best_models(K = 1))
 
   ## ------------------------------------------------------------------------------------
   ## CHECKING CV IMPLEMENTATION VS. INTERNAL H2O CV
@@ -587,7 +595,7 @@ test.CV.SL <- function() {
   valid_data <- get_validation_data(mfit_cv)
 
   # Re-score on training data (should be equivalent to h2o-based CV metrics):
-  preds_cv_check <- eval_MSE_CV(mfit_cv, get_train_data(mfit_cv))
+  preds_cv_check <- eval_MSE(mfit_cv, get_train_data(mfit_cv))
   # Internal CV MSE and CV evaluated on train_data should be the same:
   mfit_cv$getmodel_ids
 

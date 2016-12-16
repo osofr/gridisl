@@ -25,16 +25,6 @@ get_validation_data <- function(modelfit) {
   return(modelfit$OData_valid$dat.sVar)
 }
 
-#' Get the combined out of sample predictions from V cross-validation models
-#'
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit_cvSL}.
-#' @return A vector of out-of-sample predictions from the best selected model (CV-MSE).
-#' @export
-get_out_of_sample_CV_predictions <- function(modelfit) {
-  assert_that(is.PredictionModel(modelfit))
-  return(modelfit$get_out_of_sample_CVpreds)
-}
-
 #' Save the best performing h2o model
 #'
 #' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
@@ -112,46 +102,46 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   if (any(c("nfolds","fold_column") %in% names(params))) stop("Cannot have fields named 'nfolds' or 'fold_column' inside  params argument." %+%
                                                               "To perform V fold cross-validation use the corresponding arguments 'nfolds' or 'fold_column' of this function.")
 
-  OData_train <- validate_convert_input_data(train_data, ID = ID, t_name = t_name, x = x, y = y, useH2Oframe = useH2Oframe, dest_frame = "all_train_H2Oframe")
-  CheckVarNameExists(OData_train$dat.sVar, y)
+  train_data <- validate_convert_input_data(train_data, ID = ID, t_name = t_name, x = x, y = y, useH2Oframe = useH2Oframe, dest_frame = "all_train_H2Oframe")
+  CheckVarNameExists(train_data$dat.sVar, y)
 
-  nodes <- OData_train$nodes ## Extract nodes list
+  nodes <- train_data$nodes ## Extract nodes list
 
   if (missing(x)) x <- nodes$Lnodes ## Assign predictors if missing (everything but ID and outcome in y)
 
   ## If fold_column specified in the model parameters, add it to the data object:
-  if (!is.null(fold_column)) OData_train$fold_column <- fold_column
-
-  # ## If hold_column specified in the model parameters, add it to the data object:
-  # if (!is.null(params$hold_column)) {
-  #   OData_train$hold_column <- params$hold_column
-  #   params$hold_column <- NULL
-  # }
+  if (!is.null(fold_column)) train_data$fold_column <- fold_column
 
   ## Define R6 object with validation data:
   if (!missing(valid_data)) {
-    OData_valid <- validate_convert_input_data(valid_data, ID = ID, t_name = t_name, x = x, y = y, useH2Oframe = useH2Oframe, dest_frame = "all_valid_H2Oframe")
-    CheckVarNameExists(OData_valid$dat.sVar, y)
+    valid_data <- validate_convert_input_data(valid_data, ID = ID, t_name = t_name, x = x, y = y, useH2Oframe = useH2Oframe, dest_frame = "all_valid_H2Oframe")
+    CheckVarNameExists(valid_data$dat.sVar, y)
   } else {
-    OData_valid <- NULL
+    valid_data <- NULL
   }
 
   ## Define R6 regression class (specify subset_exprs to select only specific obs during fitting, e.g., only non-holdouts)
   regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, model_contrl = params, runCV = runCV, fold_column = fold_column)
   # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, subset_exprs = list("!hold"), model_contrl = params)
   ## Define a modeling object, perform fitting (real data is being passed for the first time here):
-  modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)$fit(data = OData_train, validation_data = OData_valid)
+  modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)$fit(data = train_data, validation_data = valid_data)
 
   ## ------------------------------------------------------------------------------------------
-  ## If validation data supplied, score the models based on validation set as well
+  ## If validation data supplied then score the models based on validation set
   ## ------------------------------------------------------------------------------------------
-  if (!is.null(OData_valid)) preds <- modelfit$predict(newdata = OData_valid)
+  if (!missing(valid_data) && !is.null(valid_data)) {
+    # ************** NEED TO MODIFY THIS TO EXPLICIT FUNCTION CALL THAT WOULD EVALUATE MSE FOR HOLDOUT **************
+    # preds <- modelfit$predict(newdata = valid_data)
+    modelfit$score_models(validation_data = valid_data)
+  }
 
   ## ------------------------------------------------------------------------------------------
   ## If CV was used, then score the models based on out-of-sample predictions on the training data (automatically done by h2o)
   ## ------------------------------------------------------------------------------------------
   if (runCV) {
-    mse <- eval_MSE_CV(modelfit)
+    mse <- modelfit$score_models()$getMSE
+    # modelfit$getMSE
+    # mse <- eval_MSE_cv(modelfit)
     print("Mean CV MSE (for out of sample predictions) as evaluated by h2o: "); print(data.frame(mse))
   }
   return(modelfit)
@@ -164,21 +154,19 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
 #' @param newdata Subject-specific data for which predictions should be obtained.
 #' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
 #' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
-#' @param evalMSE Use newdata for model scoring (based on MSE)
 #' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
 #' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return A matrix of subject level predictions (subject are rows, columns are different models) or a data.table with subject level covariates added along with model-based predictions.
 #' @export
-predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE = FALSE, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
-  if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
+predict_model <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+  if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
 
   if (!missing(newdata))
-    # newdata <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
     newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,
                                            x = modelfit$predvars, y = modelfit$outvar,
                                            useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
@@ -187,24 +175,81 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
     assert_that(is.integerish(predict_only_bestK_models))
     predict_model_names = modelfit$get_best_model_names(K = predict_only_bestK_models)
     message(paste0("obtaining predictions for the best models: ", paste0(predict_model_names, collapse = ",")))
-    modelfit$predict(newdata = newdata, predict_model_names = predict_model_names, MSE = evalMSE)
+    preds <- as.data.table(modelfit$predict(newdata = newdata, predict_model_names = predict_model_names))
   } else {
     message("obtaining predictions for all models...")
-    modelfit$predict(newdata = newdata, MSE = evalMSE)
+    preds <- as.data.table(modelfit$predict(newdata = newdata))
   }
 
-  preds <- as.data.table(modelfit$getprobA1) # actual matrix of predictions needs to be extracted
+  # preds <- as.data.table(modelfit$getprobA1) # actual matrix of predictions needs to be extracted
 
   if (add_subject_data) {
     if (missing(newdata)) newdata <- modelfit$OData_train
-
     covars <- c(nodes$IDnode, nodes$tnode, modelfit$outvar)
-    # covars <- c(nodes$IDnode, modelfit$predvars, modelfit$outvar)
-
     ## to protect against an error if some variables are dropped from new data
     sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
     predsDT <- newdata$dat.sVar[, sel_covars, with = FALSE]
-    predsDT[, (colnames(modelfit$getprobA1)) := preds]
+    predsDT[, (colnames(preds)) := preds]
+    preds <- predsDT
+  }
+
+  return(preds)
+}
+
+#' Get the combined out of sample predictions from V cross-validation models
+#'
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit_cvSL}.
+#' @return A vector of out-of-sample predictions from the best selected model (CV-MSE).
+#' @export
+get_out_of_sample_predictions <- function(modelfit) {
+  assert_that(is.PredictionModel(modelfit))
+  return(modelfit$get_out_of_sample_preds)
+}
+
+# ---------------------------------------------------------------------------------------
+#' Prediction for holdout (out-of-sample) model
+#'
+#' When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
+#' 1. For \code{fit_holdoutSL} the default holdout predictions will be based on validation data.
+#' 2. For \code{fit_cvSL} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
+#' @param modelfit Model fit object returned by \code{\link{fit_holdoutSL}} or \code{\link{fit_cvSL}} functions.
+#' @param newdata Subject-specific data for which holdout (out-of-sample) predictions should be obtained.
+#' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
+#' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
+#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
+#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @return ...
+predict_holdout <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+  if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
+  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
+  assert_that(is.PredictionModel(modelfit))
+  gvars$verbose <- verbose
+  nodes <- modelfit$OData_train$nodes
+
+  if (missing(newdata) && !modelfit$runCV) newdata <- modelfit$OData_valid
+  if (!missing(newdata))
+    newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,
+                                           x = modelfit$predvars, y = modelfit$outvar,
+                                           useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
+
+  if (!missing(predict_only_bestK_models)) {
+    assert_that(is.integerish(predict_only_bestK_models))
+    predict_model_names = modelfit$get_best_model_names(K = predict_only_bestK_models)
+    message(paste0("obtaining predictions for the best models: ", paste0(predict_model_names, collapse = ",")))
+    preds <- as.data.table(modelfit$predict_out_of_sample(newdata = newdata, predict_model_names = predict_model_names))
+  } else {
+    message("obtaining predictions for all models...")
+    preds <- as.data.table(modelfit$predict_out_of_sample(newdata = newdata))
+  }
+
+  if (add_subject_data) {
+    if (missing(newdata)) newdata <- modelfit$OData_train
+    covars <- c(nodes$IDnode, nodes$tnode, modelfit$outvar)
+    ## to protect against an error if some variables are dropped from new data
+    sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
+    predsDT <- newdata$dat.sVar[, sel_covars, with = FALSE]
+    predsDT[, (colnames(preds)) := preds]
     preds <- predsDT
   }
 
@@ -212,7 +257,7 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
 }
 
 # ---------------------------------------------------------------------------------------
-#' Evaluate cross-validated MSE for all h2o model fits
+#' Evaluate MSE for model fits, possibly using new data
 #'
 #' By default this function will extract out-of-sample predictions from original training data (automatically done by h2o) to evaluate the cross-validated MSE.
 #' However, when \code{newdata} is supplied, the predictions for each CV model will be based on this external validation dataset.
@@ -223,25 +268,24 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, evalMSE 
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 #' @export
-eval_MSE_CV <- function(modelfit, newdata, verbose = getOption("growthcurveSL.verbose")) {
+eval_MSE <- function(modelfit, newdata, verbose = getOption("growthcurveSL.verbose")) {
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
+  # if (modelfit$runCV) stop("cannot evaluate the holdout-based MSE for modeling approaches that used cross-validation.")
+
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
 
   if (missing(newdata)) {
-
     ## Use out-of-sample predictions from original training data (automatically done by h2o) to evaluate the CV MSE
-    modelfit <- modelfit$score_CV()
+    modelfit <- modelfit$score_models()
   } else {
-
+    newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,
+                                           x = modelfit$predvars, y = modelfit$outvar,
+                                           useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
     ## Get predictions for each CV model based on external validation CV dataset, then use those predictions and outcome in newdata to evalute the CV MSE
-    newOData <- importData(data = newdata, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
-    t_CV <- system.time(
-      modelfit <- modelfit$score_CV(validation_data = newOData)
-    )
-    print("t_CV: "); print(t_CV)
+    modelfit <- modelfit$score_models(validation_data = newdata)
   }
   return(modelfit$getMSE)
 }

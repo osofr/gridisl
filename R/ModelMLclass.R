@@ -24,7 +24,7 @@ predict_h2o_new <- function(model_id, frame_id, returnVector = TRUE) {
 ## Obtain h2oFrame to be used for prediction
 ## ----------------------------------------------------------------
 getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_idx) {
-  assert_that(!is.null(subset_idx))
+  # assert_that(!is.null(subset_idx))
   if (missing(DataStorageObject)) {
 
     return(h2o::h2o.getFrame(ParentObject$get_train_H2Oframe_ID))
@@ -46,7 +46,7 @@ getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_id
           newdat[, (fold_column) := data$dat.sVar[subset_idx, fold_column, with = FALSE]]
         } else {
           ####### Temporary fix to avoid the current bug in h2o  ######
-          newdat[, (fold_column) := factor(sample(c(1:10), nrow(newdat), TRUE))]
+          # newdat[, (fold_column) := factor(sample(c(1:10), nrow(newdat), TRUE))]
         }
       }
       prediction_H2Oframe <- fast.load.to.H2O(newdat, destination_frame = "prediction_H2Oframe")
@@ -97,7 +97,7 @@ check_out_of_sample_consistency <- function(models_list, valid_H2Oframe, predvar
 ## This procedure is repeated for each cross-validated model in the ensemble, resulting in a matrix of predictions (n,k),
 ## where k is the total number of models trained by this ensemble (with h2o.grid, etc) and is equal to length(models_list)
 ## ----------------------------------------------------------------------------------------------------------------------------------
-predict_out_of_sample_CV <- function(m.fit, ParentObject, validation_data, subset_idx, predict_model_names, ...) {
+predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subset_idx, predict_model_names, ...) {
   # h2o.no_progress()
   models_list <- m.fit$fitted_models_all
   if (!missing(predict_model_names)) models_list <- models_list[predict_model_names]
@@ -196,7 +196,7 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   names(pAoutDT) <- names(models_list)
   pAoutDT <- as.data.table(pAoutDT)
 
-  if (length(subset_idx) > 0) {
+  if (nrow(H2Oframe) > 0) {
     pAout_h2o <- NULL
     for (idx in seq_along(models_list)) {
       # pAoutMat[, idx] <- predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe))
@@ -406,9 +406,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     fit = function(data, subset_idx, validation_data = NULL, destination_frame, ...) {
       assert_that(is.DataStorageClass(data))
       if (missing(destination_frame)) destination_frame <- "train_H2Oframe"
-
       train_H2Oframe <- self$setdata(data, subset_idx, self$classify, destination_frame = destination_frame, ...)
-
       private$train_H2Oframe <- train_H2Oframe
       private$train_H2Oframe_ID <- h2o::h2o.getId(train_H2Oframe)
 
@@ -432,7 +430,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
       self$model.fit <- try(fit(self$fit.class, self$params, training_frame = train_H2Oframe, y = self$outvar, x = self$predvars,
                                 model_contrl = self$model_contrl, fold_column = self$fold_column, validation_frame = valid_H2Oframe, ...),
-                        silent = FALSE)
+                          silent = FALSE)
 
       if (inherits(self$model.fit, "try-error")) {
         self$emptydata
@@ -444,33 +442,12 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
     predictP1 = function(data, subset_idx, predict_model_names) {
       P1_DT <- predictP1(self$model.fit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx, predict_model_names = predict_model_names)
-      # if (!is.matrix(P1)) {
-      #   P1 <- matrix(P1, byrow = TRUE)
-      # }
-      # if (!missing(predict_model_names)) {
-      #   colnames(P1_DT) <- predict_model_names
-      # } else {
-      #   colnames(P1_DT) <- names(self$getmodel_ids)
-      # }
       return(P1_DT)
     },
 
     # score_CV = function(validation_data) {
-    predictP1_out_of_sample_CV = function(validation_data, subset_idx, predict_model_names) {
-      P1_DT <- predict_out_of_sample_CV(self$model.fit, ParentObject = self, validation_data = validation_data, subset_idx = subset_idx, predict_model_names = predict_model_names)
-
-      # P1 <- predict_out_of_sample_CV(self$model.fit, validation_data, fold_column = self$fold_column)
-      # P1 <- predict_out_of_sample_CV_DF(self$model.fit, ParentObject = self, validation_data = validation_data, subset_idx = subset_idx, predict_model_names = predict_model_names)
-      # for (col_idx in seq_along(P1_DT)) {
-      #   print(all.equal(P1_DT[[col_idx]],P1[, col_idx]))
-      # }
-      #
-      # if (is.data.table(P1_DT)) {
-      #   P1_DT <- as.matrix(P1_DT)
-      # } else if (!is.matrix(P1_DT)) {
-      #   P1_DT <- matrix(P1_DT, byrow = TRUE)
-      # }
-      # colnames(P1_DT) <- names(self$getmodel_ids)
+    predictP1_out_of_sample_cv = function(validation_data, subset_idx, predict_model_names) {
+      P1_DT <- predict_out_of_sample_cv(self$model.fit, ParentObject = self, validation_data = validation_data, subset_idx = subset_idx, predict_model_names = predict_model_names)
       return(P1_DT)
     },
 
@@ -715,17 +692,14 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
       P1_residSL <- predictP1(self$model.fit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx, predict_model_names = predict_model_names)
 
       if (ncol(P1_firstGLM) > 1) stop("initial glm fit for residuals must provide predictions with one column matrix only")
-
-      for (i in seq.int(ncol(P1_residSL))) {
-        P1_residSL[,i] <-  P1_residSL[,i] + P1_firstGLM[,1]
+      for (model.fit in names(P1_residSL)) {
+        P1_residSL[, (model.fit) := eval(as.name(model.fit)) + P1_firstGLM[[1]]]
       }
-      # P1 <- P1 + predict_h2o_new(self$firstGLMfit$fitted_models_all[[1]]@model_id, frame_id = h2o.getId(train_H2Oframe))
-      # P1 <- P1 + predictP1(self$firstGLMfit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx)
-      if (!missing(predict_model_names)) {
-        colnames(P1_residSL) <- predict_model_names
-      } else {
-        colnames(P1_residSL) <- names(self$getmodel_ids)
-      }
+      # if (!missing(predict_model_names)) {
+      #   colnames(P1_residSL) <- predict_model_names
+      # } else {
+      #   colnames(P1_residSL) <- names(self$getmodel_ids)
+      # }
       return(P1_residSL)
     }
   )

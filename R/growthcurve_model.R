@@ -134,10 +134,11 @@ fit_cvSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = N
   ## ------------------------------------------------------------------------------------------
   ## Define validation data to be used for scoring during CV (each summary row (X_i,Y_i) is created by first dropping this row):
   valid_data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = FALSE)
-  ## old approach: valid_data <- define_features(data, nodes, train_set = FALSE, holdout = FALSE)
-  OData_valid <- importData(data = valid_data, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
+  valid_data <- importData(data = valid_data, ID = nodes$IDnode, t_name = nodes$tnode, covars = modelfit$predvars, OUTCOME = modelfit$outvar)
+  modelfit$OData_valid <- valid_data
 
-  modelfit <- modelfit$score_CV(validation_data = OData_valid) # returns the modelfit object intself, but does the scoring of each CV model
+  # modelfit <- modelfit$score_models(validation_data = valid_data) # returns the modelfit object intself, but does the scoring of each CV model
+  modelfit$score_models(validation_data = valid_data)
   print("CV MSE after manual CV model rescoring: "); print(unlist(modelfit$getMSE))
   # preds <- predict_CV(modelfit, valid_data) # will return the matrix of predicted cv values (one column per model)
 
@@ -188,25 +189,3 @@ predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, grid = FALSE
   return(preds)
 }
 
-# ---------------------------------------------------------------------------------------
-#' Prediction for holdout (out-of-sample) model
-#'
-#' @param modelfit Model fit object returned by \code{\link{fit_holdoutSL}} function.
-#' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
-#' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
-#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
-#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-#' @return ...
-predict_holdouts <- function(modelfit, predict_only_bestK_models, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
-  if (is.null(modelfit)) stop("must call fit_holdoutSL() prior to obtaining predictions")
-  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
-  assert_that(is.PredictionModel(modelfit))
-  gvars$verbose <- verbose
-  nodes <- modelfit$OData_train$nodes
-  valid_data <- modelfit$OData_valid
-
-  preds <- predict_model(modelfit = modelfit, newdata = valid_data, predict_only_bestK_models, evalMSE = FALSE, add_subject_data = add_subject_data)
-
-  return(preds)
-}

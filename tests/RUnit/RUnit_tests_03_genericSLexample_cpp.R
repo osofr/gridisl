@@ -224,7 +224,7 @@ test.generic.h2oSL <- function() {
   grid_mfit_cv$show(model_stats = TRUE, all_fits = TRUE)
   model_cv <- grid_mfit_cv$getfit$fitted_models_all[[1]]
 
-  eval_MSE_CV(grid_mfit_cv)
+  eval_MSE_cv(grid_mfit_cv)
 
   ## ----------------------------------------------------------------
   ## Perform fitting on a grid of algorithms w/ Vfold CV based on user-spec'ed fold_column
@@ -239,7 +239,7 @@ test.generic.h2oSL <- function() {
   fit_preds_best <- predict_model(grid_mfit_cv, newdata = cpp, predict_only_bestK_model = 1)
   head(fit_preds_best[])
 
-  # eval_MSE_CV(grid_mfit_cv)
+  # eval_MSE_cv(grid_mfit_cv)
 
   grid_mfit_cv$getmodel_ids
 

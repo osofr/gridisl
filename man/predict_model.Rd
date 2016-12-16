@@ -4,7 +4,7 @@
 \alias{predict_model}
 \title{Predict for new dataset}
 \usage{
-predict_model(modelfit, newdata, predict_only_bestK_models, evalMSE = FALSE,
+predict_model(modelfit, newdata, predict_only_bestK_models,
   add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
@@ -14,8 +14,6 @@ predict_model(modelfit, newdata, predict_only_bestK_models, evalMSE = FALSE,
 
 \item{predict_only_bestK_models}{Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
 Leave missing to obtain predictions for all models that were fit as part of this ensemble.}
-
-\item{evalMSE}{Use newdata for model scoring (based on MSE)}
 
 \item{add_subject_data}{Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
 When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).}
