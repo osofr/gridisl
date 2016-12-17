@@ -6,6 +6,11 @@ predict_h2o_new <- function(model_id, frame_id, returnVector = TRUE) {
   job_key <- res$key$name
   dest_key <- res$dest$name
 
+  # browser()
+  # h2o.getFrame("train_H2Oframe")
+  # predict(h2o.getModel("Grid_GBM_train_H2Oframe_model_R_1481770962766_193_model_1"),h2o.getFrame(frame_id))
+  # predict(h2o.getModel(model_id), h2o.getFrame(frame_id))
+
   h2o:::.h2o.__waitOnJob(job_key, pollInterval = 0.01)
   newpreds <- h2o.getFrame(dest_key)
 
@@ -50,7 +55,6 @@ getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_id
         }
       }
       prediction_H2Oframe <- fast.load.to.H2O(newdat, destination_frame = "prediction_H2Oframe")
-
     }
     return(prediction_H2Oframe)
   }
@@ -100,7 +104,7 @@ check_out_of_sample_consistency <- function(models_list, valid_H2Oframe, predvar
 predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subset_idx, predict_model_names, ...) {
   # h2o.no_progress()
   models_list <- m.fit$fitted_models_all
-  if (!missing(predict_model_names)) models_list <- models_list[predict_model_names]
+  if (!missing(predict_model_names) && !is.null(predict_model_names)) models_list <- models_list[predict_model_names]
 
   ## Grab the internallly stored h2o out of sample predictions for each CV model (cross-validation predictions are combined into a single vector of length n)
   if (missing(validation_data)) {
@@ -187,7 +191,7 @@ predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
 predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict_model_names, ...) {
   H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
   models_list <- m.fit$fitted_models_all
-  if (!missing(predict_model_names)) models_list <- models_list[predict_model_names]
+  if (!missing(predict_model_names) && !is.null(predict_model_names)) models_list <- models_list[predict_model_names]
 
   # pAoutMat <- matrix(gvars$misval, nrow = nrow(H2Oframe), ncol = length(models_list))
   # colnames(pAoutMat) <- names(models_list)
@@ -406,6 +410,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     fit = function(data, subset_idx, validation_data = NULL, destination_frame, ...) {
       assert_that(is.DataStorageClass(data))
       if (missing(destination_frame)) destination_frame <- "train_H2Oframe"
+
       train_H2Oframe <- self$setdata(data, subset_idx, self$classify, destination_frame = destination_frame, ...)
       private$train_H2Oframe <- train_H2Oframe
       private$train_H2Oframe_ID <- h2o::h2o.getId(train_H2Oframe)
@@ -419,6 +424,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       }
 
       if (!is.null(validation_data)) {
+
         assert_that(is.DataStorageClass(validation_data))
         valid_H2Oframe <- self$setdata(validation_data, classify = self$classify, destination_frame = "valid_H2Oframe", ...)
         private$valid_H2Oframe <- valid_H2Oframe
@@ -496,7 +502,6 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       predvars <- self$predvars
 
       if (self$useH2Oframe) {
-
         if (missing(subset_idx)) {
           subsetH2Oframe <- data$H2Oframe
         } else {
@@ -510,7 +515,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
         load_var_names <- c(outvar, predvars)
         if (!is.null(data$fold_column)) load_var_names <- c(load_var_names, data$fold_column)
-        if (!is.null(data$hold_column)) load_var_names <- c(load_var_names, data$hold_column)
+
         if (missing(subset_idx)) subset_idx <- (1:data$nobs)
         load_subset_t <- system.time(subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[subset_idx, load_var_names, with = FALSE], destination_frame = destination_frame))
         # if (gvars$verbose) {

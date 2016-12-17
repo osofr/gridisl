@@ -183,19 +183,23 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       return(ModelFitObject)
     },
 
-    fit = function(overwrite = FALSE, data, validation_data = NULL, ...) { # Move overwrite to a field? ... self$overwrite
+    fit = function(overwrite = FALSE, data, validation_data = NULL, subset_exprs = NULL, ...) { # Move overwrite to a field? ... self$overwrite
       if (gvars$verbose) print("fitting the model: "); self$show()
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
+
 
       ## save a pointer to training data class used for fitting
       self$OData_train <- data
       self$nodes <- self$OData_train$nodes
 
       ## save a pointer to validation data class used for scoring
+      ## **** NOTE THAT AUTOMATIC SUBSETTING WILL NOT WORK FOR VALIDATION DATA ->
+      ## **** VALIDATION DATA NEEDS TO BE ALREADY SPLIT APPROPRIATELY IF DOING SUBSETS
       if (!is.null(validation_data)) self$OData_valid <- validation_data
 
-      # self$define.subset.idx(data)
-      subset_idx <- data$evalsubst(subset_exprs = self$subset_exprs)
+      if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
+
+      subset_idx <- data$evalsubst(subset_exprs = subset_exprs)
 
       # self$subset_train <- self$subset_idx
       model.fit <- self$ModelFitObject$fit(data, subset_idx = subset_idx, validation_data = validation_data, ...)
@@ -215,11 +219,11 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       return(invisible(self))
     },
 
-    refit_best_model = function(data, ...) {
+    refit_best_model = function(data, subset_exprs = NULL, ...) {
       if (gvars$verbose) print("refitting the best model: "); self$show()
-
+      if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
       # self$define.subset.idx(data)
-      subset_idx <- data$evalsubst(subset_exprs = self$subset_exprs)
+      subset_idx <- data$evalsubst(subset_exprs = subset_exprs)
 
       top_model_params <- self$get_best_model_params()
       top_model_name <- self$get_best_model_names(1)
@@ -237,14 +241,15 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     # Predict the response E[Y|newdata];
-    predict = function(newdata, subset_exprs, predict_model_names, ...) {
+    predict = function(newdata, subset_exprs = NULL, predict_model_names = NULL, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to attempting to make predictions.")
+      if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
 
       if (missing(newdata)) {
-        ## When missing newdata the predictions are for the training frame
+        ## When missing newdata the predictions are for the training frame.
+        ## No subset re-evaluation is needed (training frame was already subsetted by self$subset_exprs)
         probA1 <- self$ModelFitObject$predictP1(predict_model_names = predict_model_names)
       } else {
-        if (missing(subset_exprs)) subset_exprs <- self$subset_exprs
         subset_idx <- newdata$evalsubst(subset_exprs = subset_exprs)
         if (!self$use_best_retrained_model) {
           probA1 <- self$ModelFitObject$predictP1(data = newdata, subset_idx = subset_idx, predict_model_names = predict_model_names)
@@ -257,8 +262,9 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     # Predict the response E[Y|newdata] for out of sample observations  (validation set / holdouts);
-    predict_out_of_sample = function(newdata, subset_exprs, predict_model_names, ...) {
+    predict_out_of_sample = function(newdata, subset_exprs = NULL, predict_model_names, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to attempting to make predictions.")
+      if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
 
       if (missing(newdata) && self$runCV) {
         ## For CV without missing data use the default h2o out-of-sample (holdout) predictions
@@ -268,9 +274,9 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         ## For holdouts use the validation data (if it was used)
         newdata <- self$OData_valid
         if (!is.null(newdata)) stop("Must supply the validation data for making holdout predictions")
+        subset_idx <- newdata$evalsubst(subset_exprs = subset_exprs) # self$define.subset.idx(newdata)
         probA1 <- self$predict(newdata, subset_exprs, predict_model_names, ...)
       } else {
-        if (missing(subset_exprs)) subset_exprs <- self$subset_exprs
         subset_idx <- newdata$evalsubst(subset_exprs = subset_exprs) # self$define.subset.idx(newdata)
         if (self$runCV) {
           probA1 <- self$ModelFitObject$predictP1_out_of_sample_cv(validation_data = newdata, subset_idx = subset_idx, predict_model_names = predict_model_names)
@@ -283,22 +289,23 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     # Predict the response E[Y|newdata] based for CV fold models and using validation data;
-    score_models = function(validation_data, ...) {
+    score_models = function(validation_data, subset_exprs = NULL, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
+      if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
 
-      out_of_sample_preds_DT <- self$predict_out_of_sample(validation_data, ...)
+      out_of_sample_preds_DT <- self$predict_out_of_sample(validation_data, subset_exprs, ...)
 
       if (!missing(validation_data)) {
-        subset_idx <- validation_data$evalsubst(subset_exprs = self$subset_exprs)
+        subset_idx <- validation_data$evalsubst(subset_exprs = subset_exprs)
         test_values <- validation_data$get.outvar(subset_idx, var = self$outvar)
         IDs <- validation_data$get.outvar(subset_idx, var = validation_data$nodes$IDnode)
       } else if (self$runCV) {
-        subset_idx <- self$OData_train$evalsubst(subset_exprs = self$subset_exprs)
+        subset_idx <- self$OData_train$evalsubst(subset_exprs = subset_exprs)
         test_values <- self$OData_train$get.outvar(subset_idx, var = self$outvar)
         IDs <- self$OData_train$get.outvar(subset_idx, var = self$OData_train$nodes$IDnode)
       } else if (!self$runCV) {
         if (is.null(self$OData_valid)) stop("Must provide validation data to scoring the holdout models")
-        subset_idx <- self$OData_valid$evalsubst(subset_exprs = self$subset_exprs)
+        subset_idx <- self$OData_valid$evalsubst(subset_exprs = subset_exprs)
         test_values <- self$OData_valid$get.outvar(subset_idx, var = self$outvar)
         IDs <- self$OData_valid$get.outvar(subset_idx, var = self$OData_valid$nodes$IDnode)
       }

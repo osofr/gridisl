@@ -216,27 +216,30 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       if (!missing(subset_vars)) {
         assert_that(is.character(subset_vars))
         for (subsetvar in subset_vars) {
-          # *) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
+          # (*) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
           sVar.vec <- self$get.outvar(var = subsetvar)
           assert_that(!is.null(sVar.vec))
-          # *) reconstruct correct expression that tests for missing values
+          # (*) reconstruct correct expression that tests for missing values
           res <- res & (!gvars$misfun(sVar.vec))
         }
       }
       if (!is.null(subset_exprs)) {
         if (is.logical(subset_exprs)) {
-          res <- res & subset_exprs
-        } else if (is.character(subset_exprs)){
-          # ******************************************************
-          # data.table evaluation of the logical subset expression
-          # Note: This can be made a lot more faster by also keying data.table on variables in eval(parse(text = subset_exprs))
-          # ******************************************************
+          return(which(res & subset_exprs))
+        } else if (is.character(subset_exprs)) {
+          ## ******************************************************
+          ## data.table evaluation of the logical subset expression
+          ## Note: This can be made faster by using keys in data.table on variables in eval(parse(text = subset_exprs))
+          ## ******************************************************
           res.tmp <- self$dat.sVar[, eval(parse(text = subset_exprs)), by = get(self$nodes$ID)][["V1"]]
           assert_that(is.logical(res.tmp))
-          res <- res & res.tmp
+          return(which(res & res.tmp))
+        } else if (is.integer(subset_exprs)) {
+          ## The expression is already a row index, hence should be returned unchanged
+          return(subset_exprs)
         }
       }
-      return(res)
+      return(which(res))
     },
 
     # ---------------------------------------------------------------------

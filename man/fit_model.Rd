@@ -5,7 +5,8 @@
 \title{Generic modeling function for any longitudinal data.}
 \usage{
 fit_model(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column,
-  seed, useH2Oframe = FALSE, verbose = getOption("growthcurveSL.verbose"))
+  seed, useH2Oframe = FALSE, subset_exprs = NULL, subset_idx = NULL,
+  verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}
@@ -27,6 +28,12 @@ fit_model(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column,
 \item{fold_column}{...}
 
 \item{seed}{...}
+
+\item{useH2Oframe}{...}
+
+\item{subset_exprs}{...}
+
+\item{subset_idx}{...}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
 }

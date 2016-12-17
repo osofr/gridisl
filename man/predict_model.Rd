@@ -5,7 +5,8 @@
 \title{Predict for new dataset}
 \usage{
 predict_model(modelfit, newdata, predict_only_bestK_models,
-  add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose"))
+  add_subject_data = FALSE, subset_idx = NULL,
+  verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit_model}} function.}
@@ -18,10 +19,14 @@ Leave missing to obtain predictions for all models that were fit as part of this
 \item{add_subject_data}{Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
 When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
+\item{subset_idx}{...}
+
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
+Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
 }
 \value{
-A matrix of subject level predictions (subject are rows, columns are different models) or a data.table with subject level covariates added along with model-based predictions.
+A matrix of subject level predictions (subject are rows, columns are different models)
+or a data.table with subject level covariates added along with model-based predictions.
 }
 \description{
 Predict for new dataset

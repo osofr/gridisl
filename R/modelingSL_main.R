@@ -72,13 +72,17 @@ validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Ofram
 #' @param nfolds ...
 #' @param fold_column ...
 #' @param seed ...
-#' @param useH2Oframe
+#' @param useH2Oframe ...
+#' @param subset_exprs ...
+#' @param subset_idx ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 # @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
 # @example tests/examples/1_growthcurveSL_example.R
 #' @export
-fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column, seed, useH2Oframe = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column, seed,
+                      useH2Oframe = FALSE, subset_exprs = NULL, subset_idx = NULL,
+                      verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
 
   if (missing(train_data)) stop("train_data arg must be specified")
@@ -107,7 +111,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
 
   nodes <- train_data$nodes ## Extract nodes list
 
-  if (missing(x)) x <- nodes$Lnodes ## Assign predictors if missing (everything but ID and outcome in y)
+  if (missing(x)) x <- nodes$Lnodes ## Assign predictors if missing (everything, but ID and outcome in y)
 
   ## If fold_column specified in the model parameters, add it to the data object:
   if (!is.null(fold_column)) train_data$fold_column <- fold_column
@@ -120,11 +124,17 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
     valid_data <- NULL
   }
 
+  if (!is.null(subset_exprs)) {
+    # ... Check that the subset_exprs is a valid expression ...
+  }
+  if (!is.null(subset_idx))
+    if (!is.integer(subset_idx)) stop("subset_idx must be an integer vector, current class: " %+% class(subset_idx))
+
   ## Define R6 regression class (specify subset_exprs to select only specific obs during fitting, e.g., only non-holdouts)
-  regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, model_contrl = params, runCV = runCV, fold_column = fold_column)
+  regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, model_contrl = params, runCV = runCV, subset_exprs = subset_exprs, fold_column = fold_column)
   # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, subset_exprs = list("!hold"), model_contrl = params)
   ## Define a modeling object, perform fitting (real data is being passed for the first time here):
-  modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)$fit(data = train_data, validation_data = valid_data)
+  modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx)
 
   ## ------------------------------------------------------------------------------------------
   ## If validation data supplied then score the models based on validation set
@@ -132,19 +142,67 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   if (!missing(valid_data) && !is.null(valid_data)) {
     # ************** NEED TO MODIFY THIS TO EXPLICIT FUNCTION CALL THAT WOULD EVALUATE MSE FOR HOLDOUT **************
     # preds <- modelfit$predict(newdata = valid_data)
-    modelfit$score_models(validation_data = valid_data)
+    modelfit$score_models(validation_data = valid_data, subset_exprs = subset_idx)
   }
 
   ## ------------------------------------------------------------------------------------------
   ## If CV was used, then score the models based on out-of-sample predictions on the training data (automatically done by h2o)
   ## ------------------------------------------------------------------------------------------
   if (runCV) {
-    mse <- modelfit$score_models()$getMSE
+    mse <- modelfit$score_models(subset_exprs = subset_idx)$getMSE
     # modelfit$getMSE
     # mse <- eval_MSE_cv(modelfit)
     print("Mean CV MSE (for out of sample predictions) as evaluated by h2o: "); print(data.frame(mse))
   }
   return(modelfit)
+}
+
+.predict_generic <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE,
+                             subset_idx = NULL, pred_holdout = FALSE,
+                             verbose = getOption("growthcurveSL.verbose")) {
+  if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
+  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
+  assert_that(is.PredictionModel(modelfit))
+  gvars$verbose <- verbose
+  nodes <- modelfit$OData_train$nodes
+
+  if (!is.null(subset_idx))
+    if (!is.integer(subset_idx)) stop("subset_idx must be an integer vector, current class: " %+% class(subset_idx))
+
+  if (!missing(newdata))
+    newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,
+                                           x = modelfit$predvars, y = modelfit$outvar,
+                                           useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
+
+  if (!missing(predict_only_bestK_models)) {
+    assert_that(is.integerish(predict_only_bestK_models))
+    predict_model_names = modelfit$get_best_model_names(K = predict_only_bestK_models)
+    message(paste0("obtaining predictions for the best models: ", paste0(predict_model_names, collapse = ",")))
+  } else {
+    predict_model_names <- NULL
+    message("obtaining predictions for all models...")
+  }
+
+  if (!pred_holdout) {
+    preds <- modelfit$predict(newdata = newdata, subset_exprs = subset_idx, predict_model_names = predict_model_names)
+  } else {
+    preds <- modelfit$predict_out_of_sample(newdata = newdata, subset_exprs = subset_idx, predict_model_names = predict_model_names)
+  }
+
+  preds <- as.data.table(preds)
+
+  if (add_subject_data) {
+    if (missing(newdata)) newdata <- modelfit$OData_train
+    covars <- c(nodes$IDnode, nodes$tnode, modelfit$outvar)
+    ## to protect against an error if some variables are dropped from new data
+    sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
+    predsDT <- newdata$dat.sVar[, sel_covars, with = FALSE]
+    if (!is.null(subset_idx)) predsDT <- predsDT[subset_idx, ]
+    predsDT[, (colnames(preds)) := preds]
+    preds <- predsDT
+  }
+
+  return(preds)
 }
 
 # ---------------------------------------------------------------------------------------
@@ -156,42 +214,74 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
 #' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
 #' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
 #' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-#' @return A matrix of subject level predictions (subject are rows, columns are different models) or a data.table with subject level covariates added along with model-based predictions.
+#' @param subset_idx ...
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
+#' Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @return A matrix of subject level predictions (subject are rows, columns are different models)
+#' or a data.table with subject level covariates added along with model-based predictions.
 #' @export
-predict_model <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+predict_model <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE,
+                          subset_idx = NULL,
+                          verbose = getOption("growthcurveSL.verbose")) {
+  return(.predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx, pred_holdout = FALSE, verbose))
+}
+
+# ---------------------------------------------------------------------------------------
+#' Prediction for holdout (out-of-sample) model
+#'
+#' When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
+#' 1. For \code{fit_holdoutSL} the default holdout predictions will be based on validation data.
+#' 2. For \code{fit_cvSL} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
+#' @param modelfit Model fit object returned by \code{\link{fit_holdoutSL}} or \code{\link{fit_cvSL}} functions.
+#' @param newdata Subject-specific data for which holdout (out-of-sample) predictions should be obtained.
+#' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
+#' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
+#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
+#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
+#' @param subset_idx ...
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @return ...
+predict_holdout <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE,
+                            subset_idx = NULL,
+                            verbose = getOption("growthcurveSL.verbose")) {
+  if (missing(newdata) && !modelfit$runCV) newdata <- modelfit$OData_valid
+  return(.predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx, pred_holdout = TRUE, verbose))
+}
+
+# ---------------------------------------------------------------------------------------
+#' Predict for holdout or curve SuperLearner fits
+#'
+#' @param modelfit Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.
+#' @param newdata Subject-specific data for which predictions should be obtained.
+#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
+#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @return ...
+#' @export
+predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, grid = FALSE, verbose = getOption("growthcurveSL.verbose")) {
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
 
-  if (!missing(newdata))
-    newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,
-                                           x = modelfit$predvars, y = modelfit$outvar,
-                                           useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
-
-  if (!missing(predict_only_bestK_models)) {
-    assert_that(is.integerish(predict_only_bestK_models))
-    predict_model_names = modelfit$get_best_model_names(K = predict_only_bestK_models)
-    message(paste0("obtaining predictions for the best models: ", paste0(predict_model_names, collapse = ",")))
-    preds <- as.data.table(modelfit$predict(newdata = newdata, predict_model_names = predict_model_names))
+  if (missing(newdata)) {
+    newdata <- modelfit$OData_train$dat.sVar
+  } else if (!grid) {
+    newdata <- define_features_drop(newdata, ID = nodes$IDnode, t_name = nodes$tnode, y = nodes$Ynode, train_set = TRUE)
   } else {
-    message("obtaining predictions for all models...")
-    preds <- as.data.table(modelfit$predict(newdata = newdata))
+    ## in the future might define the grid data internally, right now it is assumed the user correctly defines the grid data
   }
 
-  # preds <- as.data.table(modelfit$getprobA1) # actual matrix of predictions needs to be extracted
+  ## will use the best model retrained on all data for prediction:
+  modelfit$use_best_retrained_model <- TRUE
+  best_fit_name <- names(modelfit$getRetrainedfit$model_ids)
+  preds <- predict_model(modelfit = modelfit, newdata = newdata, add_subject_data = add_subject_data)
+  data.table::setnames(preds, old = best_fit_name, new = "SL.preds")
+  modelfit$use_best_retrained_model <- FALSE
 
-  if (add_subject_data) {
-    if (missing(newdata)) newdata <- modelfit$OData_train
-    covars <- c(nodes$IDnode, nodes$tnode, modelfit$outvar)
-    ## to protect against an error if some variables are dropped from new data
-    sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
-    predsDT <- newdata$dat.sVar[, sel_covars, with = FALSE]
-    predsDT[, (colnames(preds)) := preds]
-    preds <- predsDT
-  }
+  ## will obtain predictions for all models in the ensemble that were trained on non-holdout observations only:
+  # preds2 <- predict_model(modelfit = modelfit, newdata = newdata, add_subject_data = add_subject_data)
 
   return(preds)
 }
@@ -207,56 +297,6 @@ get_out_of_sample_predictions <- function(modelfit) {
 }
 
 # ---------------------------------------------------------------------------------------
-#' Prediction for holdout (out-of-sample) model
-#'
-#' When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
-#' 1. For \code{fit_holdoutSL} the default holdout predictions will be based on validation data.
-#' 2. For \code{fit_cvSL} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
-#' @param modelfit Model fit object returned by \code{\link{fit_holdoutSL}} or \code{\link{fit_cvSL}} functions.
-#' @param newdata Subject-specific data for which holdout (out-of-sample) predictions should be obtained.
-#' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
-#' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
-#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
-#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-#' @return ...
-predict_holdout <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE, verbose = getOption("growthcurveSL.verbose")) {
-  if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
-  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
-  assert_that(is.PredictionModel(modelfit))
-  gvars$verbose <- verbose
-  nodes <- modelfit$OData_train$nodes
-
-  if (missing(newdata) && !modelfit$runCV) newdata <- modelfit$OData_valid
-  if (!missing(newdata))
-    newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,
-                                           x = modelfit$predvars, y = modelfit$outvar,
-                                           useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
-
-  if (!missing(predict_only_bestK_models)) {
-    assert_that(is.integerish(predict_only_bestK_models))
-    predict_model_names = modelfit$get_best_model_names(K = predict_only_bestK_models)
-    message(paste0("obtaining predictions for the best models: ", paste0(predict_model_names, collapse = ",")))
-    preds <- as.data.table(modelfit$predict_out_of_sample(newdata = newdata, predict_model_names = predict_model_names))
-  } else {
-    message("obtaining predictions for all models...")
-    preds <- as.data.table(modelfit$predict_out_of_sample(newdata = newdata))
-  }
-
-  if (add_subject_data) {
-    if (missing(newdata)) newdata <- modelfit$OData_train
-    covars <- c(nodes$IDnode, nodes$tnode, modelfit$outvar)
-    ## to protect against an error if some variables are dropped from new data
-    sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
-    predsDT <- newdata$dat.sVar[, sel_covars, with = FALSE]
-    predsDT[, (colnames(preds)) := preds]
-    preds <- predsDT
-  }
-
-  return(preds)
-}
-
-# ---------------------------------------------------------------------------------------
 #' Evaluate MSE for model fits, possibly using new data
 #'
 #' By default this function will extract out-of-sample predictions from original training data (automatically done by h2o) to evaluate the cross-validated MSE.
@@ -265,27 +305,29 @@ predict_holdout <- function(modelfit, newdata, predict_only_bestK_models, add_su
 #' dimensionality as the original training data used for fitting the h2o models.
 #' @param modelfit Model fit object returned by \code{\link{fit_model}} function.
 #' @param newdata ...
+#' @param subset_idx ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
 #' @return ...
 #' @export
-eval_MSE <- function(modelfit, newdata, verbose = getOption("growthcurveSL.verbose")) {
+eval_MSE <- function(modelfit, newdata, subset_idx = NULL, verbose = getOption("growthcurveSL.verbose")) {
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
-  # if (modelfit$runCV) stop("cannot evaluate the holdout-based MSE for modeling approaches that used cross-validation.")
-
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
 
+  if (!is.null(subset_idx))
+    if (!is.integer(subset_idx)) stop("subset_idx must be an integer vector, current class: " %+% class(subset_idx))
+
   if (missing(newdata)) {
     ## Use out-of-sample predictions from original training data (automatically done by h2o) to evaluate the CV MSE
-    modelfit <- modelfit$score_models()
+    modelfit <- modelfit$score_models(subset_exprs = subset_idx)
   } else {
     newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,
                                            x = modelfit$predvars, y = modelfit$outvar,
                                            useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
     ## Get predictions for each CV model based on external validation CV dataset, then use those predictions and outcome in newdata to evalute the CV MSE
-    modelfit <- modelfit$score_models(validation_data = newdata)
+    modelfit <- modelfit$score_models(validation_data = newdata, subset_exprs = subset_idx)
   }
   return(modelfit$getMSE)
 }
