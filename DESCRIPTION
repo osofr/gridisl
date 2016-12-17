@@ -1,9 +1,9 @@
-Package: longDiSL
-Title: Discrete SuperLearner for Longitudinal Data
+Package: longGriDiSL
+Title: Grid-based Discrete SuperLearner for Longitudinal Data
 Version: 0.0.4.9000
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"))
-Description: Discrete SuperLearner for Longitudinal Data.
+Description: Grid-based Discrete SuperLearner for Longitudinal Data.
 Depends:
     R (>= 3.2.1)
 Imports:

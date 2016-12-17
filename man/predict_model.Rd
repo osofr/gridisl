@@ -6,7 +6,7 @@
 \usage{
 predict_model(modelfit, newdata, predict_only_bestK_models,
   add_subject_data = FALSE, subset_idx = NULL,
-  verbose = getOption("longDiSL.verbose"))
+  verbose = getOption("longGriDiSL.verbose"))
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit_model}} function.}
@@ -22,7 +22,7 @@ When \code{FALSE} (default) only the actual predictions are returned (as a matri
 \item{subset_idx}{...}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
-Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.}
+Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.}
 }
 \value{
 A matrix of subject level predictions (subject are rows, columns are different models)

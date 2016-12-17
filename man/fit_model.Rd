@@ -6,7 +6,7 @@
 \usage{
 fit_model(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column,
   seed, useH2Oframe = FALSE, subset_exprs = NULL, subset_idx = NULL,
-  verbose = getOption("longDiSL.verbose"))
+  verbose = getOption("longGriDiSL.verbose"))
 }
 \arguments{
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}
@@ -35,7 +35,7 @@ fit_model(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column,
 
 \item{subset_idx}{...}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.}
 }
 \value{
 ...

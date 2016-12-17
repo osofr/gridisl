@@ -1,44 +1,44 @@
 
 #-----------------------------------------------------------------------------
-# Global State Vars (can be controlled globally with options(longDiSL.optname = ))
+# Global State Vars (can be controlled globally with options(longGriDiSL.optname = ))
 #-----------------------------------------------------------------------------
 gvars <- new.env(parent = emptyenv())
 gvars$verbose <- FALSE      # verbose mode (print all messages)
-gvars$opts <- list()        # named list of package options that is controllable by the user (set_all_longDiSL_options())
+gvars$opts <- list()        # named list of package options that is controllable by the user (set_all_longGriDiSL_options())
 gvars$misval <- NA_integer_ # the default missing value for observations (# gvars$misval <- -.Machine$integer.max)
 gvars$misXreplace <- 0L     # the default replacement value for misval that appear in the design matrix
 gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$tolerr => a = b
 gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
-allowed.fit.package <- c("face", "brokenstick", "speedglm", "glm", "h2o")
-allowed.fit.algorithm = c("face", "brokenstick", "glm", "gbm", "randomForest", "deeplearning", "GridLearner", "ResidGridLearner")
+allowed.fit.package <- c("speedglm", "glm", "h2o")
+allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "GridLearner", "ResidGridLearner")
 # , "SuperLearner"
 allowed.bin.method = c("equal.mass", "equal.len", "dhist")
 
-#' Querying/setting a single \code{longDiSL} option
+#' Querying/setting a single \code{longGriDiSL} option
 #'
-#' To list all \code{longDiSL} options, just run this function without any parameters provided. To query only one value, pass the first parameter. To set that, use the \code{value} parameter too.
+#' To list all \code{longGriDiSL} options, just run this function without any parameters provided. To query only one value, pass the first parameter. To set that, use the \code{value} parameter too.
 #'
-#' The arguments of \code{\link{set_all_longDiSL_options}} list all available \code{longDiSL} options.
+#' The arguments of \code{\link{set_all_longGriDiSL_options}} list all available \code{longGriDiSL} options.
 #'
-#' @param o Option name (string). See \code{\link{set_all_longDiSL_options}}.
+#' @param o Option name (string). See \code{\link{set_all_longGriDiSL_options}}.
 #' @param value Value to assign (optional)
 #' @export
-#' @seealso \code{\link{set_all_longDiSL_options}}
+#' @seealso \code{\link{set_all_longGriDiSL_options}}
 #' @examples \dontrun{
-#' longDiSLOptions()
-#' longDiSLOptions('fit.package')
-#' longDiSLOptions('fit.package', 'h2o')
+#' longGriDiSLOptions()
+#' longGriDiSLOptions('fit.package')
+#' longGriDiSLOptions('fit.package', 'h2o')
 #' }
-longDiSLOptions <- function (o, value)  {
-  res <- getOption("longDiSL")
+longGriDiSLOptions <- function (o, value)  {
+  res <- getOption("longGriDiSL")
   if (missing(value)) {
     if (missing(o))
         return(res)
     if (o %in% names(res))
         return(res[[o]])
-    print("Possible `longDiSL` options:")
+    print("Possible `longGriDiSL` options:")
     print(names(res))
     stop(o %+% ": this options does not exist")
   } else {
@@ -50,40 +50,40 @@ longDiSLOptions <- function (o, value)  {
     else {
       res[[o]] <- value
     }
-    # options(longDiSL = res)
-    do.call("set_all_longDiSL_options", res)
+    # options(longGriDiSL = res)
+    do.call("set_all_longGriDiSL_options", res)
   }
 }
 
 getopt <- function(optname) {
-  return(longDiSLOptions(o = optname))
+  return(longGriDiSLOptions(o = optname))
   # opt <- gvars$opts
   # if (!(optname %in% (names(opt)))) stop(optname %+% ": this options does not exist")
   # return(opt[[optname]])
 }
 
-#' Print Current Option Settings for \code{longDiSL}
-#' @return Invisibly returns a list of \code{longDiSL} options.
-#' @seealso \code{\link{set_all_longDiSL_options}}
+#' Print Current Option Settings for \code{longGriDiSL}
+#' @return Invisibly returns a list of \code{longGriDiSL} options.
+#' @seealso \code{\link{set_all_longGriDiSL_options}}
 #' @export
-print_longDiSL_opts <- function() {
+print_longGriDiSL_opts <- function() {
   print(gvars$opts)
   invisible(gvars$opts)
 }
 
-#' Setting \code{longDiSL} Options
+#' Setting \code{longGriDiSL} Options
 #'
-#' Options that control \code{longDiSL} package.
+#' Options that control \code{longGriDiSL} package.
 #' \strong{Will reset all unspecified options (omitted arguments) to their default values}.
-#' The preferred way to set options for \code{longDiSL} is to use \code{\link{longDiSLOptions}}, which allows specifying individual options without having to reset all other options.
-#' To reset all options to their defaults simply run \code{set_all_longDiSL_options()} without any parameters/arguments.
+#' The preferred way to set options for \code{longGriDiSL} is to use \code{\link{longGriDiSLOptions}}, which allows specifying individual options without having to reset all other options.
+#' To reset all options to their defaults simply run \code{set_all_longGriDiSL_options()} without any parameters/arguments.
 #' @param fit.package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")
 #' @param fit.algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "SuperLearner")
 #' @param maxncats Max number of unique categories a categorical variable can have. More than these number and it is deemed continuous.
 #' @return Invisibly returns a list with old option settings.
-#' @seealso \code{\link{longDiSLOptions}}, \code{\link{print_longDiSL_opts}}
+#' @seealso \code{\link{longGriDiSLOptions}}, \code{\link{print_longGriDiSL_opts}}
 #' @export
-set_all_longDiSL_options <- function( fit.package = c("h2o", "speedglm", "glm", "brokenstick", "face"),
+set_all_longGriDiSL_options <- function( fit.package = c("h2o", "speedglm", "glm", "brokenstick", "face"),
                                            fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "GridLearner"),
                                            maxncats = 20) {
   # , "SuperLearner"
@@ -100,7 +100,7 @@ set_all_longDiSL_options <- function( fit.package = c("h2o", "speedglm", "glm", 
     maxncats = maxncats
   )
   gvars$opts <- opts
-  options(longDiSL = opts)
+  options(longGriDiSL = opts)
   invisible(old.opts)
 }
 
@@ -130,30 +130,30 @@ set.misval <- function(gvars, newmisval) {
 }
 gvars$misfun <- testmisfun()
 
-# Allows longDiSL functions to use e.g., getOption("longDiSL.verbose") to get verbose printing status
+# Allows longGriDiSL functions to use e.g., getOption("longGriDiSL.verbose") to get verbose printing status
 .onLoad <- function(libname, pkgname) {
   # reset all options to their defaults on load:
-  set_all_longDiSL_options()
+  set_all_longGriDiSL_options()
   op <- options()
-  op.longDiSL <- list(
-    longDiSL.verbose = gvars$verbose,
-    longDiSL.file.path = tempdir(),
-    # longDiSL.file.name = 'longDiSL-report-%T-%N-%n'
-    longDiSL.file.name = 'longDiSL-report-'%+%Sys.Date()
+  op.longGriDiSL <- list(
+    longGriDiSL.verbose = gvars$verbose,
+    longGriDiSL.file.path = tempdir(),
+    # longGriDiSL.file.name = 'longGriDiSL-report-%T-%N-%n'
+    longGriDiSL.file.name = 'longGriDiSL-report-'%+%Sys.Date()
   )
-  toset <- !(names(op.longDiSL) %in% names(op))
-  if (any(toset)) options(op.longDiSL[toset])
+  toset <- !(names(op.longGriDiSL) %in% names(op))
+  if (any(toset)) options(op.longGriDiSL[toset])
   invisible()
 }
 
 # Runs when attached to search() path such as by library() or require()
 .onAttach <- function(...) {
   if (interactive()) {
-  	packageStartupMessage('longDiSL')
-  	# packageStartupMessage('Version: ', utils::packageDescription('longDiSL')$Version)
-  	packageStartupMessage('Version: ', utils::packageDescription('longDiSL')$Version, '\n')
-  	packageStartupMessage('Please note this package is still in its early stages of development. Check for updates and report bugs at http://github.com/osofr/longDiSL.', '\n')
-  	# packageStartupMessage('To see the vignette use vignette("longDiSL_vignette", package="longDiSL"). To see all available package documentation use help(package = "longDiSL") and ?longDiSL.', '\n')
-  	# packageStartupMessage('To see the latest updates for this version, use news(package = "longDiSL").', '\n')
+  	packageStartupMessage('longGriDiSL')
+  	# packageStartupMessage('Version: ', utils::packageDescription('longGriDiSL')$Version)
+  	packageStartupMessage('Version: ', utils::packageDescription('longGriDiSL')$Version, '\n')
+  	packageStartupMessage('Please note this package is still in its early stages of development. Check for updates and report bugs at http://github.com/osofr/longGriDiSL.', '\n')
+  	# packageStartupMessage('To see the vignette use vignette("longGriDiSL_vignette", package="longGriDiSL"). To see all available package documentation use help(package = "longGriDiSL") and ?longGriDiSL.', '\n')
+  	# packageStartupMessage('To see the latest updates for this version, use news(package = "longGriDiSL").', '\n')
   }
 }

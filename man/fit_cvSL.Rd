@@ -5,7 +5,7 @@
 \title{Discrete SuperLearner with V-fold cross-validation.}
 \usage{
 fit_cvSL(ID, t_name, x, y, data, params, nfolds = 5, fold_column = NULL,
-  seed = NULL, verbose = getOption("longDiSL.verbose"))
+  seed = NULL, verbose = getOption("longGriDiSL.verbose"))
 }
 \arguments{
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}
@@ -26,7 +26,7 @@ fit_cvSL(ID, t_name, x, y, data, params, nfolds = 5, fold_column = NULL,
 
 \item{seed}{Random number seed for selecting a random holdout.}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.}
 
 \item{expr_to_train}{Additional logical expression which will further subset observations (rows) for training data.
 Use this to restrict the model fitting to a specific subsample of the training dataset.}

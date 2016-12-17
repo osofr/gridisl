@@ -4,7 +4,7 @@
 \alias{save_best_h2o_model}
 \title{Save the best performing h2o model}
 \usage{
-save_best_h2o_model(modelfit, file.path = getOption("longDiSL.file.path"))
+save_best_h2o_model(modelfit, file.path = getOption("longGriDiSL.file.path"))
 }
 \arguments{
 \item{modelfit}{A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.}

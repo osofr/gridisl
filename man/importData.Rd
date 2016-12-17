@@ -5,7 +5,7 @@
 \title{Import data, define nodes (columns), define dummies for factor columns and define input data R6 object}
 \usage{
 importData(data, ID = "Subject_ID", t_name = "time_period", covars,
-  OUTCOME = "Y", verbose = getOption("longDiSL.verbose"))
+  OUTCOME = "Y", verbose = getOption("longGriDiSL.verbose"))
 }
 \arguments{
 \item{data}{Input dataset, can be a \code{data.frame} or a \code{data.table}.}
@@ -18,7 +18,7 @@ importData(data, ID = "Subject_ID", t_name = "time_period", covars,
 
 \item{OUTCOME}{Character name of the column containing outcomes.}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.}
 }
 \value{
 An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.

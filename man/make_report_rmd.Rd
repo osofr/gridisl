@@ -5,8 +5,8 @@
 \title{Generate report(s) with modeling stats using pandoc.}
 \usage{
 make_report_rmd(modelfit, data, K = 5, format = c("html", "pdf", "word"),
-  file.name = getOption("longDiSL.file.name"),
-  file.path = getOption("longDiSL.file.path"), openFile = TRUE,
+  file.name = getOption("longGriDiSL.file.name"),
+  file.path = getOption("longGriDiSL.file.path"), openFile = TRUE,
   keep_md = FALSE, keep_tex = FALSE, ...)
 }
 \arguments{
