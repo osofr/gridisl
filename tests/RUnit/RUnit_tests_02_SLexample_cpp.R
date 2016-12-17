@@ -1,7 +1,7 @@
 ## ------------------------------------------------------------------------------------
 ## face / brokenstick based on random holdouts
 ## ------------------------------------------------------------------------------------
-test.holdoutfit_FACE_BS_h2o <- function() {
+test.holdoutfit_h2o <- function() {
   # library("longDiSL")
   options(longDiSL.verbose = TRUE)
   data(cpp)
@@ -16,48 +16,11 @@ test.holdoutfit_FACE_BS_h2o <- function() {
   x <- "agedays"
   y <- "haz"
 
-
   run_algo <- function(fit.package, fit.algorithm) {
-
-    # Fit, training on non-holdouts and using holdouts as validation set (for scoring only)
-    mfit_useY_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
-                                    data = cpp_holdout, hold_column = "hold",
-                                    params = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = TRUE, name = "useY"))
-    print("Holdout MSE, using the holdout Y for prediction"); print(mfit_useY_hold$getMSE)
-    # FACE MSE: [1] 0.2271609
-    # BS MSE: [1] 0.02650036
-    # predict for previously used holdout / validation set:
-    preds_holdout_1 <- longDiSL:::predict_holdout(mfit_useY_hold)
-    print(nrow(preds_holdout_1))     # [1] 453
-    print(head(preds_holdout_1[]))
-    #       face.useY
-    # [1,]  1.1349727
-    # [2,] -0.9447051
-    # [3,]  0.4762184
-    # [4,]  0.6611348
-    # [5,]  1.3357934
-    # [6,]  0.6251740
-    #      brokenstick.useY
-    # [1,]        1.2869520
-    # [2,]       -1.3341364
-    # [3,]        0.6166304
-    # [4,]        0.8225809
-    # [5,]        1.1366634
-    # [6,]        0.5201101
-
-    ## Obtain predictions for model trained on non-holdout obs only:
-    preds_train <- predict_model(mfit_useY_hold, newdata = cpp_holdout, add_subject_data = TRUE)
-    preds_train[]
-    ## Obtain predictions for a model trained on all data:
-    preds_alldat_train <- predict_SL(mfit_useY_hold, newdata = cpp_holdout, add_subject_data = TRUE)
-    preds_alldat_train[]
-
     mfit_cor_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
                                     data = cpp_holdout, hold_column = "hold",
                                     params = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = FALSE, name = "correct"))
     print("Holdout MSE, hiding the holdout Y for prediction"); print(mfit_cor_hold$getMSE)
-    # FACE MSE: [1] 1.211989
-    # BS MSE: [1] 1.186241
     # speed or reg GLM MSE: [1] 1.813257
     # h2o GLM MSE: [1] 1.619442
     # GBM MSE [1] 1.531809
@@ -68,20 +31,6 @@ test.holdoutfit_FACE_BS_h2o <- function() {
     preds_holdout_2 <- longDiSL:::predict_holdout(mfit_cor_hold)
     print(nrow(preds_holdout_2)) # [1] 453
     print(head(preds_holdout_2[]))
-    #      face.correct
-    # [1,]    0.8130066
-    # [2,]   -0.5080113
-    # [3,]    0.3607981
-    # [4,]    0.6898970
-    # [5,]    1.4985014
-    # [6,]    0.8654325
-    #          brokenstick.correct
-    # [1,]           0.5584825
-    # [2,]          -0.7488577
-    # [3,]           0.6277059
-    # [4,]           1.0331509
-    # [5,]           1.0495770
-    # [6,]           0.8009358
 
     ## Obtain predictions for model trained on non-holdout obs:
     preds_train <- predict_model(mfit_cor_hold, newdata = cpp_holdout, add_subject_data = TRUE)
@@ -90,11 +39,9 @@ test.holdoutfit_FACE_BS_h2o <- function() {
     preds_alldat_train <- predict_SL(mfit_cor_hold, newdata = cpp_holdout, add_subject_data = TRUE)
     preds_alldat_train[]
 
-    return(list(mfit_useY_hold =  mfit_useY_hold, mfit_cor_hold =  mfit_cor_hold))
+    return(list(mfit_cor_hold =  mfit_cor_hold))
   }
 
-  res_FACE <- run_algo("face", "face")
-  res_BS <- run_algo("brokenstick", "brokenstick")
   res_GLM1 <- run_algo("speedglm", "glm")
   res_GLM2 <- run_algo("glm", "glm")
   res_GLM3 <- run_algo("h2o", "glm")
@@ -102,9 +49,7 @@ test.holdoutfit_FACE_BS_h2o <- function() {
   res_DRF <- run_algo("h2o", "randomForest")
   res_DP <- run_algo("h2o", "deeplearning")
 
-  mfits_stack <- make_PredictionStack(res_FACE$mfit_useY_hold, res_FACE$mfit_cor_hold,
-                                      res_BS$mfit_useY_hold, res_BS$mfit_cor_hold,
-                                      res_GLM3$mfit_cor_hold, res_GBM$mfit_cor_hold,
+  mfits_stack <- make_PredictionStack(res_GLM3$mfit_cor_hold, res_GBM$mfit_cor_hold,
                                       res_DRF$mfit_cor_hold, res_DP$mfit_cor_hold
                                       )
 
@@ -117,17 +62,9 @@ test.holdoutfit_FACE_BS_h2o <- function() {
   # get the model objects for top K models:
   top_model <- mfits_stack$get_best_models(K = 1)
   mfits_stack$show(model_stats = TRUE, all_fits = TRUE)
-  # fetch the model fits directly:
-  res_BS$mfit_useY_hold$getfit
 
   train_dat <- get_train_data(res_GBM$mfit_cor_hold)
   val_dat <- get_validation_data(res_GBM$mfit_cor_hold)
-
-  preds_tgrid_FACE <- predict_save_tgrid(res_FACE$mfit_cor_hold, cpp_holdout, ID, t_name, y, tmin = 1, tmax = 500, incr = 50, "hold")
-  preds_tgrid_FACE[]
-  preds_tgrid_BS <- predict_save_tgrid(res_BS$mfit_cor_hold, cpp_holdout, ID, t_name, y, tmin = 1, tmax = 500, incr = 5, "hold")
-                                    # file.name = paste0(fname, "predictions"), file.path = report.path)
-  preds_tgrid_BS[]
 
 }
 
