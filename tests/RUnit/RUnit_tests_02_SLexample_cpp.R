@@ -2,8 +2,8 @@
 ## face / brokenstick based on random holdouts
 ## ------------------------------------------------------------------------------------
 test.holdoutfit_FACE_BS_h2o <- function() {
-  # library("growthcurveSL")
-  options(growthcurveSL.verbose = TRUE)
+  # library("longDiSL")
+  options(longDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   # covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -27,7 +27,7 @@ test.holdoutfit_FACE_BS_h2o <- function() {
     # FACE MSE: [1] 0.2271609
     # BS MSE: [1] 0.02650036
     # predict for previously used holdout / validation set:
-    preds_holdout_1 <- growthcurveSL:::predict_holdout(mfit_useY_hold)
+    preds_holdout_1 <- longDiSL:::predict_holdout(mfit_useY_hold)
     print(nrow(preds_holdout_1))     # [1] 453
     print(head(preds_holdout_1[]))
     #       face.useY
@@ -65,7 +65,7 @@ test.holdoutfit_FACE_BS_h2o <- function() {
     # deeplearning MSE [1] 1.543277
 
     # predict for previously used holdout / validation set:
-    preds_holdout_2 <- growthcurveSL:::predict_holdout(mfit_cor_hold)
+    preds_holdout_2 <- longDiSL:::predict_holdout(mfit_cor_hold)
     print(nrow(preds_holdout_2)) # [1] 453
     print(head(preds_holdout_2[]))
     #      face.correct
@@ -111,7 +111,7 @@ test.holdoutfit_FACE_BS_h2o <- function() {
   print(mfits_stack$get_best_MSEs(K = 2))
   print(mfits_stack$get_best_MSE_table(K = 2))
   make_report_rmd(mfits_stack, data = cpp_holdout, K = 2,
-                  file.name = paste0("BS_ALL_", getOption("growthcurveSL.file.name")),
+                  file.name = paste0("BS_ALL_", getOption("longDiSL.file.name")),
                   format = "html", openFile = FALSE)
 
   # get the model objects for top K models:
@@ -132,10 +132,10 @@ test.holdoutfit_FACE_BS_h2o <- function() {
 }
 
 test.holdoutSL.GLM <- function() {
-  # library("growthcurveSL")
+  # library("longDiSL")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(growthcurveSL.verbose = TRUE)
+  options(longDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -162,7 +162,7 @@ test.holdoutSL.GLM <- function() {
                               hold_column = "hold") # , use_new_features = TRUE
 
     # print("Holdout MSE, using the holdout Y for prediction"); print(mfit_holdGLM$getMSE)
-    holdPredDT <- growthcurveSL:::predict_holdout(mfit_holdGLM, predict_only_bestK_models = 5, add_subject_data = TRUE)
+    holdPredDT <- longDiSL:::predict_holdout(mfit_holdGLM, predict_only_bestK_models = 5, add_subject_data = TRUE)
     print("GLM holdPredDT"); print(holdPredDT[])
     preds_best_train <- predict_model(mfit_holdGLM, predict_only_bestK_models = 1, add_subject_data = TRUE)
     print("GLM preds_best_train"); print(preds_best_train[])
@@ -176,7 +176,7 @@ test.holdoutSL.GLM <- function() {
 
     make_report_rmd(mfit_holdGLM, data = cpp_holdout,
                     K = 10,
-                    file.name = paste0("GLMs_", getOption("growthcurveSL.file.name")),
+                    file.name = paste0("GLMs_", getOption("longDiSL.file.name")),
                     title = paste0("Growth Curve Imputation with GLM"),
                     format = "html", keep_md = TRUE, openFile = TRUE)
 
@@ -186,10 +186,10 @@ test.holdoutSL.GLM <- function() {
 ## Holdout Growth Curve SL with model scoring based on random holdouts
 ## ------------------------------------------------------------------------------------
 test.holdoutSL.GLM.GBM <- function() {
-  # library("growthcurveSL")
+  # library("longDiSL")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(growthcurveSL.verbose = TRUE)
+  options(longDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -254,7 +254,7 @@ test.holdoutSL.GLM.GBM <- function() {
   preds_alldat[]
 
   ## Predictions for all holdout data points for all models trained on non-holdout data:
-  preds_holdout2 <- growthcurveSL:::predict_holdout(mfit_hold2, add_subject_data = TRUE)
+  preds_holdout2 <- longDiSL:::predict_holdout(mfit_hold2, add_subject_data = TRUE)
   preds_holdout2[]
 
   ## Predictions for training data from models trained on non-holdout data (default):
@@ -271,7 +271,7 @@ test.holdoutSL.GLM.GBM <- function() {
   preds_holdout2_alldat <- predict_model(mfit_hold2, newdata = cpp_plus, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_holdout2_alldat[]
 
-  holdPredDT <- growthcurveSL:::predict_holdout(mfit_hold2, predict_only_bestK_models = 5, add_subject_data = TRUE)
+  holdPredDT <- longDiSL:::predict_holdout(mfit_hold2, predict_only_bestK_models = 5, add_subject_data = TRUE)
   print("10 best MSEs among all learners: "); print(mfit_hold2$get_best_MSEs(K = 5))
   models <- mfit_hold2$get_best_models(K = 5)
   print("Top 5 models: "); print(models)
@@ -295,7 +295,7 @@ test.holdoutSL.GLM.GBM <- function() {
                               data = cpp_holdout, params = GRIDparams,
                               random = TRUE, use_new_features = TRUE)
 
-  preds_holdout3 <- growthcurveSL:::predict_holdout(mfit_hold3)
+  preds_holdout3 <- longDiSL:::predict_holdout(mfit_hold3)
   head(preds_holdout3[])
 
   ## get top performing model:
@@ -313,13 +313,13 @@ test.holdoutSL.GLM.GBM <- function() {
   preds_best_all[]
 
   ## predict for previously used holdout / validation set:
-  preds_holdout_all <- growthcurveSL:::predict_holdout(mfit_hold)
+  preds_holdout_all <- longDiSL:::predict_holdout(mfit_hold)
   head(preds_holdout_all[])
   ## Predict for best model only (based on prev. holdouts)
-  preds_holdout_best <- growthcurveSL:::predict_holdout(mfit_hold, predict_only_bestK_models = 1)
+  preds_holdout_best <- longDiSL:::predict_holdout(mfit_hold, predict_only_bestK_models = 1)
   head(preds_holdout_best[])
   ## add subject-level data to prediction data
-  preds_holdout_best <- growthcurveSL:::predict_holdout(mfit_hold, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  preds_holdout_best <- longDiSL:::predict_holdout(mfit_hold, predict_only_bestK_models = 1, add_subject_data = TRUE)
   head(preds_holdout_best[])
 
   ## Obtain predictions from the best holdout model for training data only (default in predict_model when newdata is missing):
@@ -335,10 +335,10 @@ test.holdoutSL.GLM.GBM <- function() {
 ## Holdout Growth Curve SL based on residuals from initial glm regression (model scoring based on random holdouts)
 ## ------------------------------------------------------------------------------------
 test.residual.holdoutSL <- function() {
-  # library("growthcurveSL")
+  # library("longDiSL")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(growthcurveSL.verbose = TRUE)
+  options(longDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -390,7 +390,7 @@ test.residual.holdoutSL <- function() {
   # [1] 1.776226
 
   ## Predictions for all holdout data points for all models trained on non-holdout data only:
-  preds_holdout_all <- growthcurveSL:::predict_holdout(mfit_resid_hold, add_subject_data = TRUE)
+  preds_holdout_all <- longDiSL:::predict_holdout(mfit_resid_hold, add_subject_data = TRUE)
   preds_holdout_all[]
   ## Predictions for new data based on best SL model re-trained on all data:
   preds_alldat <- predict_SL(mfit_resid_hold, newdata = cpp_holdout, add_subject_data = TRUE)
@@ -401,11 +401,11 @@ test.residual.holdoutSL <- function() {
 ## Growth Curve SL with model scoring based on full V-FOLD CROSS-VALIDATION
 ## ------------------------------------------------------------------------------------
 test.CV.SL <- function() {
-  # library("growthcurveSL")
+  # library("longDiSL")
   require("data.table")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(growthcurveSL.verbose = TRUE)
+  options(longDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -486,7 +486,7 @@ test.CV.SL <- function() {
   ## Make report, save grid predictions and out of sample predictions
   # fname <- paste0(data.name, "_", "CV_gridSL_")
   make_report_rmd(mfit_cv1, K = 10, data = cpp_folds,
-                  # file.name = paste0(fname, getOption("growthcurveSL.file.name")),
+                  # file.name = paste0(fname, getOption("longDiSL.file.name")),
                   title = paste0("Growth Curve Imputation with cpp Data"),
                   format = "html", keep_md = TRUE, openFile = FALSE)
 

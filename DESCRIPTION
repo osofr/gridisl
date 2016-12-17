@@ -1,9 +1,9 @@
-Package: growthcurveSL
-Title: SuperLearner for Imputing Growth Curves
+Package: longDiSL
+Title: Discrete SuperLearner for Longitudinal Data
 Version: 0.0.4.9000
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"))
-Description: SuperLearner for Imputing Growth Curves.
+Description: Discrete SuperLearner for Longitudinal Data.
 Depends:
     R (>= 3.2.1)
 Imports:
@@ -23,11 +23,9 @@ Imports:
 LinkingTo: Rcpp
 Suggests:
     h2o,
-    face,
     knitr,
     magrittr,
-    RUnit,
-    simcausal
+    RUnit
 License: GPL (>= 2)
 LazyData: true
 RoxygenNote: 5.0.1

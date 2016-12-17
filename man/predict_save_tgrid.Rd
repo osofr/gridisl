@@ -6,7 +6,7 @@
 \usage{
 predict_save_tgrid(SLfit, data, ID, t_name, y, tmin = 1, tmax = 500,
   incr = 2, hold_column = NULL, file.name = NULL,
-  file.path = getOption("growthcurveSL.file.path"))
+  file.path = getOption("longDiSL.file.path"))
 }
 \arguments{
 \item{SLfit}{SuperLearner fit returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.}

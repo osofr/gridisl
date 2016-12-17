@@ -5,7 +5,7 @@
 \title{Evaluate MSE for model fits, possibly using new data}
 \usage{
 eval_MSE(modelfit, newdata, subset_idx = NULL,
-  verbose = getOption("growthcurveSL.verbose"))
+  verbose = getOption("longDiSL.verbose"))
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit_model}} function.}
@@ -14,7 +14,7 @@ eval_MSE(modelfit, newdata, subset_idx = NULL,
 
 \item{subset_idx}{...}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.}
 }
 \value{
 ...

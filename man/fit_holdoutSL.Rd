@@ -6,7 +6,7 @@
 \usage{
 fit_holdoutSL(ID, t_name, x, y, data, params, hold_column = NULL,
   random = FALSE, seed = NULL, expr_to_train = NULL,
-  use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose"))
+  use_new_features = FALSE, verbose = getOption("longDiSL.verbose"))
 }
 \arguments{
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}
@@ -34,7 +34,7 @@ Use this to restrict the model fitting to a specific subsample of the training d
 
 \item{use_new_features}{...}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.}
 }
 \value{
 ...

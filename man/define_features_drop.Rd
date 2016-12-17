@@ -6,7 +6,7 @@
 \usage{
 define_features_drop(dataDT, ID, t_name, y, train_set = TRUE, hold_column,
   noNAs = FALSE, includeRLMIDind = FALSE,
-  verbose = getOption("growthcurveSL.verbose"))
+  verbose = getOption("longDiSL.verbose"))
 }
 \arguments{
 \item{dataDT}{Input data.table}
@@ -31,7 +31,7 @@ To evaluate either training or validation data summaries FOR ALL observations th
 
 \item{includeRLMIDind}{...}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.}
 }
 \value{
 ...
@@ -53,7 +53,7 @@ This process is repeated in a loop for all person-time rows in the data.
 ## Features of the curve for training / validation sets (including random holdout and CV validation)
 ## ------------------------------------------------------------------------------------
 test.holdout.features <- function() {
-  options(growthcurveSL.verbose = TRUE)
+  options(longDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")

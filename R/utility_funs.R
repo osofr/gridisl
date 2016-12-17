@@ -1,4 +1,4 @@
-#' @useDynLib growthcurveSL
+#' @useDynLib longDiSL
 #' @import R6
 #' @importFrom Rcpp sourceCpp
 #' @importFrom graphics axis barplot hist par text  legend plot
@@ -23,15 +23,15 @@ is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(Predi
 #' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
 #' @param covars Names of predictors (covariates) in the data.
 #' @param OUTCOME Character name of the column containing outcomes.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.
 #' @return An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
-# @example tests/examples/1_growthcurveSL_example.R
+# @example tests/examples/1_longDiSL_example.R
 #' @export
-importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("growthcurveSL.verbose")) {
+importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("longDiSL.verbose")) {
   gvars$verbose <- verbose
   # if (verbose) {
   #   current.options <- capture.output(str(gvars$opts))
-  #   print("Using the following growthcurveSL options/settings: ")
+  #   print("Using the following longDiSL options/settings: ")
   #   cat('\n')
   #   cat(paste0(current.options, collapse = '\n'), '\n')
   # }

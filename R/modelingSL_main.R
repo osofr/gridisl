@@ -29,7 +29,7 @@ get_validation_data <- function(modelfit) {
 #'
 #' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
 #' @export
-save_best_h2o_model <- function(modelfit, file.path = getOption('growthcurveSL.file.path')) {
+save_best_h2o_model <- function(modelfit, file.path = getOption('longDiSL.file.path')) {
   assert_that(is.PredictionModel(modelfit))
   best_model_name <- modelfit$get_best_model_names(K = 1)
   message("saving the best model fit: " %+% best_model_name)
@@ -75,14 +75,14 @@ validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Ofram
 #' @param useH2Oframe ...
 #' @param subset_exprs ...
 #' @param subset_idx ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.
 #' @return ...
-# @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
-# @example tests/examples/1_growthcurveSL_example.R
+# @seealso \code{\link{longDiSL-package}} for the general overview of the package,
+# @example tests/examples/1_longDiSL_example.R
 #' @export
 fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column, seed,
                       useH2Oframe = FALSE, subset_exprs = NULL, subset_idx = NULL,
-                      verbose = getOption("growthcurveSL.verbose")) {
+                      verbose = getOption("longDiSL.verbose")) {
   gvars$verbose <- verbose
 
   if (missing(train_data)) stop("train_data arg must be specified")
@@ -159,7 +159,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
 
 .predict_generic <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE,
                              subset_idx = NULL, pred_holdout = FALSE,
-                             verbose = getOption("growthcurveSL.verbose")) {
+                             verbose = getOption("longDiSL.verbose")) {
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
@@ -216,13 +216,13 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
 #' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
 #' @param subset_idx ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
-#' Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.
 #' @return A matrix of subject level predictions (subject are rows, columns are different models)
 #' or a data.table with subject level covariates added along with model-based predictions.
 #' @export
 predict_model <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE,
                           subset_idx = NULL,
-                          verbose = getOption("growthcurveSL.verbose")) {
+                          verbose = getOption("longDiSL.verbose")) {
   return(.predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx, pred_holdout = FALSE, verbose))
 }
 
@@ -239,11 +239,11 @@ predict_model <- function(modelfit, newdata, predict_only_bestK_models, add_subj
 #' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
 #' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
 #' @param subset_idx ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.
 #' @return ...
 predict_holdout <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE,
                             subset_idx = NULL,
-                            verbose = getOption("growthcurveSL.verbose")) {
+                            verbose = getOption("longDiSL.verbose")) {
   if (missing(newdata) && !modelfit$runCV) newdata <- modelfit$OData_valid
   return(.predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx, pred_holdout = TRUE, verbose))
 }
@@ -255,10 +255,10 @@ predict_holdout <- function(modelfit, newdata, predict_only_bestK_models, add_su
 #' @param newdata Subject-specific data for which predictions should be obtained.
 #' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
 #' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.
 #' @return ...
 #' @export
-predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, grid = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, grid = FALSE, verbose = getOption("longDiSL.verbose")) {
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
@@ -306,10 +306,10 @@ get_out_of_sample_predictions <- function(modelfit) {
 #' @param modelfit Model fit object returned by \code{\link{fit_model}} function.
 #' @param newdata ...
 #' @param subset_idx ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.
 #' @return ...
 #' @export
-eval_MSE <- function(modelfit, newdata, subset_idx = NULL, verbose = getOption("growthcurveSL.verbose")) {
+eval_MSE <- function(modelfit, newdata, subset_idx = NULL, verbose = getOption("longDiSL.verbose")) {
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
   assert_that(is.PredictionModel(modelfit))

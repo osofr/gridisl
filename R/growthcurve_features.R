@@ -23,7 +23,7 @@
 #' @export
 predict_save_tgrid <- function(SLfit, data, ID, t_name, y, tmin = 1, tmax = 500, incr = 2, hold_column = NULL,
                                file.name = NULL,
-                               file.path = getOption('growthcurveSL.file.path')) {
+                               file.path = getOption('longDiSL.file.path')) {
 
   inputDT_all_train <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
   inputDT_tgrid <- define_tgrid(inputDT_all_train, ID = ID, t_name = t_name, y = y, tmin = tmin, tmax = tmax, incr = incr, hold_column = hold_column)
@@ -147,11 +147,11 @@ define_tgrid <- function(dataDT, ID, t_name, y, tmin = 1, tmax = 500, incr = 2, 
 #' (in which case all observation from the input data are returned with their corresponding summaries).
 #' @param noNAs ...
 #' @param includeRLMIDind ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.
 #' @export
 #' @example tests/RUnit/RUnit_tests_01_features_cpp.R
 #' @return ...
-define_features_drop <- function(dataDT, ID, t_name, y, train_set = TRUE, hold_column, noNAs = FALSE, includeRLMIDind = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+define_features_drop <- function(dataDT, ID, t_name, y, train_set = TRUE, hold_column, noNAs = FALSE, includeRLMIDind = FALSE, verbose = getOption("longDiSL.verbose")) {
   # dataDT <- data.table(dataDT)
   dataDT <- copy(dataDT) # Making sure nothing gets modified by reference:
   if (train_set && !missing(hold_column)) {
@@ -244,10 +244,10 @@ define_features_drop <- function(dataDT, ID, t_name, y, train_set = TRUE, hold_c
 #' @param hold_column ...
 #' @param noNAs ...
 #' @param includeRLMIDind ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.
 #' @export
 #' @return ...
-define_features <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, hold_column = "hold", noNAs = FALSE, includeRLMIDind = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+define_features <- function(dataDT, nodes, train_set = TRUE, holdout = TRUE, hold_column = "hold", noNAs = FALSE, includeRLMIDind = FALSE, verbose = getOption("longDiSL.verbose")) {
   warning("this function is deprecated")
 
   # dataDT <- data.table(dataDT)

@@ -19,12 +19,12 @@
 #' @param expr_to_train Additional logical expression which will further subset observations (rows) for training data.
 #' Use this to restrict the model fitting to a specific subsample of the training datset.
 #' @param use_new_features ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.
 #' @return ...
-# @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
-# @example tests/examples/1_growthcurveSL_example.R
+# @seealso \code{\link{longDiSL-package}} for the general overview of the package,
+# @example tests/examples/1_longDiSL_example.R
 #' @export
-fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, random = FALSE, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("longDiSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)
@@ -92,12 +92,12 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
 #' @param expr_to_train Additional logical expression which will further subset observations (rows) for training data.
 #' Use this to restrict the model fitting to a specific subsample of the training dataset.
 #' @param use_new_features ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.
 #' @return ...
-# @seealso \code{\link{growthcurveSL-package}} for the general overview of the package,
-# @example tests/examples/1_growthcurveSL_example.R
+# @seealso \code{\link{longDiSL-package}} for the general overview of the package,
+# @example tests/examples/1_longDiSL_example.R
 #' @export
-fit_cvSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = NULL, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("growthcurveSL.verbose")) {
+fit_cvSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = NULL, seed = NULL, expr_to_train = NULL, use_new_features = FALSE, verbose = getOption("longDiSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)

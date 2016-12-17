@@ -2,7 +2,7 @@
 ## Features of the curve for training / validation sets (including random holdout and CV validation)
 ## ------------------------------------------------------------------------------------
 test.holdout.features <- function() {
-  options(growthcurveSL.verbose = TRUE)
+  options(longDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")

@@ -6,7 +6,7 @@
 \usage{
 define_features(dataDT, nodes, train_set = TRUE, holdout = TRUE,
   hold_column = "hold", noNAs = FALSE, includeRLMIDind = FALSE,
-  verbose = getOption("growthcurveSL.verbose"))
+  verbose = getOption("longDiSL.verbose"))
 }
 \arguments{
 \item{dataDT}{Input data.table}
@@ -23,7 +23,7 @@ define_features(dataDT, nodes, train_set = TRUE, holdout = TRUE,
 
 \item{includeRLMIDind}{...}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longDiSL.verbose=TRUE)}.}
 }
 \value{
 ...
