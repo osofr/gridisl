@@ -101,7 +101,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     OData_train = NULL, # object of class DataStorageClass used for training
     OData_valid = NULL, # object of class DataStorageClass used for scoring models (contains validation data)
     ModelFitObject = NULL, # object of class ModelFitObject that is used in fitting / prediction
-    use_best_retrained_model = FALSE,
+    # use_best_retrained_model = FALSE,
     BestModelFitObject = NULL,
     fit.package = character(),
     fit.algorithm = character(),
@@ -241,28 +241,27 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     # Predict the response E[Y|newdata];
-    predict = function(newdata, subset_exprs = NULL, predict_model_names = NULL, ...) {
+    predict = function(newdata, subset_exprs = NULL, predict_model_names = NULL, use_best_retrained_model = FALSE, convertResToDT = TRUE, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to attempting to make predictions.")
-      if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
+      if (is.null(subset_exprs) && !missing(newdata)) subset_exprs <- self$subset_exprs
+      if (!missing(newdata)) subset_idx <- newdata$evalsubst(subset_exprs = subset_exprs)
 
-      if (missing(newdata)) {
-        ## When missing newdata the predictions are for the training frame.
-        ## No subset re-evaluation is needed (training frame was already subsetted by self$subset_exprs)
-        probA1 <- self$ModelFitObject$predictP1(predict_model_names = predict_model_names)
+      ## When missing newdata the predictions are for the training frame.
+      ## No subset re-evaluation is needed (training frame was already subsetted by self$subset_exprs)
+
+      if (!use_best_retrained_model) {
+        probA1 <- self$ModelFitObject$predictP1(newdata, subset_idx = subset_idx, predict_model_names = predict_model_names)
       } else {
-        subset_idx <- newdata$evalsubst(subset_exprs = subset_exprs)
-        if (!self$use_best_retrained_model) {
-          probA1 <- self$ModelFitObject$predictP1(data = newdata, subset_idx = subset_idx, predict_model_names = predict_model_names)
-        } else {
-          probA1 <- self$BestModelFitObject$predictP1(data = newdata, subset_idx = subset_idx)
-        }
-        probA1 <- as.data.table(probA1)
+        probA1 <- self$BestModelFitObject$predictP1(newdata, subset_idx = subset_idx)
       }
+
+      if (convertResToDT) probA1 <- as.data.table(probA1)
+
       return(probA1)
     },
 
     # Predict the response E[Y|newdata] for out of sample observations  (validation set / holdouts);
-    predict_out_of_sample = function(newdata, subset_exprs = NULL, predict_model_names, ...) {
+    predict_out_of_sample = function(newdata, subset_exprs = NULL, predict_model_names, convertResToDT = TRUE, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to attempting to make predictions.")
       if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
 
@@ -284,7 +283,9 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
           probA1 <- self$ModelFitObject$predictP1(data = newdata, subset_idx = subset_idx, predict_model_names = predict_model_names)
         }
       }
-      probA1 <- as.data.table(probA1)
+
+      if (convertResToDT) probA1 <- as.data.table(probA1)
+
       return(probA1)
     },
 

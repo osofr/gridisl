@@ -21,6 +21,49 @@ test.shared_h2o_database <- function() {
   h2oFRAME_ID <- h2o::h2o.getId(h2oFRAME_test)
 
   ## ----------------------------------------------------------------
+  ## Defining h2o plogis and qlogis functions
+  ## ----------------------------------------------------------------
+  x <- h2oFRAME_test[, "whz"]
+
+  # plogis(x) <=> exp(x)/(1+exp(x))
+  h2o_exp_x <- h2o.exp(x)
+  plogis_h2o <- h2o_exp_x / (1 + h2o_exp_x)
+  all.equal(as.vector(plogis_h2o) , plogis(as.vector(x)))
+
+  # qlogis(x) <=> log(x/(1-x))
+  qlogis_h2o <-h2o::h2o.log(x / (1 - x))
+  all.equal(as.vector(qlogis_h2o), qlogis(as.vector(x)))
+
+  ## ----------------------------------------------------------------
+  ## Defining new column (pre-assigned) values. Then assigning new values to a subset of rows of h2o.FRAME
+  ## ----------------------------------------------------------------
+  h2oFRAME_test[, "test_col"] <- 1
+  h2oFRAME_test[, "test_col_copy"] <- h2oFRAME_test[, "wtkg"]
+
+  subset_idx <- sort(sample(1:nrow(h2oFRAME_test), 20))
+  h2oFRAME_test[subset_idx, "test_col"]
+  h2oFRAME_test[subset_idx, "test_col"] <- h2oFRAME_test[subset_idx, "wtkg"]
+
+  h2oFRAME_test[1:3, "test_col_copy"] <- 1
+
+  ## THIS DOES NOT WORK. THE VECTOR HAS TO BE CONVERTED TO h2o FRAME work
+  # h2oFRAME_test[1:3, "test_col_copy"] <- c(1:3)
+  h2oFRAME_test[1:3, "test_col_copy"] <- as.h2o(c(1:3))
+
+  ## SUBSETTING BY LOGICAL EXPRESSION ON ANOTHER h2o FRAME
+  h2oFRAME_test[h2oFRAME_test[, "test_col_copy"] < 2, ]
+
+  ## CONVERTING INTEGER TO NUMERIC
+  class(as.vector(h2oFRAME_test[, "agedays"]))
+  h2oFRAME_test[["agedays"]] <- h2o.asnumeric(h2oFRAME_test[["agedays"]]) + 0.0000000
+  class(as.vector(h2oFRAME_test[["agedays"]]))
+  # as.numeric(h2oFRAME_test[["agedays"]])
+
+
+
+
+
+  ## ----------------------------------------------------------------
   ## Define learners (glm, grid glm and grid gbm)
   ## ----------------------------------------------------------------
   ## glm grid learner:
@@ -49,6 +92,7 @@ test.shared_h2o_database <- function() {
   grid_mfit_val_h2o <- fit_model(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                                  train_data = cpp[!holdout_col, ], valid_data = cpp[holdout_col, ],
                                  params  = GRIDparams, useH2Oframe = TRUE)
+
   ## return predictions for all models in the ensemble for training data
   fit_preds <- predict_model(grid_mfit_val_h2o); head(fit_preds[])
   ## Same without newdata, predict for training data

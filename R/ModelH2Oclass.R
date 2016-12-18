@@ -1,4 +1,4 @@
-predict_h2o_new <- function(model_id, frame_id, returnVector = TRUE) {
+predict_h2o_new <- function(model_id, frame_id, convertResToDT = TRUE) {
   # h2o.no_progress()
   # waitOnJob = FALSE,
   url <- paste0('Predictions/models/', model_id, '/frames/',  frame_id)
@@ -14,7 +14,7 @@ predict_h2o_new <- function(model_id, frame_id, returnVector = TRUE) {
   h2o:::.h2o.__waitOnJob(job_key, pollInterval = 0.01)
   newpreds <- h2o.getFrame(dest_key)
 
-  if (returnVector) {
+  if (convertResToDT) {
     if ("p1" %in% colnames(newpreds)) {
       return(as.vector(newpreds[,"p1"]))
     } else {
@@ -84,10 +84,10 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
     for (idx in seq_along(models_list)) {
       # pAoutMat[, idx] <- predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe))
       pAout_h2o <- h2o.cbind(pAout_h2o,
-                             predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe), returnVector = FALSE))
+                             predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe), convertResToDT = FALSE))
     }
-    pAoutDT <- as.data.table(pAout_h2o)
-    setnames(pAoutDT, names(models_list))
+    names(pAout_h2o) <- names(models_list)
+    # if (convertResToDT) pAoutDT <- as.data.table(pAout_h2o)
   }
   return(pAoutDT)
 }
@@ -168,13 +168,25 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     },
 
     predictP1 = function(data, subset_idx, predict_model_names) {
-      P1_DT <- predictP1(self$model.fit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx, predict_model_names = predict_model_names)
+      P1_DT <- predictP1(self$model.fit,
+                         ParentObject = self,
+                         DataStorageObject = data,
+                         subset_idx = subset_idx,
+                         predict_model_names = predict_model_names)
+                         # convertResToDT = convertResToDT)
+      # if (convertResToDT) P1_DT <- as.data.table(P1_DT)
       return(P1_DT)
     },
 
     # score_CV = function(validation_data) {
     predictP1_out_of_sample_cv = function(validation_data, subset_idx, predict_model_names) {
-      P1_DT <- predict_out_of_sample_cv(self$model.fit, ParentObject = self, validation_data = validation_data, subset_idx = subset_idx, predict_model_names = predict_model_names)
+      P1_DT <- predict_out_of_sample_cv(self$model.fit,
+                                        ParentObject = self,
+                                        validation_data = validation_data,
+                                        subset_idx = subset_idx,
+                                        predict_model_names = predict_model_names)
+                                        # convertResToDT = convertResToDT)
+      # if (convertResToDT) P1_DT <- as.data.table(P1_DT)
       return(P1_DT)
     },
 
@@ -370,8 +382,8 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
                               silent = FALSE)
 
       GLMmodelID <- self$firstGLMfit$fitted_models_all[[1]]@model_id
-      firstGLM_preds_train <- predict_h2o_new(GLMmodelID, frame_id = h2o.getId(train_H2Oframe), returnVector = FALSE)
-      firstGLM_preds_valid <- predict_h2o_new(GLMmodelID, frame_id = h2o.getId(valid_H2Oframe), returnVector = FALSE)
+      firstGLM_preds_train <- predict_h2o_new(GLMmodelID, frame_id = h2o.getId(train_H2Oframe), convertResToDT = FALSE)
+      firstGLM_preds_valid <- predict_h2o_new(GLMmodelID, frame_id = h2o.getId(valid_H2Oframe), convertResToDT = FALSE)
 
       ## save predictions from the first model (fit on training data, but predictions made for all data)
       train_H2Oframe[["firstGLM_preds"]] <- firstGLM_preds_train
@@ -417,9 +429,14 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
       P1_firstGLM <- predictP1(self$firstGLMfit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx)
       P1_residSL <- predictP1(self$model.fit, ParentObject = self, DataStorageObject = data, subset_idx = subset_idx, predict_model_names = predict_model_names)
 
+      # if (convertResToDT)
+      # P1_firstGLM <- as.data.table(P1_firstGLM)
+      # P1_residSL <- as.data.table(P1_residSL)
+
       if (ncol(P1_firstGLM) > 1) stop("initial glm fit for residuals must provide predictions with one column matrix only")
       for (model.fit in names(P1_residSL)) {
-        P1_residSL[, (model.fit) := eval(as.name(model.fit)) + P1_firstGLM[[1]]]
+        # P1_residSL[, (model.fit) := eval(as.name(model.fit)) + P1_firstGLM[[1]]]
+        P1_residSL[, model.fit] <-  P1_residSL[, model.fit] + P1_firstGLM
       }
 
       return(P1_residSL)

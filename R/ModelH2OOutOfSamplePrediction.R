@@ -50,8 +50,10 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
     message("Obtaining the out-of-sample CV predictions for h2o-stored training data")
     # pAoutDT <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
     pAoutDT <- lapply(models_list, function(h2omodel) h2o.cross_validation_holdout_predictions(h2omodel))
-    pAoutDT <- as.data.table(h2o.cbind(pAoutDT))
-    setnames(pAoutDT, names(models_list))
+    pAoutDT <- h2o.cbind(pAoutDT)
+    names(pAoutDT) <- names(models_list)
+    # setnames(pAoutDT, names(models_list))
+    # if (convertResToDT) pAoutDT <- as.data.table(pAoutDT)
     return(pAoutDT)
 
   } else {
@@ -108,14 +110,12 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
     }
 
     pAoutMat_h2o <- h2o.arrange(pAoutMat_h2o, "C1")
-    pAoutMat_h2o <- pAoutMat_h2o[, 2:ncol(pAoutMat_h2o)]
+    pAoutDT <- pAoutMat_h2o[, 2:ncol(pAoutMat_h2o)]
     })
-
     print("CV_loop_t"); print(CV_loop_t)
-
-    pAoutDT <- as.data.table(pAoutMat_h2o)
-    setnames(pAoutDT, names(models_list))
-
+    names(pAoutDT) <- names(models_list)
+    # if (convertResToDT) pAoutDT <- as.data.table(pAoutDT)
+    # setnames(pAoutDT, names(models_list))
     return(pAoutDT)
   }
 }

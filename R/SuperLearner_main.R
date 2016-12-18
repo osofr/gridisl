@@ -25,6 +25,16 @@ get_validation_data <- function(modelfit) {
   return(modelfit$OData_valid$dat.sVar)
 }
 
+#' Get the combined out of sample predictions from V cross-validation models
+#'
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit_cvSL}.
+#' @return A vector of out-of-sample predictions from the best selected model (CV-MSE).
+#' @export
+get_out_of_sample_predictions <- function(modelfit) {
+  assert_that(is.PredictionModel(modelfit))
+  return(modelfit$get_out_of_sample_preds)
+}
+
 #' Save the best performing h2o model
 #'
 #' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
@@ -93,29 +103,12 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
     data <- add_holdout_ind(data, ID, hold_column = hold_column, random = random, seed = seed)
   }
 
-  # params$hold_column <- hold_column
   train_data <- data[!data[[hold_column]], ]
-
-  ## ------------------------------------------------------------------------------------------
-  ## Define training data summaries (excludes holdouts, summaries are created without the holdout observations):
-  ## ------------------------------------------------------------------------------------------
-  # train_data <- define_features_drop(train_data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
-  # if (!is.null(expr_to_train)) train_data <- train_data[eval(parse(text=expr_to_train)), ]
 
   ## ------------------------------------------------------------------------------------------
   ## Define validation data (includes the holdout only, each summary is created without the holdout observation):
   ## ------------------------------------------------------------------------------------------
   valid_data <- data[data[[hold_column]], ]
-  # by giving the hold_column the non-holdout observations will be automatically dropped (could have also done it manually)
-  # valid_data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = FALSE, hold_column = hold_column)
-
-  ## ------------------------------------------------------------------------------------------
-  ## Add new features as predictors?
-  ## ------------------------------------------------------------------------------------------
-  # if (use_new_features) {
-  #   new_features <- setdiff(colnames(train_data), c(orig_colnames, hold_column))
-  #   x <- c(x, new_features)
-  # }
 
   ## ------------------------------------------------------------------------------------------
   ## Perform fitting based on training set (and model scoring based on holdout validation set)
@@ -125,9 +118,6 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
   ## ------------------------------------------------------------------------------------------
   ## Re-fit the best scored model using all available data
   ## ------------------------------------------------------------------------------------------
-  ## Define training data summaries (using all observations):
-  # data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
-
   OData_all <- importData(data = data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
   best_fit <- modelfit$refit_best_model(OData_all)
 
@@ -165,23 +155,6 @@ fit_cvSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = N
     fold_column <- "fold"
     data <- add_CVfolds_ind(data, ID, nfolds = nfolds, fold_column = fold_column, seed = seed)
   }
-
-  # params$fold_column <- fold_column
-
-  ## ------------------------------------------------------------------------------------------
-  ## Define training data summaries (using all observations):
-  ## ------------------------------------------------------------------------------------------
-  # train_data <- define_features(data, nodes, train_set = TRUE, holdout = FALSE)
-  # train_data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
-  # if (!is.null(expr_to_train)) train_data <- train_data[eval(parse(text=expr_to_train)), ]
-
-  ## ------------------------------------------------------------------------------------------
-  ## Add new features as predictors?
-  ## ------------------------------------------------------------------------------------------
-  # if (use_new_features) {
-  #   new_features <- setdiff(colnames(train_data), c(orig_colnames, fold_column))
-  #   x <- c(x, new_features)
-  # }
 
   ## ------------------------------------------------------------------------------------------
   ## Perform CV fitting (no scoring yet)
@@ -242,10 +215,8 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
     train_data <- add_CVfolds_ind(train_data, ID, nfolds = nfolds, fold_column = "fold", seed = seed)
     fold_column <- "fold"
     nfolds <- NULL
-    # params$fold_column <- fold_column
   } else if (missing(nfolds) && !missing(fold_column)) {
     runCV <- TRUE
-    # params$fold_column <- fold_column
     nfolds <- NULL
   } else {
     runCV <- FALSE
@@ -307,9 +278,55 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   return(modelfit)
 }
 
-.predict_generic <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE,
-                             subset_idx = NULL, pred_holdout = FALSE,
-                             verbose = getOption("longGriDiSL.verbose")) {
+# ---------------------------------------------------------------------------------------
+# Predict for new dataset
+predict_model <- function(modelfit, newdata, predict_only_bestK_models,
+                          add_subject_data = FALSE,
+                          subset_idx = NULL,
+                          verbose = getOption("longGriDiSL.verbose")) {
+  return(predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx,
+                         use_best_retrained_model = FALSE, pred_holdout = FALSE, verbose))
+}
+
+# ---------------------------------------------------------------------------------------
+# Out-of-sample predictions for validation folds or holdouts.
+# When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
+# 1. For \code{fit_holdoutSL} the default holdout predictions will be based on validation data.
+# 2. For \code{fit_cvSL} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
+predict_holdout <- function(modelfit, newdata, predict_only_bestK_models,
+                            add_subject_data = FALSE,
+                            subset_idx = NULL,
+                            verbose = getOption("longGriDiSL.verbose")) {
+  if (missing(newdata) && !modelfit$runCV) newdata <- modelfit$OData_valid
+  return(predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx,
+                         use_best_retrained_model = FALSE, pred_holdout = TRUE, verbose))
+}
+
+# ---------------------------------------------------------------------------------------
+#' Generic predict for new data
+#'
+#' @param modelfit Model fit object returned by \code{\link{fit_model}} function.
+#' @param newdata Subject-specific data for which predictions should be obtained.
+#' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
+#' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
+#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
+#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
+#' @param subset_idx A vector of row indices in \code{newdata} for which the predictions should be obtain.
+#' Default is \code{NULL} in which case all observations in \code{newdata} will be used for prediction.
+#' @param use_best_retrained_model Set to \code{TRUE} to obtained the predictions from the best scoring model that was re-trained on all observed data.
+#' @param pred_holdout Set to \code{TRUE} for out-of-sample predictions for validation folds or holdouts.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
+#' Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
+#' @return A data.table of subject level predictions (subject are rows, columns are different models)
+#' or a data.table with subject level covariates added along with model-based predictions.
+#' @export
+predict_generic <- function(modelfit, newdata, predict_only_bestK_models,
+                            add_subject_data = FALSE,
+                            subset_idx = NULL,
+                            use_best_retrained_model = FALSE,
+                            pred_holdout = FALSE,
+                            verbose = getOption("longGriDiSL.verbose")) {
+
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
@@ -324,19 +341,20 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
                                            x = modelfit$predvars, y = modelfit$outvar,
                                            useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
 
-  if (!missing(predict_only_bestK_models)) {
+  if (!missing(predict_only_bestK_models) && !use_best_retrained_model) {
     assert_that(is.integerish(predict_only_bestK_models))
     predict_model_names = modelfit$get_best_model_names(K = predict_only_bestK_models)
     message(paste0("obtaining predictions for the best models: ", paste0(predict_model_names, collapse = ",")))
   } else {
     predict_model_names <- NULL
-    message("obtaining predictions for all models...")
+    if (!use_best_retrained_model) message("obtaining predictions for all models...")
   }
 
   if (!pred_holdout) {
-    preds <- modelfit$predict(newdata = newdata, subset_exprs = subset_idx, predict_model_names = predict_model_names)
+    preds <- modelfit$predict(newdata, subset_exprs = subset_idx, predict_model_names = predict_model_names, use_best_retrained_model = use_best_retrained_model)
   } else {
-    preds <- modelfit$predict_out_of_sample(newdata = newdata, subset_exprs = subset_idx, predict_model_names = predict_model_names)
+    if (use_best_retrained_model) message("argument use_best_retrained_model was ignored, since pred_holdout was set to TRUE")
+    preds <- modelfit$predict_out_of_sample(newdata, subset_exprs = subset_idx, predict_model_names = predict_model_names)
   }
 
   preds <- as.data.table(preds)
@@ -356,94 +374,62 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
 }
 
 # ---------------------------------------------------------------------------------------
-#' Predict for new dataset
-#'
-#' @param modelfit Model fit object returned by \code{\link{fit_model}} function.
-#' @param newdata Subject-specific data for which predictions should be obtained.
-#' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
-#' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
-#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
-#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
-#' @param subset_idx ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
-#' Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
-#' @return A matrix of subject level predictions (subject are rows, columns are different models)
-#' or a data.table with subject level covariates added along with model-based predictions.
-#' @export
-predict_model <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE,
-                          subset_idx = NULL,
-                          verbose = getOption("longGriDiSL.verbose")) {
-  return(.predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx, pred_holdout = FALSE, verbose))
-}
-
-# ---------------------------------------------------------------------------------------
-#' Prediction for holdout (out-of-sample) model
-#'
-#' When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
-#' 1. For \code{fit_holdoutSL} the default holdout predictions will be based on validation data.
-#' 2. For \code{fit_cvSL} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
-#' @param modelfit Model fit object returned by \code{\link{fit_holdoutSL}} or \code{\link{fit_cvSL}} functions.
-#' @param newdata Subject-specific data for which holdout (out-of-sample) predictions should be obtained.
-#' @param predict_only_bestK_models Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
-#' Leave missing to obtain predictions for all models that were fit as part of this ensemble.
-#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
-#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
-#' @param subset_idx ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
-#' @return ...
-predict_holdout <- function(modelfit, newdata, predict_only_bestK_models, add_subject_data = FALSE,
-                            subset_idx = NULL,
-                            verbose = getOption("longGriDiSL.verbose")) {
-  if (missing(newdata) && !modelfit$runCV) newdata <- modelfit$OData_valid
-  return(.predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx, pred_holdout = TRUE, verbose))
-}
-
-# ---------------------------------------------------------------------------------------
-#' Predict for holdout or curve SuperLearner fits
+#' Predict for holdout or CV SuperLearner fits
 #'
 #' @param modelfit Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.
 #' @param newdata Subject-specific data for which predictions should be obtained.
+#' If missing then the predictions for the training data will be typically returned.
+#' See \code{pred_holdout} for discussion of alternative cases.
 #' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
 #' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
+#' @param subset_idx A vector of row indices in \code{newdata} for which the predictions should be obtain.
+#' Default is \code{NULL} in which case all observations in \code{newdata} will be used for prediction.
+#' @param use_best_retrained_model Set to \code{TRUE} to obtained the predictions from the best scoring model that was re-trained on all observed data.
+#' @param pred_holdout Set to \code{TRUE} for out-of-sample predictions for validation folds (out-of-sample observations) or holdouts.
+#'  When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
+#'  1. For \code{\link{fit_holdoutSL}} the default holdout predictions will be based on validation data.
+#'  2. For \code{\link{fit_cvSL}} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
-#' @return ...
+#' @return A data.table of subject level predictions (subject are rows, columns are different models)
+#' or a data.table with subject level covariates added along with model-based predictions.
 #' @export
-predict_SL <- function(modelfit, newdata, add_subject_data = FALSE, grid = FALSE, verbose = getOption("longGriDiSL.verbose")) {
+predict_SL <- function(modelfit, newdata,
+                       add_subject_data = FALSE,
+                       subset_idx = NULL,
+                       use_best_retrained_model = TRUE,
+                       pred_holdout = FALSE,
+                       verbose = getOption("longGriDiSL.verbose")) {
+
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit))
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
 
-  if (missing(newdata)) {
-    newdata <- modelfit$OData_train$dat.sVar
-  } else if (!grid) {
-    newdata <- define_features_drop(newdata, ID = nodes$IDnode, t_name = nodes$tnode, y = nodes$Ynode, train_set = TRUE)
-  } else {
-    ## in the future might define the grid data internally, right now it is assumed the user correctly defines the grid data
+  if (missing(newdata) && pred_holdout && !modelfit$runCV) {
+    ## For holdout predictions with holdoutSL the default is to use the previous validation data
+    newdata <- modelfit$OData_valid
+  } else if (missing(newdata)) {
+    ## For all other cases, the default is to use the training data
+    newdata <- modelfit$OData_train
   }
 
-  ## will use the best model retrained on all data for prediction:
-  modelfit$use_best_retrained_model <- TRUE
-  best_fit_name <- names(modelfit$getRetrainedfit$model_ids)
-  preds <- predict_model(modelfit = modelfit, newdata = newdata, add_subject_data = add_subject_data)
-  data.table::setnames(preds, old = best_fit_name, new = "SL.preds")
-  modelfit$use_best_retrained_model <- FALSE
+  if (use_best_retrained_model & pred_holdout) {
+    message("Setting use_best_retrained_model to FALSE since performing the holdout (out of training sample) predictions.")
+    use_best_retrained_model <- FALSE
+  }
+
+  preds <- predict_generic(modelfit, newdata, predict_only_bestK_models = 1, add_subject_data, subset_idx, use_best_retrained_model, pred_holdout, verbose)
+
+  if (use_best_retrained_model) {
+    best_fit_name <- names(modelfit$getRetrainedfit$model_ids)
+    data.table::setnames(preds, old = best_fit_name, new = "SL.preds")
+  }
 
   ## will obtain predictions for all models in the ensemble that were trained on non-holdout observations only:
   # preds2 <- predict_model(modelfit = modelfit, newdata = newdata, add_subject_data = add_subject_data)
 
   return(preds)
-}
-
-#' Get the combined out of sample predictions from V cross-validation models
-#'
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit_cvSL}.
-#' @return A vector of out-of-sample predictions from the best selected model (CV-MSE).
-#' @export
-get_out_of_sample_predictions <- function(modelfit) {
-  assert_that(is.PredictionModel(modelfit))
-  return(modelfit$get_out_of_sample_preds)
 }
 
 # ---------------------------------------------------------------------------------------
