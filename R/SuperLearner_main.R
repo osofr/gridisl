@@ -252,7 +252,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
     if (!is.integer(subset_idx)) stop("subset_idx must be an integer vector, current class: " %+% class(subset_idx))
 
   ## Define R6 regression class (specify subset_exprs to select only specific obs during fitting, e.g., only non-holdouts)
-  regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, model_contrl = params, runCV = runCV, subset_exprs = subset_exprs, fold_column = fold_column)
+  regobj <- RegressionClass$new(outvar = y, predvars = x, model_contrl = params, runCV = runCV, subset_exprs = subset_exprs, fold_column = fold_column)
   # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, subset_exprs = list("!hold"), model_contrl = params)
   ## Define a modeling object, perform fitting (real data is being passed for the first time here):
   modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx)
@@ -315,6 +315,7 @@ predict_holdout <- function(modelfit, newdata, predict_only_bestK_models,
 #' Default is \code{NULL} in which case all observations in \code{newdata} will be used for prediction.
 #' @param use_best_retrained_model Set to \code{TRUE} to obtained the predictions from the best scoring model that was re-trained on all observed data.
 #' @param pred_holdout Set to \code{TRUE} for out-of-sample predictions for validation folds or holdouts.
+#' @param force_data.table ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
 #' Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
 #' @return A data.table of subject level predictions (subject are rows, columns are different models)
@@ -325,6 +326,7 @@ predict_generic <- function(modelfit, newdata, predict_only_bestK_models,
                             subset_idx = NULL,
                             use_best_retrained_model = FALSE,
                             pred_holdout = FALSE,
+                            force_data.table = TRUE,
                             verbose = getOption("longGriDiSL.verbose")) {
 
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
@@ -351,23 +353,24 @@ predict_generic <- function(modelfit, newdata, predict_only_bestK_models,
   }
 
   if (!pred_holdout) {
-    preds <- modelfit$predict(newdata, subset_exprs = subset_idx, predict_model_names = predict_model_names, use_best_retrained_model = use_best_retrained_model)
+    preds <- modelfit$predict(newdata, subset_exprs = subset_idx, predict_model_names = predict_model_names, use_best_retrained_model = use_best_retrained_model, convertResToDT = force_data.table)
   } else {
     if (use_best_retrained_model) message("argument use_best_retrained_model was ignored, since pred_holdout was set to TRUE")
-    preds <- modelfit$predict_out_of_sample(newdata, subset_exprs = subset_idx, predict_model_names = predict_model_names)
+    preds <- modelfit$predict_out_of_sample(newdata, subset_exprs = subset_idx, predict_model_names = predict_model_names, convertResToDT = force_data.table)
   }
 
-  preds <- as.data.table(preds)
-
-  if (add_subject_data) {
-    if (missing(newdata)) newdata <- modelfit$OData_train
-    covars <- c(nodes$IDnode, nodes$tnode, modelfit$outvar)
-    ## to protect against an error if some variables are dropped from new data
-    sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
-    predsDT <- newdata$dat.sVar[, sel_covars, with = FALSE]
-    if (!is.null(subset_idx)) predsDT <- predsDT[subset_idx, ]
-    predsDT[, (colnames(preds)) := preds]
-    preds <- predsDT
+  if (force_data.table) {
+    preds <- as.data.table(preds)
+    if (add_subject_data) {
+      if (missing(newdata)) newdata <- modelfit$OData_train
+      covars <- c(nodes$IDnode, nodes$tnode, modelfit$outvar)
+      ## to protect against an error if some variables are dropped from new data
+      sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
+      predsDT <- newdata$dat.sVar[, sel_covars, with = FALSE]
+      if (!is.null(subset_idx)) predsDT <- predsDT[subset_idx, ]
+      predsDT[, (colnames(preds)) := preds]
+      preds <- predsDT
+    }
   }
 
   return(preds)
@@ -389,6 +392,7 @@ predict_generic <- function(modelfit, newdata, predict_only_bestK_models,
 #'  When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
 #'  1. For \code{\link{fit_holdoutSL}} the default holdout predictions will be based on validation data.
 #'  2. For \code{\link{fit_cvSL}} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
+#' @param force_data.table ...
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
 #' @return A data.table of subject level predictions (subject are rows, columns are different models)
 #' or a data.table with subject level covariates added along with model-based predictions.
@@ -398,6 +402,7 @@ predict_SL <- function(modelfit, newdata,
                        subset_idx = NULL,
                        use_best_retrained_model = TRUE,
                        pred_holdout = FALSE,
+                       force_data.table = TRUE,
                        verbose = getOption("longGriDiSL.verbose")) {
 
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
@@ -419,9 +424,9 @@ predict_SL <- function(modelfit, newdata,
     use_best_retrained_model <- FALSE
   }
 
-  preds <- predict_generic(modelfit, newdata, predict_only_bestK_models = 1, add_subject_data, subset_idx, use_best_retrained_model, pred_holdout, verbose)
+  preds <- predict_generic(modelfit, newdata, predict_only_bestK_models = 1, add_subject_data, subset_idx, use_best_retrained_model, pred_holdout, force_data.table, verbose)
 
-  if (use_best_retrained_model) {
+  if (use_best_retrained_model && force_data.table) {
     best_fit_name <- names(modelfit$getRetrainedfit$model_ids)
     data.table::setnames(preds, old = best_fit_name, new = "SL.preds")
   }

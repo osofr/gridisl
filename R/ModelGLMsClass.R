@@ -80,13 +80,16 @@ predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
   assert_that(!is.null(Xmat)); assert_that(!is.null(subset_idx))
   # Set to default missing value for A[i] degenerate/degerministic/misval:
   # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newBinDatObject$n)
-  pAout <- rep.int(gvars$misval, max(subset_idx))
+  # pAout <- rep.int(gvars$misval, max(subset_idx))
+  pAout <- rep.int(gvars$misval, length(subset_idx))
   if (length(subset_idx) > 0) {
     if (!all(is.na(m.fit$coef))) {
       eta <- Xmat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
-      pAout[subset_idx] <- match.fun(FUN = m.fit$linkfun)(eta)
+      pAout <- match.fun(FUN = m.fit$linkfun)(eta)
+      # pAout[subset_idx] <- match.fun(FUN = m.fit$linkfun)(eta)
     } else {
-      pAout[subset_idx] <- NaN
+      pAout <- NaN
+      # pAout[subset_idx] <- NaN
     }
   }
   return(pAout)

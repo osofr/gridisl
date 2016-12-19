@@ -6,7 +6,7 @@
 \usage{
 predict_SL(modelfit, newdata, add_subject_data = FALSE, subset_idx = NULL,
   use_best_retrained_model = TRUE, pred_holdout = FALSE,
-  verbose = getOption("longGriDiSL.verbose"))
+  force_data.table = TRUE, verbose = getOption("longGriDiSL.verbose"))
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.}
@@ -27,6 +27,8 @@ Default is \code{NULL} in which case all observations in \code{newdata} will be 
 When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
 1. For \code{\link{fit_holdoutSL}} the default holdout predictions will be based on validation data.
 2. For \code{\link{fit_cvSL}} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.}
+
+\item{force_data.table}{...}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.}
 }

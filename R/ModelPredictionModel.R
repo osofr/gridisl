@@ -365,6 +365,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     # ------------------------------------------------------------------------------
     get_best_MSEs = function(K = 1) {
       if (!self$is.fitted) stop("Please fit the model prior to calling get_best_models()")
+
       if (!is.integerish(K)) stop("K argument must be an integer <= the total number of models")
       if (K > length(self$getmodel_ids)) {
         message("K value exceeds the total number of models; K is being truncated to " %+% length(self$getmodel_ids))
@@ -373,13 +374,20 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       if (is.null(self$getMSE)) stop("The validation / holdout MSE has not been evaluated, making model model ranking impossible.
   Please call evalMSE_byID() and provide a vector of validation / test values.")
+
       return(sort(unlist(self$getMSE))[1:K])
     },
 
     # ------------------------------------------------------------------------------
     # return top K model object names
     # ------------------------------------------------------------------------------
-    get_best_model_names = function(K = 1) { return(names(self$get_best_MSEs(K))) },
+    get_best_model_names = function(K = 1) {
+      if (length(self$getmodel_ids) == 1) {
+        return(names(self$getmodel_ids))
+      } else {
+        return(names(self$get_best_MSEs(K)))
+      }
+    },
 
     # ------------------------------------------------------------------------------
     # return top K model objects ranked by prediction MSE on a holdout (CV) fold

@@ -6,7 +6,6 @@ predict_h2o_new <- function(model_id, frame_id, convertResToDT = TRUE) {
   job_key <- res$key$name
   dest_key <- res$dest$name
 
-  # browser()
   # h2o.getFrame("train_H2Oframe")
   # predict(h2o.getModel("Grid_GBM_train_H2Oframe_model_R_1481770962766_193_model_1"),h2o.getFrame(frame_id))
   # predict(h2o.getModel(model_id), h2o.getFrame(frame_id))
@@ -74,7 +73,6 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
 
   # pAoutMat <- matrix(gvars$misval, nrow = nrow(H2Oframe), ncol = length(models_list))
   # colnames(pAoutMat) <- names(models_list)
-
   pAoutDT <- rep.int(list(numeric()), length(models_list))
   names(pAoutDT) <- names(models_list)
   pAoutDT <- as.data.table(pAoutDT)
@@ -82,14 +80,14 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   if (nrow(H2Oframe) > 0) {
     pAout_h2o <- NULL
     for (idx in seq_along(models_list)) {
+      idx <- 1
       # pAoutMat[, idx] <- predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe))
       pAout_h2o <- h2o.cbind(pAout_h2o,
-                             predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe), convertResToDT = FALSE))
+                             predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe), convertResToDT = FALSE)[["predict"]])
     }
     names(pAout_h2o) <- names(models_list)
-    # if (convertResToDT) pAoutDT <- as.data.table(pAout_h2o)
   }
-  return(pAoutDT)
+  return(pAout_h2o)
 }
 
 h2oModelClass  <- R6Class(classname = "h2oModelClass",

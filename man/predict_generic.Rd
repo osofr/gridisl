@@ -7,7 +7,7 @@
 predict_generic(modelfit, newdata, predict_only_bestK_models,
   add_subject_data = FALSE, subset_idx = NULL,
   use_best_retrained_model = FALSE, pred_holdout = FALSE,
-  verbose = getOption("longGriDiSL.verbose"))
+  force_data.table = TRUE, verbose = getOption("longGriDiSL.verbose"))
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit_model}} function.}
@@ -26,6 +26,8 @@ Default is \code{NULL} in which case all observations in \code{newdata} will be 
 \item{use_best_retrained_model}{Set to \code{TRUE} to obtained the predictions from the best scoring model that was re-trained on all observed data.}
 
 \item{pred_holdout}{Set to \code{TRUE} for out-of-sample predictions for validation folds or holdouts.}
+
+\item{force_data.table}{...}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
 Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.}
