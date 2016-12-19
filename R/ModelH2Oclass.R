@@ -11,7 +11,7 @@ predict_h2o_new <- function(model_id, frame_id, convertResToDT = TRUE) {
   # predict(h2o.getModel(model_id), h2o.getFrame(frame_id))
 
   h2o:::.h2o.__waitOnJob(job_key, pollInterval = 0.01)
-  newpreds <- h2o.getFrame(dest_key)
+  newpreds <- h2o::h2o.getFrame(dest_key)
 
   if (convertResToDT) {
     if ("p1" %in% colnames(newpreds)) {
@@ -71,8 +71,6 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   models_list <- m.fit$fitted_models_all
   if (!missing(predict_model_names) && !is.null(predict_model_names)) models_list <- models_list[predict_model_names]
 
-  # pAoutMat <- matrix(gvars$misval, nrow = nrow(H2Oframe), ncol = length(models_list))
-  # colnames(pAoutMat) <- names(models_list)
   pAoutDT <- rep.int(list(numeric()), length(models_list))
   names(pAoutDT) <- names(models_list)
   pAoutDT <- as.data.table(pAoutDT)
@@ -80,10 +78,8 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   if (nrow(H2Oframe) > 0) {
     pAout_h2o <- NULL
     for (idx in seq_along(models_list)) {
-      idx <- 1
-      # pAoutMat[, idx] <- predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe))
-      pAout_h2o <- h2o.cbind(pAout_h2o,
-                             predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o.getId(H2Oframe), convertResToDT = FALSE)[["predict"]])
+      pAout_h2o <- h2o::h2o.cbind(pAout_h2o,
+                             predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o::h2o.getId(H2Oframe), convertResToDT = FALSE)[["predict"]])
     }
     names(pAout_h2o) <- names(models_list)
   }
@@ -380,8 +376,8 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
                               silent = FALSE)
 
       GLMmodelID <- self$firstGLMfit$fitted_models_all[[1]]@model_id
-      firstGLM_preds_train <- predict_h2o_new(GLMmodelID, frame_id = h2o.getId(train_H2Oframe), convertResToDT = FALSE)
-      firstGLM_preds_valid <- predict_h2o_new(GLMmodelID, frame_id = h2o.getId(valid_H2Oframe), convertResToDT = FALSE)
+      firstGLM_preds_train <- predict_h2o_new(GLMmodelID, frame_id = h2o::h2o.getId(train_H2Oframe), convertResToDT = FALSE)
+      firstGLM_preds_valid <- predict_h2o_new(GLMmodelID, frame_id = h2o::h2o.getId(valid_H2Oframe), convertResToDT = FALSE)
 
       ## save predictions from the first model (fit on training data, but predictions made for all data)
       train_H2Oframe[["firstGLM_preds"]] <- firstGLM_preds_train

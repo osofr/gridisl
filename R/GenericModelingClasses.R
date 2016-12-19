@@ -1,27 +1,32 @@
-#----------------------------------------------------------------------------------
-# Classes that control modelling of the multivariate joint probability model P(sA|sW).
-# NOT USED
-#----------------------------------------------------------------------------------
-
 ## ---------------------------------------------------------------------------------
-## S3 constructors for the modeling classes:
+## S3 constructors for new modeling classes:
 ## ---------------------------------------------------------------------------------
-# newFitModel <- function(fit.algorithm, fit.package, reg, ...) { UseMethod("newFitModel") }
-# newFitModel.face <- function(fit.algorithm, fit.package, reg, ...) faceModelClass$new(fit.algorithm, fit.package, reg, ...)
-# newFitModel.brokenstick <- function(fit.algorithm, fit.package, reg, ...) brokenstickModelClass$new(fit.algorithm, fit.package, reg, ...)
-# newFitModel.xgboost <- function(fit.algorithm, fit.package, reg, ...) xgboostModelClass$new(fit.algorithm, fit.package, reg, ...)
-# newFitModel.glm <- function(fit.algorithm, fit.package, reg, ...) glmModelClass$new(fit.algorithm, fit.package, reg, ...)
-# newFitModel.h2o <- function(fit.algorithm, fit.package, reg, ...) h2oModelClass$new(fit.algorithm, fit.package, reg, ...)
+#' @export
+newFitModel <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) { UseMethod("newFitModel") }
 
-# # Summary model constructor for continuous outcome sA[j]:
-# newsummarymodel.contin <- function(regClass, reg, DataStorageClass.g0, ...) ContinModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
-# # Summary model constructor for categorical outcome sA[j]:
-# newsummarymodel.categor <- function(regClass, reg, DataStorageClass.g0, ...) CategorModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
-# # Summary model constructor for stratification (by reg$subset_exprs):
-# newsummarymodel.stratify <- function(regClass, reg, DataStorageClass.g0, ...) StratifiedModel$new(reg = reg, DataStorageClass.g0 = DataStorageClass.g0, ...)
-# # Summary model constructor for binary outcome sA[j]:
-# newsummarymodel.binary <- function(regClass, reg, ...) PredictionModel$new(reg = reg, ...)
-# # Summary model constructor for Q-learning (sequential regression):
-# newsummarymodel.Qlearn <- function(regClass, reg, ...) QlearnModel$new(reg = reg, ...)
-# # For evaluating propensity scores under g.star (counterfactual probabilities)
-# newsummarymodel.deterministic <- function(regClass, reg, ...) DeterministicPredictionModel$new(reg = reg, ...)
+#' @export
+newFitModel.h2o <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) {
+  h2oModelClass$new(fit.algorithm, fit.package, reg, ...)
+  if (fit.algorithm %in% "GridLearner") {
+    ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
+  } else if (fit.algorithm %in% "ResidGridLearner") {
+    ModelFitObject <- h2oResidualModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
+  } else {
+    ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
+  }
+  return(ModelFitObject)
+}
+
+#' @export
+newFitModel.glm <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+
+#' @export
+newFitModel.speedglm <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+
+# newFitModel.xgboost <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) xgboostModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+
+#' @export
+newFitModel.face <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) faceModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+
+#' @export
+newFitModel.brokenstick <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) brokenstickModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)

@@ -5,7 +5,7 @@ check_out_of_sample_consistency <- function(models_list, valid_H2Oframe, predvar
   if (length(all_folds_h2o) > 1) {
     ## 1. Test that the exactly the same fold assignments were used by all CV models in the ensemble.
     for (idx in 2:length(all_folds_h2o) ) {
-      if (!h2o.all(all_folds_h2o[[1]]==all_folds_h2o[[idx]])  )
+      if (!h2o::h2o.all(all_folds_h2o[[1]]==all_folds_h2o[[idx]])  )
         stop("Out-of-sample (holdout) predictions for new data has failed. The fold assignmets of the following CV model do not match to others: " %+% names(models_list)[idx])
     }
 
@@ -21,7 +21,7 @@ check_out_of_sample_consistency <- function(models_list, valid_H2Oframe, predvar
     stop("Out-of-sample (holdout) predictions for new data has failed. The fold assignments in new data (validation_data) and training data appear to be different.")
 
   ## 4a. Test that the new validation data (in h2oFrame) has the same number of observations as the training data
-  if (!(nrow(valid_H2Oframe) == nrow(h2o.getFrame(train_frame_ID_1))))
+  if (!(nrow(valid_H2Oframe) == nrow(h2o::h2o.getFrame(train_frame_ID_1))))
     stop("Out-of-sample (holdout) predictions for new data has failed. The number of rows in new data (validation_data) does not match that of the training data.")
 
   ## 4b. Test that all predictors are present in the validation data (in h2oFrame)
@@ -49,8 +49,8 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
 
     message("Obtaining the out-of-sample CV predictions for h2o-stored training data")
     # pAoutDT <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
-    pAoutDT <- lapply(models_list, function(h2omodel) h2o.cross_validation_holdout_predictions(h2omodel))
-    pAoutDT <- h2o.cbind(pAoutDT)
+    pAoutDT <- lapply(models_list, function(h2omodel) h2o::h2o.cross_validation_holdout_predictions(h2omodel))
+    pAoutDT <- h2o::h2o.cbind(pAoutDT)
     names(pAoutDT) <- names(models_list)
     # setnames(pAoutDT, names(models_list))
     # if (convertResToDT) pAoutDT <- as.data.table(pAoutDT)
@@ -70,8 +70,8 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
 
     ## Get the fold assignments for the 1st model in ensemble:
     h2o_model_1 <- models_list[[1]]
-    fold_h2o <- h2o.cross_validation_fold_assignment(h2o_model_1)
-    vfolds_cat_h2o <- sort(h2o.levels(fold_h2o)) # # vfolds_ncat_h2o <- h2o.nlevels(fold_h2o)
+    fold_h2o <- h2o::h2o.cross_validation_fold_assignment(h2o_model_1)
+    vfolds_cat_h2o <- sort(h2o::h2o.levels(fold_h2o)) # # vfolds_ncat_h2o <- h2o.nlevels(fold_h2o)
 
     pAoutMat_h2o <- NULL
     CV_loop_t <- system.time({
@@ -82,7 +82,7 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
 
       ## Define validation frame for this fold:
       valid_H2Oframe_CV.i <- valid_H2Oframe[fold_CV_i_logical, ]
-      cv.i_foldframeID <- h2o.getId(valid_H2Oframe_CV.i)
+      cv.i_foldframeID <- h2o::h2o.getId(valid_H2Oframe_CV.i)
 
       dest_key_LIST <- vector(mode = "list", length = length(models_list))
 
@@ -102,14 +102,14 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
 
       newpreds_prev_CV_i <- NULL
       for (idx in seq_along(dest_key_LIST)) {
-        newpreds <- h2o.getFrame(dest_key_LIST[[idx]])
-        newpreds_prev_CV_i <- h2o.cbind(newpreds_prev_CV_i, newpreds)
+        newpreds <- h2o::h2o.getFrame(dest_key_LIST[[idx]])
+        newpreds_prev_CV_i <- h2o::h2o.cbind(newpreds_prev_CV_i, newpreds)
       }
-      newpreds_prev_CV_i <- h2o.cbind(h2o.which(fold_CV_i_logical), newpreds_prev_CV_i)
-      pAoutMat_h2o <- h2o.rbind(pAoutMat_h2o, newpreds_prev_CV_i)
+      newpreds_prev_CV_i <- h2o::h2o.cbind(h2o.which(fold_CV_i_logical), newpreds_prev_CV_i)
+      pAoutMat_h2o <- h2o::h2o.rbind(pAoutMat_h2o, newpreds_prev_CV_i)
     }
 
-    pAoutMat_h2o <- h2o.arrange(pAoutMat_h2o, "C1")
+    pAoutMat_h2o <- h2o::h2o.arrange(pAoutMat_h2o, "C1")
     pAoutDT <- pAoutMat_h2o[, 2:ncol(pAoutMat_h2o)]
     })
     print("CV_loop_t"); print(CV_loop_t)

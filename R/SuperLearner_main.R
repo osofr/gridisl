@@ -224,8 +224,9 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
     nfolds <- NULL
   }
 
-  if (any(c("nfolds","fold_column") %in% names(params))) stop("Cannot have fields named 'nfolds' or 'fold_column' inside  params argument." %+%
-                                                              "To perform V fold cross-validation use the corresponding arguments 'nfolds' or 'fold_column' of this function.")
+  if (any(c("nfolds","fold_column") %in% names(params)))
+    stop("Cannot have fields named 'nfolds' or 'fold_column' inside  params argument." %+%
+         "To perform V fold cross-validation use the corresponding arguments 'nfolds' or 'fold_column' of this function.")
 
   train_data <- validate_convert_input_data(train_data, ID = ID, t_name = t_name, x = x, y = y, useH2Oframe = useH2Oframe, dest_frame = "all_train_H2Oframe")
   CheckVarNameExists(train_data$dat.sVar, y)
@@ -255,14 +256,13 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   regobj <- RegressionClass$new(outvar = y, predvars = x, model_contrl = params, runCV = runCV, subset_exprs = subset_exprs, fold_column = fold_column)
   # regobj <- RegressionClass$new(outvar = nodes$Ynode, predvars = x, subset_exprs = list("!hold"), model_contrl = params)
   ## Define a modeling object, perform fitting (real data is being passed for the first time here):
-  modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx)
+  modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)
+  modelfit <- modelfit$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx)
 
   ## ------------------------------------------------------------------------------------------
   ## If validation data supplied then score the models based on validation set
   ## ------------------------------------------------------------------------------------------
   if (!missing(valid_data) && !is.null(valid_data)) {
-    # ************** NEED TO MODIFY THIS TO EXPLICIT FUNCTION CALL THAT WOULD EVALUATE MSE FOR HOLDOUT **************
-    # preds <- modelfit$predict(newdata = valid_data)
     modelfit$score_models(validation_data = valid_data, subset_exprs = subset_idx)
   }
 
@@ -276,30 +276,6 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
     print("Mean CV MSE (for out of sample predictions) as evaluated by h2o: "); print(data.frame(mse))
   }
   return(modelfit)
-}
-
-# ---------------------------------------------------------------------------------------
-# Predict for new dataset
-predict_model <- function(modelfit, newdata, predict_only_bestK_models,
-                          add_subject_data = FALSE,
-                          subset_idx = NULL,
-                          verbose = getOption("longGriDiSL.verbose")) {
-  return(predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx,
-                         use_best_retrained_model = FALSE, pred_holdout = FALSE, verbose))
-}
-
-# ---------------------------------------------------------------------------------------
-# Out-of-sample predictions for validation folds or holdouts.
-# When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
-# 1. For \code{fit_holdoutSL} the default holdout predictions will be based on validation data.
-# 2. For \code{fit_cvSL} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
-predict_holdout <- function(modelfit, newdata, predict_only_bestK_models,
-                            add_subject_data = FALSE,
-                            subset_idx = NULL,
-                            verbose = getOption("longGriDiSL.verbose")) {
-  if (missing(newdata) && !modelfit$runCV) newdata <- modelfit$OData_valid
-  return(predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx,
-                         use_best_retrained_model = FALSE, pred_holdout = TRUE, verbose))
 }
 
 # ---------------------------------------------------------------------------------------
@@ -435,6 +411,30 @@ predict_SL <- function(modelfit, newdata,
   # preds2 <- predict_model(modelfit = modelfit, newdata = newdata, add_subject_data = add_subject_data)
 
   return(preds)
+}
+
+# ---------------------------------------------------------------------------------------
+# Predict for new dataset
+predict_model <- function(modelfit, newdata, predict_only_bestK_models,
+                          add_subject_data = FALSE,
+                          subset_idx = NULL,
+                          verbose = getOption("longGriDiSL.verbose")) {
+  return(predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx,
+                         use_best_retrained_model = FALSE, pred_holdout = FALSE, force_data.table = TRUE, verbose))
+}
+
+# ---------------------------------------------------------------------------------------
+# Out-of-sample predictions for validation folds or holdouts.
+# When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
+# 1. For \code{fit_holdoutSL} the default holdout predictions will be based on validation data.
+# 2. For \code{fit_cvSL} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
+predict_holdout <- function(modelfit, newdata, predict_only_bestK_models,
+                            add_subject_data = FALSE,
+                            subset_idx = NULL,
+                            verbose = getOption("longGriDiSL.verbose")) {
+  if (missing(newdata) && !modelfit$runCV) newdata <- modelfit$OData_valid
+  return(predict_generic(modelfit, newdata, predict_only_bestK_models, add_subject_data, subset_idx,
+                         use_best_retrained_model = FALSE, pred_holdout = TRUE, force_data.table = TRUE, verbose))
 }
 
 # ---------------------------------------------------------------------------------------

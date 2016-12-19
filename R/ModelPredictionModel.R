@@ -1,3 +1,10 @@
+
+#' Generate model names / IDs
+#'
+#' @param H2O.model.object H2O model object (if used)
+#' @param model_algorithm The name of the modeling algorithm
+#' @param name Additional name previously specified in \code{model_contrl} list
+#' @export
 assign_model_name_id <- function(H2O.model.object, model_algorithm, name = NULL) {
   if (!missing(H2O.model.object) && inherits(H2O.model.object, "H2OModel")) {
     model_ids <- list(H2O.model.object@model_id)
@@ -10,6 +17,18 @@ assign_model_name_id <- function(H2O.model.object, model_algorithm, name = NULL)
   return(model_ids)
 }
 
+#' Create a model fit list
+#'
+#' @param model.fit Model fit object
+#' @param model_alg Name of the model algorithm
+#' @param fitfunname The name of the main function used for fitting (e.g., "glm")
+#' @param params List of main model parameters
+#' @param coef Fitted glm coefficients, if used
+#' @param nobs Number of observations used for fitting the model
+#' @param model_contrl Full list of model control parameters used
+#' @param fitclass The name of the R6 object class used for fitting
+#' @param ... Additional objects that will be included in the final fit list
+#' @export
 create_fit_object <- function(model.fit, model_alg, fitfunname, params, coef, nobs, model_contrl, fitclass = "H2Omodel", ...) {
   fitted_models_all <- vector(mode = "list", length = 1)
   fitted_models_all[[1]] <- model.fit
@@ -34,6 +53,10 @@ create_fit_object <- function(model.fit, model_alg, fitfunname, params, coef, no
   return(fit)
 }
 
+#' Create a list with main model parameters
+#'
+#' @param reg RegressionClass Object
+#' @export
 create_fit_params <- function(reg) {
   return(list(outvar = reg$outvar, predvars = reg$predvars, stratify = reg$subset_exprs[[1]]))
 }
@@ -126,7 +149,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       } else {
         self$fit.package <- reg$fit.package[1]
       }
-      if (!(self$fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
+
+      # if (!(self$fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
 
       if ("fit.algorithm" %in% names(self$model_contrl)) {
         self$fit.algorithm <- self$model_contrl[['fit.algorithm']]
@@ -134,7 +158,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       } else {
         self$fit.algorithm <- reg$fit.algorithm[1]
       }
-      if (!(self$fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
+
+      # if (!(self$fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
@@ -161,25 +186,30 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       # Add any additional options passed on to modeling functions as extra args
       # ****** NOTE: This needs to be changed to S3 dispatch for greater flexibility ******
       # ***************************************************************************
-      if (fit.package %in% c("h2o", "h2oEnsemble")) {
-        if (fit.algorithm %in% "GridLearner") {
-          ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
-        } else if (fit.algorithm %in% "ResidGridLearner") {
-          ModelFitObject <- h2oResidualModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
-        } else {
-          ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
-        }
-      } else if (fit.package %in% c("face")) {
-        ModelFitObject <- faceModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
-        fit.algorithm <- NULL
-        # fit.algorithm <- fit.package
-      } else if (fit.package %in% c("brokenstick")) {
-        ModelFitObject <- brokenstickModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
-        fit.algorithm <- NULL
-        # fit.algorithm <- fit.package
-      } else {
-        ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
-      }
+      # Calling the constructor for the fitting model class, dispatching on class name stored in fit.package
+      class(fit.package) <- fit.package
+      ModelFitObject <- newFitModel(fit.package, fit.algorithm, reg, useH2Oframe, ...)
+
+      # if (fit.package %in% c("h2o", "h2oEnsemble")) {
+      #   if (fit.algorithm %in% "GridLearner") {
+      #     ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
+      #   } else if (fit.algorithm %in% "ResidGridLearner") {
+      #     ModelFitObject <- h2oResidualModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
+      #   } else {
+      #     ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
+      #   }
+      # } else if (fit.package %in% c("face")) {
+      #   ModelFitObject <- faceModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+      #   fit.algorithm <- NULL
+      #   # fit.algorithm <- fit.package
+      # } else if (fit.package %in% c("brokenstick")) {
+      #   ModelFitObject <- brokenstickModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+      #   fit.algorithm <- NULL
+      #   # fit.algorithm <- fit.package
+      # } else {
+      #   ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+      # }
+
       return(ModelFitObject)
     },
 
