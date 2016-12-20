@@ -79,9 +79,9 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   if (nrow(H2Oframe) > 0) {
     h2o.no_progress()
     old.exprs <- getOption("expressions")
-    if (length(models_list) >= 400) options("expressions" = 10000)
-
+    if (length(models_list) >= 400) options("expressions" = length(models_list)*50)
     pAout_h2o <- NULL
+
     for (idx in seq_along(models_list)) {
       # res <- lapply(models_list, function(model) predict_h2o_new(model@model_id, frame_id = h2o::h2o.getId(H2Oframe), convertResToDT = FALSE)[["predict"]])
       # pAout_h2o <- h2o::h2o.cbind(res)
