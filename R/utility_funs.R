@@ -16,6 +16,84 @@ is.PredictionModel <- function(PredictionModel) "PredictionModel"%in%class(Predi
 is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(PredictionStack)
 
 # ---------------------------------------------------------------------------------------
+#' Define and fit growth models evaluated on holdout observations.
+#'
+#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+#' @param ID A character string name of the column that contains the unique subject identifiers.
+#' @param nfolds Number of unique folds (same fold is always assigned to all observations that share the same ID).
+#' @param fold_column A name of the column that will contain the fold indicators
+#' @param seed Random number seed for selecting a random fold.
+#' @return An input data with added fold indicator column (as ordered factor with levels 1:nfolds).
+#' @export
+add_CVfolds_ind = function(data, ID, nfolds = 5, fold_column = "fold", seed = NULL) {
+  nuniqueIDs = function() { length(unique(data[[ID]])) }
+  data <- data.table::data.table(data)
+  data.table::setkeyv(data, cols = ID)
+  if (fold_column %in% names(data)) data[, (fold_column) := NULL]
+  nuniqueIDs <- nuniqueIDs()
+  if (!is.null(seed)) set.seed(as.numeric(seed))  #If seed is specified, set seed prior to next step
+  x <- sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs]
+
+  # format fold IDs as characters with leading 0. That way the ordering of the factor levels remains consistent betweeen R and h2oFRAME
+  fold_IDs <- sprintf("%02d", seq(nfolds))
+  fold_id <- as.factor(sample(rep(fold_IDs, ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds
+
+
+  foldsDT <- data.table::data.table("ID" = unique(data[[ID]]), fold_column = fold_id)
+  data.table::setnames(foldsDT, old = names(foldsDT), new = c(ID, fold_column))
+  data.table::setkeyv(foldsDT, cols = ID)
+  data <- merge(data, foldsDT, by = ID, all.x = TRUE)
+  return(data)
+}
+
+# ---------------------------------------------------------------------------------------
+#' Define and fit growth models evaluated on holdout observations.
+#'
+#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+#' @param ID A character string name of the column that contains the unique subject identifiers.
+#' @param hold_column A name of the column that will contain the the holdout indicators
+#' @param random Logical, specifying if the holdout observations should be selected at random.
+#' If FALSE then the last observation for each subject is selected as a holdout.
+#' @param seed Random number seed for selecting a random holdout.
+#' @return An input data with added holdout indicator column (TRUE for holdout observation indicator, FALSE for training observation indicator).
+#' @export
+add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed = NULL) {
+  data <- data.table::data.table(data)
+  data.table::setkeyv(data, cols = ID)
+  if (!is.null(seed)) set.seed(as.numeric(seed))
+  if (hold_column %in% names(data)) data[, (hold_column) := NULL]
+
+  samplemax2 <- function(x) {
+    if (x == 1L) {
+      return(FALSE)
+    } else {
+      res <- rep.int(FALSE, x)
+      res[ length(res) ] <- TRUE
+      return(res)
+    }
+  }
+
+  samplerandom2 <- function(x) {
+    if (x == 1L) {
+      return(FALSE)
+    } else {
+      res <- rep.int(FALSE, x)
+      res[ sample((1:x), 1) ] <- TRUE
+      return(res)
+    }
+  }
+
+  if (random) {
+    data[, (hold_column) := samplerandom2(.N), by = eval(ID)]
+  } else {
+    data[, (hold_column) := samplemax2(.N), by = eval(ID)]
+  }
+  # self$hold_column <- hold_column
+
+  return(data)
+}
+
+# ---------------------------------------------------------------------------------------
 #' Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
 #'
 #' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
