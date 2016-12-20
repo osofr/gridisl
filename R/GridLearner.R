@@ -105,6 +105,7 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
   }
 
   model_fit <- do.call(h2o::h2o.grid, mainArgs)
+
   # sort the grid by increasing MSE:
   model_fit <- h2o::h2o.getGrid(model_fit@grid_id, sort_by = "mse", decreasing = FALSE)
 
@@ -175,7 +176,19 @@ fit.h2oGridLearner <- function(fit.class, params, training_frame, y, x, model_co
       top_grid_models[[grid.algorithm]] <- grid_model_fit$top.model
       grid_model_H2O <- grid_model_fit$model_fit
       grid_objects[[grid.algorithm]] <- grid_model_H2O
-      fitted_models[[grid.algorithm]] <- lapply(grid_model_H2O@model_ids, function(model_id) h2o::h2o.getModel(model_id))
+
+      message("...retrieving all modeling objects for grid: " %+% grid.algorithm)
+      # lapply_t <- system.time(
+        fitted_models[[grid.algorithm]] <- lapply(grid_model_H2O@model_ids, function(model_id) h2o::h2o.getModel(model_id))
+        # )
+      # print("time to retrieve all model objects"); print(lapply_t)
+      # fitted_models[[grid.algorithm]] <- vector(mode = "list", length = length(grid_model_H2O@model_ids))
+      # names(fitted_models[[grid.algorithm]]) <- grid_model_H2O@model_ids
+      # for_t <- system.time(
+      #   for (model_id in grid_model_H2O@model_ids) fitted_models[[grid.algorithm]][[model_id]] <- h2o::h2o.getModel(model_id)
+      #   )
+      # print("for_t"); print(for_t)
+
     }
     for (grid.algorithm in grid.algorithms) {
       fitted_models_all <- c(fitted_models_all, fitted_models[[grid.algorithm]])

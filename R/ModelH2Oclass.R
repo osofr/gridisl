@@ -68,6 +68,7 @@ predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
 
 predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict_model_names, ...) {
   H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
+
   models_list <- m.fit$fitted_models_all
   if (!missing(predict_model_names) && !is.null(predict_model_names)) models_list <- models_list[predict_model_names]
 
@@ -76,11 +77,20 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   pAoutDT <- as.data.table(pAoutDT)
 
   if (nrow(H2Oframe) > 0) {
+    h2o.no_progress()
+    old.exprs <- getOption("expressions")
+    if (length(models_list) >= 400) options("expressions" = 10000)
+
     pAout_h2o <- NULL
     for (idx in seq_along(models_list)) {
+      # res <- lapply(models_list, function(model) predict_h2o_new(model@model_id, frame_id = h2o::h2o.getId(H2Oframe), convertResToDT = FALSE)[["predict"]])
+      # pAout_h2o <- h2o::h2o.cbind(res)
       pAout_h2o <- h2o::h2o.cbind(pAout_h2o,
-                             predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o::h2o.getId(H2Oframe), convertResToDT = FALSE)[["predict"]])
+                        predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o::h2o.getId(H2Oframe), convertResToDT = FALSE)[["predict"]])
     }
+
+    options("expressions" = old.exprs)
+    h2o.show_progress()
     names(pAout_h2o) <- names(models_list)
   }
   return(pAout_h2o)

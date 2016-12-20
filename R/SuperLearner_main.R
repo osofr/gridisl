@@ -263,6 +263,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   ## If validation data supplied then score the models based on validation set
   ## ------------------------------------------------------------------------------------------
   if (!missing(valid_data) && !is.null(valid_data)) {
+    message("...evaluting MSE for every model based on validation data...")
     modelfit$score_models(validation_data = valid_data, subset_exprs = subset_idx)
   }
 
