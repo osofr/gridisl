@@ -5,7 +5,7 @@ h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negati
 #' @export
 SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial", fold_column, model_contrl, validation_frame = NULL, ...) {
   # if (is.numeric(seed)) set.seed(seed)  #If seed given, set seed prior to next step
-  # h2o.no_progress()
+  if (gvars$verbose) h2o.show_progress() else h2o.no_progress()
   learner_fun <- match.fun(learner)
 
   mainArgs <- list(y = y, training_frame = training_frame, family = family,
@@ -50,7 +50,7 @@ SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial",
 # use "bernoulli" when doing classification and use "gaussian" when doing regression
 #' @export
 SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomial", fold_column, model_contrl, validation_frame  = NULL, ...) {
-  # h2o.no_progress()
+  if (gvars$verbose) h2o.show_progress() else h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                   intercept = TRUE,
                   seed = 1,
@@ -100,9 +100,7 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
   common_hyper_args <- intersect(names(mainArgs), names(mainArgs$hyper_params))
   if(length(common_hyper_args) > 0) mainArgs <- mainArgs[!(names(mainArgs) %in% common_hyper_args)]
 
-  if (gvars$verbose) {
-    print("running h2o.grid grid.algorithm: " %+% grid.algorithm);
-  }
+  if (gvars$verbose) print("running h2o.grid grid.algorithm: " %+% grid.algorithm)
 
   model_fit <- do.call(h2o::h2o.grid, mainArgs)
 
@@ -177,7 +175,7 @@ fit.h2oGridLearner <- function(fit.class, params, training_frame, y, x, model_co
       grid_model_H2O <- grid_model_fit$model_fit
       grid_objects[[grid.algorithm]] <- grid_model_H2O
 
-      message("...retrieving all modeling objects for grid: " %+% grid.algorithm)
+      if (gvars$verbose) message("...retrieving all modeling objects for grid: " %+% grid.algorithm)
       # lapply_t <- system.time(
         fitted_models[[grid.algorithm]] <- lapply(grid_model_H2O@model_ids, function(model_id) h2o::h2o.getModel(model_id))
         # )

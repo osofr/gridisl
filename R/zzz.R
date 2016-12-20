@@ -3,7 +3,7 @@
 # Global State Vars (can be controlled globally with options(longGriDiSL.optname = ))
 #-----------------------------------------------------------------------------
 gvars <- new.env(parent = emptyenv())
-gvars$verbose <- FALSE      # verbose mode (print all messages)
+gvars$verbose <- TRUE       # verbose mode (print all messages)
 gvars$opts <- list()        # named list of package options that is controllable by the user (set_all_longGriDiSL_options())
 gvars$misval <- NA_integer_ # the default missing value for observations (# gvars$misval <- -.Machine$integer.max)
 gvars$misXreplace <- 0L     # the default replacement value for misval that appear in the design matrix
