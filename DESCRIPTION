@@ -10,7 +10,6 @@ Imports:
     assertthat,
     data.table,
     ggplot2,
-    ggiraph,
     methods,
     R6,
     Rcpp,
@@ -23,6 +22,7 @@ Imports:
 LinkingTo: Rcpp
 Suggests:
     h2o,
+    ggiraph,
     knitr,
     magrittr,
     RUnit
