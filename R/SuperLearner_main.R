@@ -1,6 +1,6 @@
 #' @importFrom assertthat assert_that
 #' @importFrom ggplot2 ggplot geom_point geom_errorbar theme_bw coord_flip aes position_dodge alpha
-#' @import ggiraph
+# @import ggiraph
 # @importFrom ggiraph geom_point_interactive ggiraph
 NULL
 
