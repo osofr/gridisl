@@ -323,6 +323,7 @@ test.CV.SL <- function() {
   checkTrue(all.equal(cv_valid_preds, cv_valid_preds_2))
   cv_valid_preds_2 <- longGriDiSL:::predict_holdout(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = TRUE)
   cv_valid_preds_2[]
+
   ## SAME BUT WITH predict_SL, NEW RESCORING ON TRAINING DATA:
   cv_valid_preds_rescore <- predict_SL(mfit_cv1, add_subject_data = TRUE, pred_holdout = TRUE)
   cv_valid_preds_rescore[]
