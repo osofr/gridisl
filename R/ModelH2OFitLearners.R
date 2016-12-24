@@ -65,8 +65,9 @@ fit.h2oglm <- function(fit.class, params, training_frame, y, x, fold_column, mod
   out_coef[] <- NA
   names(out_coef) <- c("Intercept", x)
   out_coef[names(model.fit@model$coefficients)] <- model.fit@model$coefficients
-  confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
+  # confusionMat <- h2o::h2o.confusionMatrix(model.fit)
+  # nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
+  nobs <- nrow(training_frame)
 
   return(create_fit_object(model.fit, model_alg = "glm", fitfunname = "h2o.glm", params = params, coef = out_coef, nobs = nobs, model_contrl = model_contrl))
 }
@@ -93,9 +94,10 @@ fit.h2orandomForest <- function(fit.class, params, training_frame, y, x, fold_co
   }
 
   model.fit <- do.call(h2o::h2o.randomForest, mainArgs)
+  # confusionMat <- h2o::h2o.confusionMatrix(model.fit)
+  # nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
+  nobs <- nrow(training_frame)
 
-  confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
   return(create_fit_object(model.fit, model_alg = "randomForest", fitfunname = "h2o.randomForest", params = params, coef = NULL, nobs = nobs, model_contrl = model_contrl))
 }
 
@@ -123,8 +125,10 @@ fit.h2ogbm <- function(fit.class, params, training_frame, y, x, fold_column, mod
   }
 
   model.fit <- do.call(h2o::h2o.gbm, mainArgs)
-  confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
+  # confusionMat <- h2o::h2o.confusionMatrix(model.fit)
+  # nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
+  nobs <- nrow(training_frame)
+
   return(create_fit_object(model.fit, model_alg = "gbm", fitfunname = "h2o.gbm", params = params, coef = NULL, nobs = nobs, model_contrl = model_contrl))
 }
 
@@ -151,7 +155,9 @@ fit.h2odeeplearning <- function(fit.class, params, training_frame, y, x, fold_co
   }
 
   model.fit <- do.call(h2o::h2o.deeplearning, mainArgs)
-  confusionMat <- h2o::h2o.confusionMatrix(model.fit)
-  nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
+  # confusionMat <- h2o::h2o.confusionMatrix(model.fit)
+  # nobs <- confusionMat[["0"]][3]+confusionMat[["1"]][3]
+  nobs <- nrow(training_frame)
+
   return(create_fit_object(model.fit, model_alg = "deeplearning", fitfunname = "h2o.deeplearning", params = params, coef = NULL, nobs = nobs, model_contrl = model_contrl))
 }

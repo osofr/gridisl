@@ -2,7 +2,7 @@
 ## S3 constructors for new modeling classes:
 ## ---------------------------------------------------------------------------------
 #' @export
-newFitModel <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) { UseMethod("newFitModel") }
+newFitModel <- function(fit.package, fit.algorithm, reg, ...) { UseMethod("newFitModel") }
 
 #' @export
 newFitModel.h2o <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) {
@@ -18,15 +18,16 @@ newFitModel.h2o <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) {
 }
 
 #' @export
-newFitModel.glm <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+newFitModel.xgboost <- function(fit.package, fit.algorithm, reg, useDMatrix, ...) XGBoostClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useDMatrix = useDMatrix, ...)
 
 #' @export
-newFitModel.speedglm <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
-
-# newFitModel.xgboost <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) xgboostModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+newFitModel.glm <- function(fit.package, fit.algorithm, reg, ...) ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
 
 #' @export
-newFitModel.face <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) faceModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+newFitModel.speedglm <- function(fit.package, fit.algorithm, reg, ...) ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
 
 #' @export
-newFitModel.brokenstick <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) brokenstickModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+newFitModel.face <- function(fit.package, fit.algorithm, reg, ...) faceModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
+
+#' @export
+newFitModel.brokenstick <- function(fit.package, fit.algorithm, reg, ...) brokenstickModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)

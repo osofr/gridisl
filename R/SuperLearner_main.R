@@ -118,6 +118,7 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, params, hold_column = NULL, ra
   ## ------------------------------------------------------------------------------------------
   ## Re-fit the best scored model using all available data
   ## ------------------------------------------------------------------------------------------
+  message("refitting the best scored model on all data...")
   OData_all <- importData(data = data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
   best_fit <- modelfit$refit_best_model(OData_all)
 

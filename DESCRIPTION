@@ -21,6 +21,7 @@ Imports:
     zoo
 LinkingTo: Rcpp
 Suggests:
+    xgboost,
     h2o,
     ggiraph,
     knitr,
