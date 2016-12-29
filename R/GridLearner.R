@@ -3,7 +3,7 @@ h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negati
 
 # Train a model using a single h2o learner (user-spec) with cross-validation & keep CV predictions
 #' @export
-SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial", fold_column, model_contrl, validation_frame = NULL, ...) {
+fit_single_h2o_learner <- function(learner, training_frame, y, x, family = "binomial", model_contrl, fold_column, validation_frame = NULL, ...) {
   # if (is.numeric(seed)) set.seed(seed)  #If seed given, set seed prior to next step
   if (gvars$verbose) h2o.show_progress() else h2o.no_progress()
   learner_fun <- match.fun(learner)
@@ -46,10 +46,9 @@ SLfit.h2oLearner <- function(learner, training_frame, y, x, family = "binomial",
   return(fit)
 }
 
-# S3 method for h2o deeplearning fit, takes BinDat data object:
-# use "bernoulli" when doing classification and use "gaussian" when doing regression
+
 #' @export
-SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomial", fold_column, model_contrl, validation_frame  = NULL, ...) {
+fit_single_h2o_grid <- function(grid.algorithm, training_frame, y, x, family = "binomial", model_contrl, fold_column, validation_frame  = NULL, ...) {
   if (gvars$verbose) h2o.show_progress() else h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                   intercept = TRUE,
@@ -137,7 +136,7 @@ SLfit.h2ogrid <- function(grid.algorithm, training_frame, y, x, family = "binomi
 }
 
 #' @export
-fit.h2oGridLearner <- function(fit.class, params, training_frame, y, x, model_contrl, fold_column, ...) {
+fit.h2ogrid <- function(fit.class, params, training_frame, y, x, model_contrl, fold_column, ...) {
   # if (is.null(fold_column)) stop("must define the column of CV fold IDs using data$define_CVfolds()")
   family <- model_contrl$family
   grid.algorithms <- model_contrl$grid.algorithm
@@ -148,19 +147,8 @@ fit.h2oGridLearner <- function(fit.class, params, training_frame, y, x, model_co
   fitted_models_all <- NULL
   ngridmodels <- 0
 
-  # nfolds <- model_contrl$nfolds
-  # fold_assignment <- model_contrl$fold_assignment
-  # When fold_column is passed as an external arg, then null nfolds as it should no longer be used.
-  # Note that fold_column name could have still been specified separately in model_contrl
-  # if (!missing(fold_column)) {
-  #   if (!is.null(fold_column) && is.character(fold_column) && (fold_column != "")) {
-  #     model_contrl$nfolds <- NULL
-  #     model_contrl$fold_assignment <- NULL
-  #   }
-  # }
-
   if (is.null(grid.algorithms) && is.null(learners)) {
-    stop("must specify either 'grid.algorithm' or 'learner' when performing estimation with GridLearner")
+    stop("must specify either 'grid.algorithm' or 'learner' when performing estimation with 'grid'")
   }
 
   if (!is.null(grid.algorithms)) {
@@ -169,8 +157,8 @@ fit.h2oGridLearner <- function(fit.class, params, training_frame, y, x, model_co
     names(fitted_models) <- names(grid_objects) <- names(top_grid_models) <- grid.algorithms
 
     for (grid.algorithm in grid.algorithms) {
-      grid_model_fit <- SLfit.h2ogrid(grid.algorithm = grid.algorithm, training_frame = training_frame, y = y, x = x, family = family,
-                                      fold_column = fold_column, model_contrl = model_contrl, ...)
+      grid_model_fit <- fit_single_h2o_grid(grid.algorithm = grid.algorithm, training_frame = training_frame, y = y, x = x, family = family,
+                                            model_contrl = model_contrl, fold_column = fold_column, ...)
       top_grid_models[[grid.algorithm]] <- grid_model_fit$top.model
       grid_model_H2O <- grid_model_fit$model_fit
       grid_objects[[grid.algorithm]] <- grid_model_H2O
@@ -199,8 +187,8 @@ fit.h2oGridLearner <- function(fit.class, params, training_frame, y, x, model_co
     fitted_models_l <- vector(mode = "list", length = length(learners))
     names(fitted_models_l) <- learners
     for (learner in learners) {
-      learner_fit <- SLfit.h2oLearner(learner = learner, training_frame = training_frame, y = y, x = x, family = family,
-                                      fold_column = fold_column, model_contrl = model_contrl, ...)
+      learner_fit <- fit_single_h2o_learner(learner = learner, training_frame = training_frame, y = y, x = x, family = family,
+                                             model_contrl = model_contrl, fold_column = fold_column, ...)
       learner_model_H2O <- learner_fit$model_fit
       fitted_models_l[[learner]] <- learner_model_H2O
     }

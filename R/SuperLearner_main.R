@@ -264,18 +264,19 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, params, nfolds, 
   ## If validation data supplied then score the models based on validation set
   ## ------------------------------------------------------------------------------------------
   if (!missing(valid_data) && !is.null(valid_data)) {
-    message("...evaluting MSE for every model based on validation data...")
+    message("...re-evaluting MSE for every model based on validation data...")
     modelfit$score_models(validation_data = valid_data, subset_exprs = subset_idx)
+    print("Internally evaluated holdout MSE, first averaged at subject level: "); print(data.frame(modelfit$getMSE))
+    print("Internally evaluated holdout RMSE, first averaged at subject level: "); print(data.frame(modelfit$getRMSE))
   }
 
   ## ------------------------------------------------------------------------------------------
   ## If CV was used, then score the models based on out-of-sample predictions on the training data (automatically done by h2o)
   ## ------------------------------------------------------------------------------------------
   if (runCV) {
-    mse <- modelfit$score_models(subset_exprs = subset_idx)$getMSE
-    # modelfit$getMSE
-    # mse <- eval_MSE_cv(modelfit)
-    print("Mean CV MSE (for out of sample predictions) as evaluated by h2o: "); print(data.frame(mse))
+    modelfit$score_models(subset_exprs = subset_idx)
+    print("Internally evaluated CV-MSE (based on holdout preds), first averaged at subject level: "); print(data.frame(modelfit$getMSE))
+    print("Internally evaluated CV-RMSE (based on holdout preds), first averaged at subject level: "); print(data.frame(modelfit$getRMSE))
   }
   return(modelfit)
 }

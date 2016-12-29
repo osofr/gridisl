@@ -109,7 +109,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     fold_column = character(),
     model_contrl = list(),
     classify = FALSE,
-    fit.class = c("glm", "randomForest", "gbm", "deeplearning", "GridLearner"),
+    fit.class = c("glm", "randomForest", "gbm", "deeplearning", "grid"),
     model.fit = list(),
     outfactors = NA,
 
@@ -414,7 +414,7 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
       ## PART II. Fit the h2o grid or single h2o learner on training data with residual predictions as new outcomes
       ## ------------------------------------------------------------------------------------------
       y <- "residual_y" ## redefine the outcome
-      mainfit_class <- "GridLearner"
+      mainfit_class <- "grid"
       class(mainfit_class) <- c(class(mainfit_class), "h2o" %+% mainfit_class)
       self$model.fit <- try(fit(mainfit_class, self$params, training_frame = train_H2Oframe, y = "residual_y", x = self$predvars,
                             model_contrl = self$model_contrl, fold_column = data$fold_column, validation_frame = valid_H2Oframe, ...),

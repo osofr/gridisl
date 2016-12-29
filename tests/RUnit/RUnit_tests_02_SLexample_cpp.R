@@ -88,7 +88,7 @@ test.holdoutSL.GLM <- function() {
                            alpha = alpha_opt, lambda = lambda_opt)
 
   GLM.GRIDparams = list(name = "GLM",
-                       fit.package = "h2o", fit.algorithm = "GridLearner",
+                       fit.package = "h2o", fit.algorithm = "grid",
                        grid.algorithm = c("glm"), seed = 23, glm = glm_hyper_params, family = "gaussian")
   ## add holdout indicator column
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
@@ -150,7 +150,7 @@ test.holdoutSL.GBM <- function() {
 
   h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
   GRIDparams = list(fit.package = "h2o",
-                   fit.algorithm = "GridLearner",
+                   fit.algorithm = "grid",
                    family = "gaussian",
                    grid.algorithm = c("glm", "gbm"), seed = 23,
                    glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
@@ -268,7 +268,7 @@ test.CV.SL <- function() {
   # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
 
   GRIDparams = list(fit.package = "h2o",
-                   fit.algorithm = "GridLearner",
+                   fit.algorithm = "grid",
                    family = "gaussian",
                    grid.algorithm = c("gbm"), seed = 23,
                    # "glm",
@@ -478,7 +478,7 @@ test.residual.holdoutSL <- function() {
 
   h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
   GRIDparams = list(fit.package = "h2o",
-                   fit.algorithm = "ResidGridLearner",
+                   fit.algorithm = "resid_grid",
                    family = "gaussian",
                    grid.algorithm = c("glm", "gbm"), seed = 23,
                    glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",

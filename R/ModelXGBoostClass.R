@@ -1,87 +1,274 @@
-# S3 method for glm binomial family fit, takes BinDat data object:
-fit.xgb.train <- function(fit.class, params, train_data, fold_column, model_contrl, validation_data  = NULL, ...) {
+## ******
+## TO DO: Investigate why cvSL fit prediction works with GLM, but not holdoutSL fit
+## TO DO: Implement a grid for xgboost that may include several learners (e.g., grid-based glm, gbm, drf and individual learner (no grid)
+##        In fit.xgb.grid we could then rbind the data.table that contains these learners
+## TO DO: Fix re-training of the best grid model (based on params, nrounds, ntreelimit, etc)
+## TO DO: Implement out of sample CV prediction for best grid model (use ntreelimit as an arg to predict)
+## TO DO: Add random forests to the grid (for RFs, the arg 'ntreelimit' might differ from 'best_iteration')
+## TO DO: Also add validation_data to watchlist in fit.xgb.train(): watchlist <- list(train = dtrain, eval = dtest)
+
+## TO DO (xgb.grid): avoid loading the entire namespace of tidyverse package (will need to define / load pipe function %>%)
+## TO DO: Might add future support for booster 'dart'
+## TO DO: Determine optimal number of nthreads based on type of evaluation (parallel fits as in stremr or a single fit)
+## TO DO (xgb.grid): "nthread = value", to the main function call (will be passed on to params)
+
+## (DONE, custom metrics / objective): Allow passing optional metric(s), custom objective and eval funs
+## (DONE, Validation Grid): For grid should be able to do the same without CV, just validation data
+## (DONE, CV): For CV need to convert the fold_column in data into a list of validation row indices. Each validation fold rows (vector) are stored as a separate list item.
+## (DONE): NEED TO BE ABLE TO TAKE PARAMS AS AN ARG AND MERGE WITH default params
+## ******
+
+# S3 method for xgboost model call
+fit.xgb.train <- function(fit.class, params, train_data, model_contrl, ...) {
+# fit.xgb.train <- function(fit.class, params, train_data, fold_column, model_contrl, validation_data  = NULL, ...) {
   if (gvars$verbose) print("calling xgboost::xgb.train...")
 
-  ## ******
-  ## TO DO: NEED TO BE ABLE TO TAKE PARAMS AS AN ARG AND MERGE WITH default params
-  ## TO DO: Determine optimal number of nthreads based on type of evaluation (parallel fits as in stremr or a single fit)
-  ## TO DO: Need to be able to use validation_data in watchlist: watchlist <- list(eval = dtest, train = dtrain)
-  ## TO DO: Allow passing optional metric(s), custom objective and eval funs
-  ## TO DO: For CV need to convert the fold_column in data into a list of validation row indices. Each validation fold rows (vector) are stored as a separate list item.
-  ## ******
+  mainArgs <- list(data = train_data)
+  model_contrl['fit.package'] <- NULL
+  model_contrl['fit.algorithm'] <- NULL
 
-  # browser()
+  # xbg.params <- model_contrl[["params"]]
+  if (is.null(model_contrl[["params"]])) {
+    message("separate list of params was not specified for xgboost, passing all arguments using globals ")
+    # xbg.params <- model_contrl
+  }
 
-  xbg.params <- model_contrl
-  xbg.params['fit.package'] <- NULL
-  xbg.params['fit.algorithm'] <- NULL
-
-  if (is.null(xbg.params$objective)) xbg.params$objective <- "reg:linear"
-  # if (is.null(xbg.params$objective)) xbg.params$objective <- "reg:logistic"
-
-  if (is.null(xbg.params$booster)) xbg.params$booster <- "gbtree" ## gbtree or gblinear
-  # if (is.null(xbg.params$nthreads)) xbg.params$nthreads <- 1
+  # if (is.null(model_contrl$objective)) model_contrl$objective <- "reg:linear"
+  # if (is.null(model_contrl$objective)) model_contrl$objective <- "reg:logistic"
+  # if (is.null(model_contrl$booster)) model_contrl$booster <- "gbtree" ## gbtree or gblinear
+  # if (is.null(model_contrl$nthreads)) model_contrl$nthreads <- 1
   ## additional parameters for 'gblinear': lambda = 0L, alpha = 0L ## regularization
+  # if (is.null(model_contrl$silent)) model_contrl$silent <- ifelse(gvars$verbose, 0, 1)
 
-  # if (is.null(xbg.params$silent)) xbg.params$silent <- ifelse(gvars$verbose, 0, 1)
+  # nrounds <- xbg.params$nrounds
+  # xbg.params['nrounds'] <- NULL
+  # if (is.null(nrounds)) nrounds <- 500
 
-  nrounds <- xbg.params$nrounds
-  if (is.null(nrounds)) nrounds <- 200
-  xbg.params['nrounds'] <- NULL
+  # callbacks <- xbg.params$callbacks
+  # xbg.params['callbacks'] <- NULL
 
-  ## NOT USED YET:
-  callbacks <- xbg.params$callbacks
-  xbg.params['callbacks'] <- NULL
+  # metrics <- xbg.params$metrics
+  # if (is.null(metrics)) metrics <- list("rmse")
+  # xbg.params['metrics'] <- NULL
 
-  metrics <- xbg.params$metrics
-  if (is.null(metrics)) metrics <- list("rmse")
-  xbg.params['metrics'] <- NULL
+  # maximize <- xbg.params$maximize
+  # if (is.null(maximize)) maximize <- FALSE
+  # xbg.params['maximize'] <- NULL
+
+  mainArgs <- c(mainArgs, model_contrl)
+  mainArgs[["verbose"]] <- gvars$verbose
+
+  # mainArgs[["callbacks"]] <- c(list(xgboost::cb.evaluation.log()))
 
   if (nrow(train_data) == 0L) {
     model.fit <- list()
-    # model.fit$coef = rep.int(NA_real_, ncol(Xmat))
-    # names(model.fit$coef) <- colnames(Xmat)
   } else {
     # SuppressGivenWarnings({
-      model.fit <- xgboost::xgb.train(xbg.params, train_data,
-                                      # , watchlist=list(train = train_data, test = validation_data),
-                                      # early_stopping_rounds = 3,
-                                      metrics = metrics,
-                                      nrounds = nrounds,
-                                      verbose = ifelse(gvars$verbose, 1, 0))
-      # preds <- predict(logist_reg, dtrain)
+    # model.fit <- xgboost::xgb.train(xbg.params, train_data, nrounds = nrounds,
+    #                                 maximize = maximize,
+    #                                 callbacks = callbacks,
+    #                                 eval_metric = metrics,
+    #                                 maximize = maximize)
+    model.fit <- do.call(xgboost::xgb.train, mainArgs)
     # }, GetWarningsToSuppress())
   }
   nobs <- nrow(train_data)
-
   return(create_fit_object(model.fit, model_alg = "gbm", fitfunname = "xgb.train",
-                           params = params, coef = NULL, nobs = nobs, model_contrl = xbg.params,
+                           params = params, coef = NULL, nobs = nobs, model_contrl = model_contrl,
                            fitclass = "XGBoostmodel"))
 }
 
-# # S3 method for glm binomial family fit, takes BinDat data object:
-# fit.xgb.cv <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
-#   if (gvars$verbose) print("calling glm.fit...")
-#   if (nrow(Xmat) == 0L) {
-#     model.fit <- list()
-#     model.fit$coef = rep.int(NA_real_, ncol(Xmat))
-#     names(model.fit$coef) <- colnames(Xmat)
-#   } else {
-#     ctrl <- glm.control(trace = FALSE)
-#     SuppressGivenWarnings({
-#       model.fit <- stats::glm.fit(x = Xmat,
-#                                   y = Yvals,
-#                                   family = gaussian() ,
-#                                   control = ctrl)
-#     }, GetWarningsToSuppress())
-#   }
+#' @export
+fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomial", model_contrl, fold_column = NULL, validation_data  = NULL, ...) {
+  ## ********************************************************************************
+  ## These defaults can be over-ridden in model_contrl
+  # ********************************************************************************
+  mainArgs <- list(data = train_data,
+                   nrounds = 500,
+                   # nrounds = 1000,
 
-#   # print(object.size(model.fit), units = "Kb")
+                   early_stopping_rounds = 10,
 
-#   return(create_fit_object(model.fit, model_alg = "gbm", fitfunname = "xgb.train",
-#                            params = params, nobs = nobs, model_contrl = xbg.params,
-#                            fitclass = "XGBoostmodel"))
-# }
+                   # metrics = list(evalMSEerror),
+                   # order_metric_name = "RMSE",
+
+                   metrics = list("rmse"),
+                   order_metric_name = "rmse",
+
+                   maximize = FALSE,
+
+                   verbose = gvars$verbose,
+
+                   seed = model_contrl[['seed']])
+
+  if (family %in% "binomial") {
+    # mainArgs[["objective"]] <- "reg:logistic" # need to see what is the difference between the two
+    mainArgs[["objective"]] <- "binary:logistic"
+  } else if (family %in% "gaussian") {
+    mainArgs[["objective"]] <- "reg:linear"
+  } else {
+    stop("family values other than 'binomial' and 'gaussian' are not yet supported for xgboost")
+  }
+
+  if (is.null(grid.algorithm)) grid.algorithm <- "gbm"
+
+  if (!is.character(grid.algorithm) || (!grid.algorithm %in% c("glm","gbm"))) stop("'grid.algorithm' must be either 'glm' or 'gbm'")
+  if (grid.algorithm %in% "glm") {
+    mainArgs[["booster"]] <- "gblinear"
+  } else if (grid.algorithm %in% "gbm") {
+    mainArgs[["booster"]] <- "gbtree"
+  } else if (grid.algorithm %in% "drf") {
+    stop("drf w/ xgboost is not implemented")
+  } else {
+    stop("the only algorithms allowed with xgboost are: glm, gbm and drf")
+  }
+
+  # Is there a validation frame for model scoring?
+  if (!is.null(validation_data)) mainArgs[["validation_data"]] <- validation_data
+
+  ## Is there a fold_column for cross-validation based model scoring?
+  ## ******** fold_column is already CONVERTED TO INTERNAL xgboost representation ********
+  if (!is.null(fold_column)) {
+      mainArgs[["folds"]] <- fold_column
+      ## callback that saves the CV models (and out-of-sample / holdout predictions)
+      mainArgs[["callbacks"]] = list(xgboost::cb.cv.predict(save_models = TRUE))
+  }
+
+  ## THE grid of hyper-parameters, can be either specified in a list with names: "glm"/"gbm"/"params"
+  grid_params <- model_contrl[[grid.algorithm]]
+
+  if (is.null(grid_params)) {
+    grid_params <- model_contrl[["params"]]
+    model_contrl[["params"]] <- NULL
+  }
+
+  if (is.null(grid_params))
+    stop("must specify hyper parameters for grid search with '" %+% algo_fun_name %+% "' by defining a SuperLearner params list item named '" %+% grid.algorithm %+% "'")
+
+  if (!is.null(grid_params[["search_criteria"]])) {
+    search_criteria <- grid_params[["search_criteria"]]
+    grid_params[["search_criteria"]] <- NULL
+  } else {
+    search_criteria <- model_contrl[["search_criteria"]]
+  }
+
+  mainArgs[["hyper_params"]] <- grid_params
+  mainArgs[["search_criteria"]] <- search_criteria
+
+  algo_fun_name <- "xgb.grid"
+  algo_fun <- get0(algo_fun_name, mode = "function", inherits = TRUE)
+
+  ## Keep only the relevant args in mainArgs list (DISABLING FOR NOW):
+  # mainArgs <- keep_only_fun_args(mainArgs, fun = algo_fun)
+
+  ## Add user args in model_contrl that pertain to learner fun algo_fun
+  ## This will replace any existing args in mainArgs or will add new ones
+  mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = algo_fun)
+
+  ## Remove any args from mainArgs that also appear in hyper_params:
+  common_hyper_args <- intersect(names(mainArgs), names(grid_params))
+  if(length(common_hyper_args) > 0) mainArgs <- mainArgs[!(names(mainArgs) %in% common_hyper_args)]
+
+  ## TO DO: What if 'params' is specified as part of model_contrl?
+  ##        replace existing items in params with those in grid_params Intersect?
+
+  ## Will put all fitted models in a single list for stacking:
+  fitted_models_all <- NULL
+  ngridmodels <- 0
+
+  if (gvars$verbose) print("running xgb.grid with booster: " %+% mainArgs[["booster"]])
+  model_fit <- do.call(xgb.grid, mainArgs)
+
+  return(model_fit)
+
+  # # browser()
+
+  # ## Sort the grid by increasing MSE:
+  # # model_fit <- h2o::h2o.getGrid(model_fit@grid_id, sort_by = "mse", decreasing = FALSE)
+
+  # fit <- vector(mode = "list")
+  # fit$fitfunname <- "xgb.grid";
+
+  # fit$model_fit <- model_fit
+  # # fit$top.model <- h2o::h2o.getModel(model_fit@model_ids[[1]])
+  # # h2o.performance(top.model)
+  # # h2o.performance(top.model, valid = TRUE)
+
+  # if (gvars$verbose) {
+  #   # print("grid search fitted models:"); print(model_fit)
+  #   # print("grid search: " %+% model_fit@grid_id)
+  #   # print("grid search top performing model:"); print(fit$top.model)
+  # }
+
+  # class(fit) <- c(class(fit)[1], c("XGBoostgrid"))
+  # return(fit)
+  # return(create_fit_object(model.fit, model_alg = "gbm", fitfunname = "xgb.train",
+  #                          params = params, nobs = nobs, model_contrl = xbg.params,
+  #                          fitclass = "XGBoostmodel"))
+}
+
+#' @export
+fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_column, ...) {
+  family <- model_contrl$family
+  grid.algorithms <- model_contrl$grid.algorithm
+  learners <- model_contrl$learner
+  if (is.null(family)) family <- "binomial"
+
+  grid_model_fit <- fit_single_xgboost_grid(grid.algorithm = grid.algorithms[[1]], train_data = train_data, family = family,
+                                            model_contrl = model_contrl, fold_column = fold_column, ...)
+
+  fitted_models_all <- grid_model_fit[["xgb_fit"]]
+  ngridmodels <- length(fitted_models_all)
+  model_algorithms <- model_ids <- vector(mode = "list", length = length(fitted_models_all))
+  model_algorithms[] <- "xgb"
+  # model_ids <- lapply(fitted_models_all, function(model) model@model_id)
+  # Assign names to each grid model, keep individual learner names intact (unless a $name arg was passed by the user):
+  GRIDmodel_names <- "grid." %+% unlist(model_algorithms) %+% "." %+% (1:ngridmodels)
+
+  # learner_names <- names(fitted_models_all)[-(1:ngridmodels)]
+  model_names <- c(GRIDmodel_names)
+  # model_names <- c(GRIDmodel_names, learner_names)
+
+  if (!is.null(model_contrl$name))  model_names <- model_names %+% "." %+% model_contrl$name
+  names(fitted_models_all) <- names(model_algorithms) <- names(model_ids) <- model_names
+  grid_model_fit[, ("model_names") := model_names]
+
+  fit <- list(
+    params = params,
+    fitted_gridDT = grid_model_fit,
+    fitted_models_all = fitted_models_all,
+    # grid_ids = lapply(fitted_gridDT, function(grids_object) grids_object@grid_id),
+    ngridmodels = ngridmodels,
+    model_algorithms = model_algorithms,
+    model_ids = model_ids
+    # top_grid_models = top_grid_models,
+    )
+
+  # ...
+  # fit <- list(params = params,
+  #             fitted_gridDT = fitted_gridDT,
+  #             grid_ids = lapply(fitted_gridDT, function(grids_object) grids_object@grid_id),
+  #             ngridmodels = ngridmodels,
+  #             model_algorithms = model_algorithms,
+  #             model_ids = model_ids,
+  #             top_grid_models = top_grid_models,
+  #             fitted_models_all = fitted_models_all)
+
+  #   fit <- list(
+  #   params = params,
+  #   fitted_gridDT = fitted_gridDT,
+  #   grid_ids = lapply(fitted_gridDT, function(grids_object) grids_object@grid_id),
+  #   ngridmodels = ngridmodels,
+  #   model_algorithms = model_algorithms,
+  #   model_ids = model_ids,
+  #   top_grid_models = top_grid_models,
+  #   fitted_models_all = fitted_models_all
+  #   )
+
+  class(fit) <- c(class(fit)[1], c("XGBoostgrid"))
+  return(fit)
+
+}
 
 ## ----------------------------------------------------------------
 ## Obtain xgb.DMatrix to be used for prediction with xgboost
@@ -119,6 +306,9 @@ getPredictXGBDMat <- function(m.fit, ParentObject, DataStorageObject, subset_idx
   }
 }
 
+predictP1.XGBoostgrid <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
+  return(predictP1.XGBoostmodel(m.fit, ParentObject, DataStorageObject, subset_idx, ...))
+}
 
 predictP1.XGBoostmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict_model_names, ...) {
   pred_dmat <- getPredictXGBDMat(m.fit, ParentObject, DataStorageObject, subset_idx)
@@ -133,10 +323,20 @@ predictP1.XGBoostmodel <- function(m.fit, ParentObject, DataStorageObject, subse
     # pAoutDT <- NULL
 
     for (idx in seq_along(models_list)) {
-      ## will generally return a vector, needs to be put into a corresponding column of a data.table
-      # pAoutDT[, (names(models_list)[idx]) := predict(models_list[[idx]], pred_dmat)]
 
-      pAoutDT[[names(models_list)[idx]]] <- predict(models_list[[idx]], pred_dmat)
+      if (!is.null(models_list[[idx]]$best_ntreelimit)) ntreelimit <- models_list[[idx]]$best_ntreelimit else ntreelimit <- NULL
+
+      ## temp fix to avoid the bug "GBLinear::Predict ntrees is only valid for gbtree predictor"
+      ## for gblinear need to replace with this (set ntreelimit to 0)
+      if (models_list[[idx]]$params$booster %in% "gblinear") {
+        models_list[[idx]]$best_ntreelimit <- NULL
+        ntreelimit <- 0
+      }
+
+      browser()
+
+      ## will generally return a vector, needs to be put into a corresponding column of a data.table
+      pAoutDT[[names(models_list)[idx]]] <- predict(models_list[[idx]], newdata = pred_dmat, ntree_limit = ntreelimit)
     }
 
     setDT(pAoutDT)
@@ -195,7 +395,7 @@ XGBoostClass <- R6Class(classname = "XGBoost",
     fold_column = character(),
     model_contrl = list(),
     classify = FALSE,
-    fit.class = c("gbm", "GridLearner"),
+    fit.class = c("gbm", "grid"),
     model.fit = list(),
     outfactors = NA,
 
@@ -214,15 +414,15 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       self$useDMatrix <- useDMatrix
       assert_that("xgboost" %in% fit.package)
 
-
-
       ## *** IN THE FUTURE THIS needs to be changed accordingly for running either single gbm model fit or for CV grid search (when implemented).
       self$fit.class <- fit.algorithm
-      class(self$fit.class) <- c(class(self$fit.class), "xgb.train")
-      ## class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
-
-
-
+      if (fit.algorithm %in% c("glm", "drf", "gbm")) {
+        class(self$fit.class) <- c(class(self$fit.class), "xgb.train")
+      } else if (fit.algorithm %in% "grid") {
+        class(self$fit.class) <- c(class(self$fit.class), "xgb.grid")
+      } else {
+        class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
+      }
       invisible(self)
     },
 
@@ -257,9 +457,17 @@ XGBoostClass <- R6Class(classname = "XGBoost",
 
       }
 
+      if (!is.null(self$fold_column)) {
+        Vfold_valid_rows <- data$dat.sVar[, .I, by = eval(self$fold_column)]
+        setkeyv(Vfold_valid_rows, cols = "fold")
+        # Vfold_valid_rows[.(unique(fold)), mult = 'all']
+        folds <- split(Vfold_valid_rows[["I"]], Vfold_valid_rows[["fold"]])
+      } else {
+        folds <- NULL
+      }
+
       self$model.fit <- try(fit(self$fit.class, self$params, train_data = train_dmat,
-                                model_contrl = self$model_contrl,
-                                fold_column = self$fold_column,
+                                model_contrl = self$model_contrl, fold_column = folds,
                                 validation_data = valid_dmat, ...),
                           silent = FALSE)
 
@@ -280,14 +488,14 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       return(P1_DT)
     },
 
-    # predictP1_out_of_sample_cv = function(validation_data, subset_idx, predict_model_names) {
-    #   P1_DT <- predict_out_of_sample_cv(self$model.fit,
-    #                                     ParentObject = self,
-    #                                     validation_data = validation_data,
-    #                                     subset_idx = subset_idx,
-    #                                     predict_model_names = predict_model_names)
-    #   return(P1_DT)
-    # },
+    predictP1_out_of_sample_cv = function(validation_data, subset_idx, predict_model_names) {
+      P1_DT <- xgb_predict_out_of_sample_cv(self$model.fit,
+                                            ParentObject = self,
+                                            validation_data = validation_data,
+                                            subset_idx = subset_idx,
+                                            predict_model_names = predict_model_names)
+      return(P1_DT)
+    },
 
     getmodel_byname = function(model_names, model_IDs) {
       if (!missing(model_names)) {
@@ -298,44 +506,40 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       }
     },
 
-    get_best_model_params = function(model_names) {
-      model_obj <- self$getmodel_byname(model_names[1])[[1]]
+    getgridDT_byname = function(model_names, model_IDs) {
+      if (!missing(model_names)) {
+        model_idx <- (self$model.fit$fitted_gridDT[["model_names"]] %in% model_names)
+        return(self$model.fit$fitted_gridDT[model_idx, ])
+      } else {
+        if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
+        # return(lapply(model_IDs, h2o::h2o.getModel))
+      }
+    },
 
-      # Top model is always going to be a call for training a single final gbm (no CV is needed)
+    get_best_model_params = function(model_names) {
+      ## actual model object returned by xgboost for the best performing model
+      model_obj <- self$getmodel_byname(model_names[1])[[1]]
+      ## data.table row from the grid with the best model
+      gridmodel_obj <- self$getgridDT_byname(model_names[1])
+
+      ## Top model is always going to be a call for training a single final xbg model (no CV /validation data)
       top_params <- list(fit.package = self$model_contrl$fit.package,
                          fit.algorithm = "xgb.train")
 
-      # browser()
       # str(model_obj)
       # model_obj$call
-
       ## params arg of xgb.train:
       top_params <- c(top_params, model_obj$params)
 
-      ## ntrees (nrounds) argument will need special treatment (with early stopping and CV / validation data):
-      ## see model_obj$evaluation_log for model history by iteration/round and performance for each round
-      top_params$nrounds <- model_obj$niter
-      top_params$callbacks <- model_obj$callbacks
+      ## should be equivalent:
+      if (!all.equal(model_obj$params, gridmodel_obj[["params"]][[1]])) stop("fatal error, model parameters appear to be inconsistent")
 
+      top_params[["nrounds"]] <- gridmodel_obj[["nrounds"]]
+      top_params <- c(top_params, gridmodel_obj[["glob_params"]][[1]])
+
+      # top_params$callbacks <- model_obj$callbacks
       # attributes(model_obj)
-
-
-      ## -------------------------------------------------
-      ## From h2o:
-      ## -------------------------------------------------
-      # top_params_tmp <- model_obj@allparameters ## alternative is to grab the exact params used in the model, including defaults
-      # top_params_tmp$model_id <- NULL
-      # top_params_tmp$training_frame <- NULL
-      # top_params_tmp$validation_frame <- NULL
-      # top_params_tmp$x <- NULL
-      # top_params_tmp$y <- NULL
-      # top_params_tmp$nfolds <- NULL
-      # top_params_tmp$fold_column <- NULL
-      # top_params_tmp$fold_assignment <- NULL
-
-      # top_params_tmp$score_each_iteration <- NULL # deeplearning fails otherwise
-      # top_params <- c(top_params, top_params_tmp)
-      # stop("Not implemented")
+      # browser()
 
       return(top_params)
     },
@@ -344,6 +548,7 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       outvar <- self$outvar
       predvars <- self$predvars
       assert_that(is.DataStorageClass(data))
+      # browser()
 
       if (self$useDMatrix) {
 
@@ -361,10 +566,8 @@ XGBoostClass <- R6Class(classname = "XGBoost",
         # load_var_names <- c(outvar, predvars)
         # if (!is.null(data$fold_column)) load_var_names <- c(load_var_names, data$fold_column)
         if (missing(subset_idx)) subset_idx <- (1:data$nobs)
-
-        # browser()
-
         load_subset_t <- system.time({
+          IDs <- data$get.outvar(subset_idx, data$nodes$IDnode)
           Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
 
           ## gives an error when all columns happen to be integer type:
@@ -373,11 +576,10 @@ XGBoostClass <- R6Class(classname = "XGBoost",
           # fit_dmat <- xgboost::xgb.DMatrix(data.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE]), label = Yvals)
 
           # Another option is to stop at data.matrix and pass it directly to xgboost, passing Y's as separate arg
-
           Xmat <- as.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE])
           if (is.integer(Xmat)) Xmat[,1] <- as.numeric(Xmat[,1])
           fit_dmat <- xgboost::xgb.DMatrix(Xmat, label = Yvals)
-
+          attr(fit_dmat, 'ID') <- IDs
         })
         # if (gvars$verbose) {
           print("time to create xgb.DMatrix: "); print(load_subset_t)
@@ -389,19 +591,19 @@ XGBoostClass <- R6Class(classname = "XGBoost",
 
     show = function(all_fits = FALSE, ...) {
       model.fit <- self$model.fit
-      grid_objects <- self$model.fit$grid_objects
+      fitted_gridDT <- self$model.fit$fitted_gridDT
       top_grid_models <- self$model.fit$top_grid_models
 
-      if (!is.null(grid_objects)) {
-        cat(" TOTAL NO. OF GRIDS: " %+% length(grid_objects) %+% "\n")
-        cat(" ======================= \n")
-        for (grid_nm in names(grid_objects)) {
-          print(grid_objects[[grid_nm]])
-          cat("\n TOP MODEL FOR THIS GRID: \n")
-          cat(" ======================= \n")
-          print(top_grid_models[[grid_nm]])
-        }
-      }
+      # if (!is.null(fitted_gridDT)) {
+      #   cat(" TOTAL NO. OF GRIDS: " %+% length(fitted_gridDT) %+% "\n")
+      #   cat(" ======================= \n")
+      #   for (grid_nm in names(fitted_gridDT)) {
+      #     print(fitted_gridDT[[grid_nm]])
+      #     cat("\n TOP MODEL FOR THIS GRID: \n")
+      #     cat(" ======================= \n")
+      #     print(top_grid_models[[grid_nm]])
+      #   }
+      # }
 
       if (all_fits) {
         cat("\n...Printing the summary fits of all models contained in this ensemble...\n")

@@ -1,10 +1,75 @@
 ## ------------------------------------------------------------------------------------
 ## Holdout Growth Curve SL with model scoring based on random holdouts
 ## ------------------------------------------------------------------------------------
-test.holdoutSL.XGBoost <- function() {
+
+test.glm.XGBoost <- function() {
   # library("longGriDiSL")
-  require("h2o")
-  h2o::h2o.init(nthreads = -1)
+  library("tidyverse")
+  options(longGriDiSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  # lambda = 0L, alpha = 0L
+  alpha_opt <- c(0,1.0,seq(0.1,0.9,0.1))
+  lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5)
+
+ GRIDparams = list(fit.package = "xgboost",
+                   fit.algorithm = "grid",
+                   grid.algorithm = c("glm"),
+                   family = "gaussian",
+                   search_criteria = list(strategy = "RandomDiscrete", max_models = 100),
+                   params = list(
+                                 alpha = alpha_opt,
+                                 lambda = lambda_opt
+                                 # eta = c(0.3, 0.1,0.01),
+                                 # max_depth = c(4,6,8,10),
+                                 # max_delta_step = c(0,1),
+                                 # subsample = 1,
+                                 # scale_pos_weight = 1
+                                 ),
+                   seed = 123456
+                   # glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
+                   # stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10
+                   )
+
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  grid_mfit_xgboost_cv1 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                                    data = cpp_folds, params = GRIDparams, fold_column = "fold")
+
+  preds_alldat2 <- predict_SL(grid_mfit_xgboost_cv1, newdata = cpp_folds, add_subject_data = FALSE)
+  head(preds_alldat2[])
+
+#     eta max_depth max_delta_step subsample scale_pos_weight              xgb_fit glob_params niter
+# 1: 0.10         8              1         1                1 <xgb.cv.synchronous>      <list>    47
+# 2: 0.10         8              0         1                1 <xgb.cv.synchronous>      <list>    47
+# 3: 0.01         6              1         1                1 <xgb.cv.synchronous>      <list>   399
+# 4: 0.01         8              0         1                1 <xgb.cv.synchronous>      <list>   399
+#    nrounds ntreelimit params iter train_rmse_mean train_rmse_std test_rmse_mean test_rmse_std
+# 1:      37         37 <list>   37        1.240311     0.01824292       1.245224    0.07221765
+# 2:      37         37 <list>   37        1.240311     0.01824292       1.245224    0.07221765
+# 3:     389        389 <list>  389        1.240320     0.01830807       1.245259    0.07237535
+# 4:     389        389 <list>  389        1.240320     0.01830807       1.245259    0.07237535
+
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  grid_mfit_xgboost_holdout <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                                              data = cpp_holdout, params = GRIDparams, hold_column = "hold")
+
+#     eta max_depth max_delta_step subsample scale_pos_weight       xgb_fit glob_params niter nrounds
+# 1: 0.10         8              1         1                1 <xgb.Booster>      <list>    57      47
+# 2: 0.10         8              0         1                1 <xgb.Booster>      <list>    57      47
+# 3: 0.01         6              1         1                1 <xgb.Booster>      <list>   499     489
+# 4: 0.01         8              0         1                1 <xgb.Booster>      <list>   499     489
+#    ntreelimit params iter train_rmse test_rmse
+# 1:         47 <list>   47   1.226035  1.271081
+# 2:         47 <list>   47   1.226035  1.271081
+# 3:        489 <list>  489   1.226041  1.271265
+# 4:        489 <list>  489   1.226041  1.271265
+
+}
+
+test.holdoutSL.XGBoost <- function() {
+  library("longGriDiSL"); library("tidyverse")
   options(longGriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -14,29 +79,55 @@ test.holdoutSL.XGBoost <- function() {
   ## Define learners (glm, grid glm and grid gbm)
   ## ----------------------------------------------------------------
   ## glm grid learner:
-  alpha_opt <- c(0,1,seq(0.1,0.9,0.1))
-  lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
-  glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 3), alpha = alpha_opt, lambda = lambda_opt)
+  # alpha_opt <- c(0,1,seq(0.1,0.9,0.1))
+  # lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
+  # glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 3), alpha = alpha_opt, lambda = lambda_opt)
   ## gbm grid learner:
-  gbm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
-                           ntrees = c(100, 200, 300, 500),
-                           learn_rate = c(0.005, 0.01, 0.03, 0.06),
-                           max_depth = c(3, 4, 5, 6, 9),
-                           sample_rate = c(0.7, 0.8, 0.9, 1.0),
-                           col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
-                           balance_classes = c(TRUE, FALSE))
+  # gbm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
+  #                          ntrees = c(100, 200, 300, 500),
+  #                          learn_rate = c(0.005, 0.01, 0.03, 0.06),
+  #                          max_depth = c(3, 4, 5, 6, 9),
+  #                          sample_rate = c(0.7, 0.8, 0.9, 1.0),
+  #                          col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
+  #                          balance_classes = c(TRUE, FALSE))
+  # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
 
-  h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
-  GRIDparams = list(fit.package = "h2o",
-                   fit.algorithm = "GridLearner",
+  GRIDparams = list(fit.package = "xgboost",
+                   fit.algorithm = "grid",
+                   grid.algorithm = c("gbm"),
                    family = "gaussian",
-                   grid.algorithm = c("glm", "gbm"), seed = 23,
-                   glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
-                   stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
+                   search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
+                   params = list(eta = c(0.3, 0.1,0.01),
+                                 max_depth = c(4,6,8,10),
+                                 max_delta_step = c(0,1),
+                                 subsample = 1,
+                                 scale_pos_weight = 1),
+                   seed = 123456
+                   # glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
+                   # stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10
+                   )
+
+  ## CURRENTLY NOT WORKING:
+  # grid_mfit_xgboost <- fit_model(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+  #                                train_data = cpp, params  = GRIDparams)
+
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  grid_mfit_xgboost_cv1 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                                    data = cpp_folds, params = GRIDparams, fold_column = "fold")
+
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  grid_mfit_xgboost_holdout <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                                              data = cpp_holdout, params = GRIDparams, hold_column = "hold")
+
+  str(grid_mfit_xgboost_holdout)
+  grid_mfit_xgboost_holdout$getfit
+  grid_mfit_xgboost_holdout$getmodel_ids
+  grid_mfit_xgboost_holdout$get_best_model_names()
+  grid_mfit_xgboost_holdout$get_best_models()
+  grid_mfit_xgboost_holdout$get_best_model_params()
 
   ## add holdout indicator column
-  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
-
+  # cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   # --------------------------------------------------------------------------------------------
   ## Fit the model based on additional special features (summaries) of the outcomes:
   # --------------------------------------------------------------------------------------------
@@ -54,25 +145,26 @@ test.holdoutSL.XGBoost <- function() {
   ## Predictions for new data based on best SL model trained on all data:
   preds_alldat <- predict_SL(mfit_hold2, newdata = cpp_holdout, add_subject_data = TRUE)
   preds_alldat[]
-
-  ## Predictions for training data from all models trained on non-holdout data (default):
-  preds_train <- longGriDiSL:::predict_model(mfit_hold2, add_subject_data = TRUE)
-  preds_train[]
-  ## Same but only for the top model
-  preds_train_top <- longGriDiSL:::predict_model(mfit_hold2, predict_only_bestK_models = 1, add_subject_data = TRUE)
-  preds_train_top[]
-  ## Same with predict_SL
+  ## Predict for best model trained on non-holdouts only:
   preds_train_top2 <- predict_SL(mfit_hold2, add_subject_data = TRUE, use_best_retrained_model = FALSE)
   preds_train_top2[]
-  checkTrue(all.equal(preds_train_top, preds_train_top2))
 
-  ## Predictions for all holdout data points for all models trained on non-holdout data:
+  ## Predictions for training data from all models trained on non-holdout data (default):
+  ## not implemented
+  # preds_train <- longGriDiSL:::predict_model(mfit_hold2, add_subject_data = TRUE)
+  # preds_train[]
+  ## Same but only for the top model
+  ## not implemented
+  # preds_train_top <- longGriDiSL:::predict_model(mfit_hold2, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  # preds_train_top[]
+  # checkTrue(all.equal(preds_train_top, preds_train_top2))
+
+  ## Predictions for holdouts for all models trained on non-holdout data:
   preds_holdout <- longGriDiSL:::predict_holdout(mfit_hold2, predict_only_bestK_models = 1, add_subject_data = TRUE)
   preds_holdout[]
   ## Same with predict_SL
   preds_holdout2 <- predict_SL(mfit_hold2, add_subject_data = TRUE, pred_holdout = TRUE)
   preds_holdout2[]
-  checkTrue(all.equal(preds_train_top, preds_train_top2))
 
   ## Predictions of the best trained model for new data
   preds_newdat_alldat <- predict_SL(mfit_hold2, newdata = cpp_holdout, add_subject_data = TRUE)
@@ -96,7 +188,8 @@ test.holdoutSL.XGBoost <- function() {
   make_report_rmd(mfit_hold2, data = cpp_holdout, K = 10, format = "html", openFile = FALSE)
 
   ## Save the best performing h2o model fit to disk:
-  save_best_h2o_model(mfit_hold2, file.path = "/Users/olegsofrygin/GoogleDrive/HBGDki/ImputationSL/sofware")
+  # not implemented
+  # save_best_h2o_model(mfit_hold2, file.path = "/Users/olegsofrygin/GoogleDrive/HBGDki/ImputationSL/sofware")
 }
 
 ## ------------------------------------------------------------------------------------
@@ -105,8 +198,6 @@ test.holdoutSL.XGBoost <- function() {
 test.CV.SL.XGBoost <- function() {
   # library("longGriDiSL")
   require("data.table")
-  require("h2o")
-  h2o::h2o.init(nthreads = -1)
   options(longGriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -115,30 +206,45 @@ test.CV.SL.XGBoost <- function() {
   ## ------------------------------------------------------------------------------------------------
   ## Define learners (glm, grid glm and grid gbm)
   ## ------------------------------------------------------------------------------------------------
-  ## glm grid learner:
-  alpha_opt <- c(0,1,seq(0.1,0.9,0.1))
-  lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
-  glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 3), alpha = alpha_opt, lambda = lambda_opt)
-  ## gbm grid learner:
-  gbm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
-                           ntrees = c(100, 200, 300, 500),
-                           learn_rate = c(0.005, 0.01, 0.03, 0.06),
-                           max_depth = c(3, 4, 5, 6, 9),
-                           sample_rate = c(0.7, 0.8, 0.9, 1.0),
-                           col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
-                           balance_classes = c(TRUE, FALSE))
+  # ## glm grid learner:
+  # alpha_opt <- c(0,1,seq(0.1,0.9,0.1))
+  # lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
+  # glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 3), alpha = alpha_opt, lambda = lambda_opt)
+  # ## gbm grid learner:
+  # gbm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
+  #                          ntrees = c(100, 200, 300, 500),
+  #                          learn_rate = c(0.005, 0.01, 0.03, 0.06),
+  #                          max_depth = c(3, 4, 5, 6, 9),
+  #                          sample_rate = c(0.7, 0.8, 0.9, 1.0),
+  #                          col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
+  #                          balance_classes = c(TRUE, FALSE))
 
-  h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas)
-  ## this fails on latest build (lambda_search)
-  # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
+  # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas)
+  # ## this fails on latest build (lambda_search)
+  # # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
 
-  GRIDparams = list(fit.package = "h2o",
-                   fit.algorithm = "GridLearner",
+  # GRIDparams = list(fit.package = "h2o",
+  #                  fit.algorithm = "grid",
+  #                  family = "gaussian",
+  #                  grid.algorithm = c("gbm"), seed = 23,
+  #                  # "glm",
+  #                  glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
+  #                  stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
+
+  GRIDparams = list(fit.package = "xgboost",
+                   fit.algorithm = "grid",
+                   grid.algorithm = c("gbm"),
                    family = "gaussian",
-                   grid.algorithm = c("gbm"), seed = 23,
-                   # "glm",
-                   glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
-                   stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
+                   search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
+                   params = list(eta = c(0.3, 0.1,0.01),
+                                 max_depth = c(4,6,8,10),
+                                 max_delta_step = c(0,1),
+                                 subsample = 1,
+                                 scale_pos_weight = 1),
+                   seed = 123456
+                   # glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
+                   # stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10
+                   )
 
   ## define CV folds (respecting that multiple observations per subject must fall within the same fold)
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
@@ -160,13 +266,14 @@ test.CV.SL.XGBoost <- function() {
   checkTrue(all.equal(preds_alldat1, preds_alldat2))
 
   ## Predictions for best CV model (not re-trained, trained only on non-holdouts), must match:
-  preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, add_subject_data = FALSE)
-  preds_best_CV[]
-  preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, add_subject_data = TRUE)
-  preds_best_CV[]
-  preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = FALSE)
-  preds_best_CV[]
-  checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
+  ## NOT IMPLEMENTED
+  # preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, add_subject_data = FALSE)
+  # preds_best_CV[]
+  # preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, add_subject_data = TRUE)
+  # preds_best_CV[]
+  # preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = FALSE)
+  # preds_best_CV[]
+  # checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
 
   # Same with predict_SL:
   preds_best_CV2 <- predict_SL(mfit_cv1, use_best_retrained_model = FALSE, add_subject_data = FALSE)
@@ -296,7 +403,7 @@ test.residual.holdoutSL <- function() {
 
   h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
   GRIDparams = list(fit.package = "h2o",
-                   fit.algorithm = "ResidGridLearner",
+                   fit.algorithm = "resid_grid",
                    family = "gaussian",
                    grid.algorithm = c("glm", "gbm"), seed = 23,
                    glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",

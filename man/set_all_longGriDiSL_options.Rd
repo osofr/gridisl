@@ -6,7 +6,7 @@
 \usage{
 set_all_longGriDiSL_options(fit.package = c("h2o", "speedglm", "glm",
   "brokenstick", "face"), fit.algorithm = c("glm", "gbm", "randomForest",
-  "deeplearning", "GridLearner"), maxncats = 20)
+  "deeplearning", "grid", "resid_grid"), maxncats = 20)
 }
 \arguments{
 \item{fit.package}{Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")}

@@ -7,9 +7,9 @@ newFitModel <- function(fit.package, fit.algorithm, reg, ...) { UseMethod("newFi
 #' @export
 newFitModel.h2o <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) {
   h2oModelClass$new(fit.algorithm, fit.package, reg, ...)
-  if (fit.algorithm %in% "GridLearner") {
+  if (fit.algorithm %in% "grid") {
     ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
-  } else if (fit.algorithm %in% "ResidGridLearner") {
+  } else if (fit.algorithm %in% "resid_grid") {
     ModelFitObject <- h2oResidualModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
   } else {
     ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)

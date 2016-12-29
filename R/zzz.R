@@ -12,7 +12,7 @@ gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
 allowed.fit.package <- c("speedglm", "glm", "h2o", "xgboost")
-allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "GridLearner", "ResidGridLearner")
+allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "grid", "resid_grid")
 # , "SuperLearner"
 allowed.bin.method = c("equal.mass", "equal.len", "dhist")
 
@@ -84,7 +84,7 @@ print_longGriDiSL_opts <- function() {
 #' @seealso \code{\link{longGriDiSLOptions}}, \code{\link{print_longGriDiSL_opts}}
 #' @export
 set_all_longGriDiSL_options <- function( fit.package = c("h2o", "speedglm", "glm", "brokenstick", "face"),
-                                           fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "GridLearner"),
+                                           fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "grid", "resid_grid"),
                                            maxncats = 20) {
   # , "SuperLearner"
 

@@ -80,7 +80,7 @@ test.shared_h2o_database <- function() {
                            balance_classes = c(TRUE, FALSE))
   ## single glm learner:
   # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
-  GRIDparams = list(fit.package = "h2o", fit.algorithm = "GridLearner", family = "gaussian",
+  GRIDparams = list(fit.package = "h2o", fit.algorithm = "grid", family = "gaussian",
                     grid.algorithm = c("glm", "gbm"), seed = 23,
                     glm = glm_hyper_params, gbm = gbm_hyper_params,
                     # learner = "h2o.glm.reg03",
@@ -177,7 +177,7 @@ test.genericSL.subset <- function() {
                            balance_classes = c(TRUE, FALSE))
   ## single glm learner:
   # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
-  GRIDparams = list(fit.package = "h2o", fit.algorithm = "GridLearner", family = "gaussian",
+  GRIDparams = list(fit.package = "h2o", fit.algorithm = "grid", family = "gaussian",
                     grid.algorithm = c("glm", "gbm"), seed = 23,
                     glm = glm_hyper_params, gbm = gbm_hyper_params,
                     # learner = "h2o.glm.reg03",
@@ -267,7 +267,7 @@ test.generic.h2oSL <- function() {
   ## ----------------------------------------------------------------
   ## single glm learner:
   h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
-  GRIDparams = list(fit.package = "h2o", fit.algorithm = "GridLearner", family = "gaussian",
+  GRIDparams = list(fit.package = "h2o", fit.algorithm = "grid", family = "gaussian",
                     grid.algorithm = c("gbm"), seed = 23, # "glm",
                     glm = glm_hyper_params,
                     gbm = gbm_hyper_params,
