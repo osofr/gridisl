@@ -9,15 +9,19 @@ Depends:
 Imports:
     assertthat,
     data.table,
+    dplyr,
     ggplot2,
+    magrittr,
     methods,
     R6,
     Rcpp,
     rmarkdown,
     pander,
+    purrr,
     speedglm,
     stats,
     stringr,
+    tidyr,
     zoo
 LinkingTo: Rcpp
 Suggests:

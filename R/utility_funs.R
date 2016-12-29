@@ -1,5 +1,6 @@
 #' @useDynLib longGriDiSL
 #' @import R6
+#' @importFrom magrittr %>%
 #' @importFrom Rcpp sourceCpp
 #' @importFrom graphics axis barplot hist par text  legend plot
 #' @importFrom methods is

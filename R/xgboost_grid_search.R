@@ -97,7 +97,7 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   }
 
   ## Convert to data frame grid
-  gs <- hyper_params %>% cross_d()
+  gs <- hyper_params %>% purrr::cross_d()
 
   ## shuffle the rows to obtain random ordering of hyper-parameters
   if (random) {
@@ -110,7 +110,7 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   if (!is.null(max_models) && nrow(gs) > max_models) gs <- gs[1:max_models, ]
 
   ## Fit every single model in the grid with CV and (possibly) using early stopping
-  gs <- gs %>% mutate(xgb_fit = pmap(gs, run_singe_model))
+  gs <- gs %>% dplyr::mutate(xgb_fit = purrr::pmap(gs, run_singe_model))
 
   glob_params <- list(missing = missing, obj = obj, feval = feval, maximize = maximize)
   gs[["glob_params"]] <- rep.int(list(glob_params), nrow(gs))
@@ -127,13 +127,13 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   # browser()
 
   gs <- gs %>%
-    mutate(niter = map_dbl(xgb_fit, "niter", .null = NA)) %>%
-    mutate(nrounds = map_dbl(xgb_fit, "best_iteration", .null = NA)) %>%
-    mutate(nrounds = ifelse(is.na(nrounds), niter, nrounds)) %>%
-    mutate(ntreelimit = map_dbl(xgb_fit, "best_ntreelimit", .null = NA)) %>%
-    mutate(params = map(xgb_fit, "params")) %>%
-    mutate(metrics = map2(xgb_fit, nrounds, function(fit, nrounds) fit$evaluation_log[nrounds,])) %>%
-    unnest(metrics)
+    dplyr::mutate(niter = purrr::map_dbl(xgb_fit, "niter", .null = NA)) %>%
+    dplyr::mutate(nrounds = purrr::map_dbl(xgb_fit, "best_iteration", .null = NA)) %>%
+    dplyr::mutate(nrounds = ifelse(is.na(nrounds), niter, nrounds)) %>%
+    dplyr::mutate(ntreelimit = purrr::map_dbl(xgb_fit, "best_ntreelimit", .null = NA)) %>%
+    dplyr::mutate(params = purrr::map(xgb_fit, "params")) %>%
+    dplyr::mutate(metrics = purrr::map2(xgb_fit, nrounds, function(fit, nrounds) fit$evaluation_log[nrounds,])) %>%
+    tidyr::unnest(metrics)
 
   # mutate(eval_metric = map_chr(xgb_fit,  function(fit) fit[['params']][['eval_metric']])) %>%
   # metric_used <- gs[["eval_metric"]][1]
@@ -143,6 +143,7 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   gs <- data.table::as.data.table(gs)
   # gs[["params"]]
 
+  ## Sort the data.table with grid model fits by user-supplied test metric value (lowest to highest)
   if (!is.null(order_metric_name)) data.table::setkeyv(gs, cols = "test_"%+%order_metric_name%+%ifelse(runCV, "_mean", ""))
 
   print(gs)

@@ -1,20 +1,41 @@
+## ******************************
+## GLMs ('glm' / 'gblinear')
+## ******************************
+## For holdoutSL the test error is always assessed by predicting from LAST model iteration.
+## However, for cvSL the test error is assessed by predicting from the BEST iteration.
+## This is due to the fact that cvSL just grabs pre-saved holdout predictions (from xgboost), while holdoutSL does new holdout predictions (manual).
+## The refit of best model for both (cvSL & holdoutSL) will be done based only on best iteration from validation data.
+## This is not how GLMs are generally implemented (minimizing the train error instead).
+## A more conventional approach is to perhaps NEVER use the test data when training GLMs, so only call xgb.train(), with watchlist containing only data_train.
+## The model performance could then be assessed in the usual way.
+## This still poses a problem for cvSL!!! No way to implement early stopping in xgb.cv so that its based on TRAINING DATA!
+
 ## ******
-## TO DO: Investigate why cvSL fit prediction works with GLM, but not holdoutSL fit
+## TO DO: Test parallel grid searches with xgboost from stremr. Test performance on real data.
+
 ## TO DO: Implement a grid for xgboost that may include several learners (e.g., grid-based glm, gbm, drf and individual learner (no grid)
 ##        In fit.xgb.grid we could then rbind the data.table that contains these learners
-## TO DO: Fix re-training of the best grid model (based on params, nrounds, ntreelimit, etc)
+
 ## TO DO: Implement out of sample CV prediction for best grid model (use ntreelimit as an arg to predict)
-## TO DO: Add random forests to the grid (for RFs, the arg 'ntreelimit' might differ from 'best_iteration')
-## TO DO: Also add validation_data to watchlist in fit.xgb.train(): watchlist <- list(train = dtrain, eval = dtest)
 
-## TO DO (xgb.grid): avoid loading the entire namespace of tidyverse package (will need to define / load pipe function %>%)
-## TO DO: Might add future support for booster 'dart'
+## TO DO fit.xgb.train(): Add validation_data to watchlist as watchlist <- list(train = dtrain, eval = dtest)?
+
+## TO DO RFs: Add random forests to the grid (for RFs, the arg 'ntreelimit' might differ from 'best_iteration')
+## TO DO RFs: Investigate difference between 'best_iteration' & 'best_ntreelimit' (different only for RFs).
+##            Which one should be used for prediction with RFs?
+
+## TO DO (xgb.grid): Add arg "nthread = value" to the main function call (will be passed on to params)
+
 ## TO DO: Determine optimal number of nthreads based on type of evaluation (parallel fits as in stremr or a single fit)
-## TO DO (xgb.grid): "nthread = value", to the main function call (will be passed on to params)
+## TO DO: Might add future support for booster 'dart'
+## TO DO: Implement parallel grid search
 
+## (DONE, retraining best model): Fix re-training of the best grid model (based on params, nrounds, ntreelimit, etc)
+## (DONE, importing purr, dplyr in xgb.grid: Avoids loading the entire namespace of tidyverse package, imports %>%
 ## (DONE, custom metrics / objective): Allow passing optional metric(s), custom objective and eval funs
-## (DONE, Validation Grid): For grid should be able to do the same without CV, just validation data
-## (DONE, CV): For CV need to convert the fold_column in data into a list of validation row indices. Each validation fold rows (vector) are stored as a separate list item.
+## (DONE, Validation Grid): Grid search can now be done without CV, just using holdout validation data and calling xgb.train instead of xgb.cv
+## (DONE, CV): For CV need to convert the fold_column in data into a list of validation row indices.
+##             Each validation fold rows (vector) are stored as a separate list item.
 ## (DONE): NEED TO BE ABLE TO TAKE PARAMS AS AN ARG AND MERGE WITH default params
 ## ******
 
@@ -79,26 +100,21 @@ fit.xgb.train <- function(fit.class, params, train_data, model_contrl, ...) {
 }
 
 #' @export
-fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomial", model_contrl, fold_column = NULL, validation_data  = NULL, ...) {
+fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomial",
+                                    model_contrl, fold_column = NULL, validation_data  = NULL, ...) {
   ## ********************************************************************************
   ## These defaults can be over-ridden in model_contrl
   # ********************************************************************************
   mainArgs <- list(data = train_data,
                    nrounds = 500,
                    # nrounds = 1000,
-
                    early_stopping_rounds = 10,
-
                    # metrics = list(evalMSEerror),
                    # order_metric_name = "RMSE",
-
                    metrics = list("rmse"),
                    order_metric_name = "rmse",
-
                    maximize = FALSE,
-
                    verbose = gvars$verbose,
-
                    seed = model_contrl[['seed']])
 
   if (family %in% "binomial") {
@@ -143,7 +159,9 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   }
 
   if (is.null(grid_params))
-    stop("must specify hyper parameters for grid search with '" %+% algo_fun_name %+% "' by defining a SuperLearner params list item named '" %+% grid.algorithm %+% "'")
+    stop("must specify hyper parameters for grid search with '" %+%
+      algo_fun_name %+%
+      "' by defining a SuperLearner params list item named '" %+% grid.algorithm %+% "'")
 
   if (!is.null(grid_params[["search_criteria"]])) {
     search_criteria <- grid_params[["search_criteria"]]
@@ -253,7 +271,6 @@ fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_colum
   #             model_ids = model_ids,
   #             top_grid_models = top_grid_models,
   #             fitted_models_all = fitted_models_all)
-
   #   fit <- list(
   #   params = params,
   #   fitted_gridDT = fitted_gridDT,
@@ -321,19 +338,19 @@ predictP1.XGBoostmodel <- function(m.fit, ParentObject, DataStorageObject, subse
 
   if (nrow(pred_dmat) > 0) {
     # pAoutDT <- NULL
+    # browser()
 
     for (idx in seq_along(models_list)) {
 
+      ## Use ntreelimit for prediction, if it was actually used during model training
       if (!is.null(models_list[[idx]]$best_ntreelimit)) ntreelimit <- models_list[[idx]]$best_ntreelimit else ntreelimit <- NULL
 
       ## temp fix to avoid the bug "GBLinear::Predict ntrees is only valid for gbtree predictor"
       ## for gblinear need to replace with this (set ntreelimit to 0)
-      if (models_list[[idx]]$params$booster %in% "gblinear") {
+      if ((models_list[[idx]]$params$booster %in% "gblinear") && (!is.null(ntreelimit))) {
         models_list[[idx]]$best_ntreelimit <- NULL
         ntreelimit <- 0
       }
-
-      browser()
 
       ## will generally return a vector, needs to be put into a corresponding column of a data.table
       pAoutDT[[names(models_list)[idx]]] <- predict(models_list[[idx]], newdata = pred_dmat, ntree_limit = ntreelimit)
@@ -436,7 +453,9 @@ XGBoostClass <- R6Class(classname = "XGBoost",
 
       if ( (length(self$predvars) == 0L) || (length(subset_idx) == 0L) ) {
       # if ((length(self$predvars) == 0L) || (length(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
-        message("unable to run " %+% self$fit.class %+% " with h2o for: intercept only models or designmat with zero rows or  constant outcome (y) ...")
+        message("unable to run " %+%
+          self$fit.class %+%
+          " with h2o for: intercept only models or designmat with zero rows or  constant outcome (y) ...")
         class(self$model.fit) <- "try-error"
         self$emptydata
         self$emptyY

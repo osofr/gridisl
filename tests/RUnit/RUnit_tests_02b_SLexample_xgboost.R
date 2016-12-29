@@ -4,7 +4,6 @@
 
 test.glm.XGBoost <- function() {
   # library("longGriDiSL")
-  library("tidyverse")
   options(longGriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -12,7 +11,7 @@ test.glm.XGBoost <- function() {
 
   # lambda = 0L, alpha = 0L
   alpha_opt <- c(0,1.0,seq(0.1,0.9,0.1))
-  lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5)
+  lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5, 2)
 
  GRIDparams = list(fit.package = "xgboost",
                    fit.algorithm = "grid",
@@ -36,9 +35,8 @@ test.glm.XGBoost <- function() {
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
   grid_mfit_xgboost_cv1 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                                     data = cpp_folds, params = GRIDparams, fold_column = "fold")
-
-  preds_alldat2 <- predict_SL(grid_mfit_xgboost_cv1, newdata = cpp_folds, add_subject_data = FALSE)
-  head(preds_alldat2[])
+  pred_alldat_cv <- predict_SL(grid_mfit_xgboost_cv1, newdata = cpp_folds, add_subject_data = FALSE)
+  head(pred_alldat_cv[])
 
 #     eta max_depth max_delta_step subsample scale_pos_weight              xgb_fit glob_params niter
 # 1: 0.10         8              1         1                1 <xgb.cv.synchronous>      <list>    47
@@ -54,6 +52,8 @@ test.glm.XGBoost <- function() {
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   grid_mfit_xgboost_holdout <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                                               data = cpp_holdout, params = GRIDparams, hold_column = "hold")
+  pred_alldat_hold <- predict_SL(grid_mfit_xgboost_holdout, newdata = cpp_folds, add_subject_data = FALSE)
+  head(pred_alldat_hold[])
 
 #     eta max_depth max_delta_step subsample scale_pos_weight       xgb_fit glob_params niter nrounds
 # 1: 0.10         8              1         1                1 <xgb.Booster>      <list>    57      47
@@ -69,7 +69,7 @@ test.glm.XGBoost <- function() {
 }
 
 test.holdoutSL.XGBoost <- function() {
-  library("longGriDiSL"); library("tidyverse")
+  # library("longGriDiSL");
   options(longGriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -114,6 +114,18 @@ test.holdoutSL.XGBoost <- function() {
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
   grid_mfit_xgboost_cv1 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                                     data = cpp_folds, params = GRIDparams, fold_column = "fold")
+
+
+#     eta max_depth max_delta_step subsample scale_pos_weight              xgb_fit glob_params niter
+# 1: 0.01         6              1         1                1 <xgb.cv.synchronous>      <list>   160
+# 2: 0.10         8              1         1                1 <xgb.cv.synchronous>      <list>    21
+# 3: 0.10         8              0         1                1 <xgb.cv.synchronous>      <list>    19
+# 4: 0.01         8              0         1                1 <xgb.cv.synchronous>      <list>   110
+#    nrounds ntreelimit params iter train_rmse_mean train_rmse_std test_rmse_mean test_rmse_std
+# 1:     150        150 <list>  150       1.0388152     0.01169493       1.219476    0.06126740
+# 2:      11         11 <list>   11       0.9829254     0.01858946       1.231881    0.05634943
+# 3:       9          9 <list>    9       0.9733750     0.01398356       1.239929    0.05497296
+# 4:     100        100 <list>  100       0.9578688     0.01304842       1.242598    0.05493737
 
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   grid_mfit_xgboost_holdout <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
