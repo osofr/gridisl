@@ -184,7 +184,7 @@ fit_cvSL <- function(ID, t_name, x, y, data, params, nfolds = 5, fold_column = N
 }
 
 # ---------------------------------------------------------------------------------------
-#' Generic modeling function for any longitudinal data.
+#' Generic modeling function for longitudinal data.
 #'
 #' @param ID A character string name of the column that contains the unique subject identifiers.
 #' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).

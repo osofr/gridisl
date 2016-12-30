@@ -11,6 +11,8 @@
 ## This still poses a problem for cvSL!!! No way to implement early stopping in xgb.cv so that its based on TRAINING DATA!
 
 ## ******
+## TO DO: Automatically initiate the h2o cluster (h2o.init(2)) if its hasn't been started.
+
 ## TO DO: Test parallel grid searches with xgboost from stremr. Test performance on real data.
 
 ## TO DO: Implement a grid for xgboost that may include several learners (e.g., grid-based glm, gbm, drf and individual learner (no grid)
@@ -117,7 +119,7 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
                    verbose = gvars$verbose,
                    seed = model_contrl[['seed']])
 
-  if (family %in% "binomial") {
+  if (family %in% c("binomial", "quasibinomial")) {
     # mainArgs[["objective"]] <- "reg:logistic" # need to see what is the difference between the two
     mainArgs[["objective"]] <- "binary:logistic"
   } else if (family %in% "gaussian") {
