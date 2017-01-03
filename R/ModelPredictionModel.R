@@ -143,14 +143,16 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       self$reg <- reg
       self$runCV <- reg$runCV
 
+
+
+      ## NEEDS TO BE REMOVED WHEN DOING MODEL STACKING.
+      ## PredictionModel should be completely olivious of the underlying model type(s)
       if ("fit.package" %in% names(self$model_contrl)) {
         self$fit.package <- self$model_contrl[['fit.package']]
         assert_that(is.character(self$fit.package))
       } else {
         self$fit.package <- reg$fit.package[1]
       }
-
-      # if (!(self$fit.package %in% allowed.fit.package)) stop("fit.package must be one of: " %+% paste0(allowed.fit.package, collapse=", "))
 
       if ("fit.algorithm" %in% names(self$model_contrl)) {
         self$fit.algorithm <- self$model_contrl[['fit.algorithm']]
@@ -159,7 +161,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         self$fit.algorithm <- reg$fit.algorithm[1]
       }
 
-      # if (!(self$fit.algorithm %in% allowed.fit.algorithm)) stop("fit.algorithm must be one of: " %+% paste0(allowed.fit.algorithm, collapse=", "))
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
@@ -190,33 +191,12 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       class(fit.package) <- fit.package
       ModelFitObject <- newFitModel(fit.package, fit.algorithm, reg, useH2Oframe, ...)
 
-      # if (fit.package %in% c("h2o", "h2oEnsemble")) {
-      #   if (fit.algorithm %in% "grid") {
-      #     ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
-      #   } else if (fit.algorithm %in% "resid_grid") {
-      #     ModelFitObject <- h2oResidualModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
-      #   } else {
-      #     ModelFitObject <- h2oModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useH2Oframe = useH2Oframe, ...)
-      #   }
-      # } else if (fit.package %in% c("face")) {
-      #   ModelFitObject <- faceModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
-      #   fit.algorithm <- NULL
-      #   # fit.algorithm <- fit.package
-      # } else if (fit.package %in% c("brokenstick")) {
-      #   ModelFitObject <- brokenstickModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
-      #   fit.algorithm <- NULL
-      #   # fit.algorithm <- fit.package
-      # } else {
-      #   ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
-      # }
-
       return(ModelFitObject)
     },
 
     fit = function(overwrite = FALSE, data, validation_data = NULL, subset_exprs = NULL, ...) { # Move overwrite to a field? ... self$overwrite
       if (gvars$verbose) print("fitting the model: "); self$show()
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
-
 
       ## save a pointer to training data class used for fitting
       self$OData_train <- data
@@ -235,9 +215,9 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       model.fit <- self$ModelFitObject$fit(data, subset_idx = subset_idx, validation_data = validation_data, ...)
 
       if (inherits(model.fit, "try-error")) {
-        message("running " %+% self$ModelFitObject$fit.class %+% " with h2o has failed, trying speedglm as a backup...")
-        self$ModelFitObject <- glmModelClass$new(fit.algorithm = "GLM", fit.package = "speedglm", reg = reg, ...)
-        model.fit <- self$ModelFitObject$fit(data, subset_idx = subset_idx, ...)
+        stop("running " %+% self$ModelFitObject$fit.class %+% " resulted in error...")
+        # self$ModelFitObject <- glmModelClass$new(fit.algorithm = "GLM", fit.package = "speedglm", reg = reg, ...)
+        # model.fit <- self$ModelFitObject$fit(data, subset_idx = subset_idx, ...)
       }
 
       self$is.fitted <- TRUE
@@ -250,19 +230,23 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     refit_best_model = function(data, subset_exprs = NULL, ...) {
+      # browser()
+      expand.dots <- list(...)
+
       if (gvars$verbose) print("refitting the best model: "); self$show()
       if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
-      # self$define.subset.idx(data)
-      subset_idx <- data$evalsubst(subset_exprs = subset_exprs)
-
-      # browser()
+      if ("subset_idx" %in% names(expand.dots)) {
+        subset_idx <- data$evalsubst(subset_exprs = expand.dots[["subset_idx"]])
+      } else {
+        subset_idx <- data$evalsubst(subset_exprs = subset_exprs)
+      }
 
       top_model_params <- self$get_best_model_params()
       top_model_name <- self$get_best_model_names(1)
       best_reg <- RegressionClass$new(outvar = self$outvar, predvars = self$predvars, model_contrl = top_model_params)
       self$BestModelFitObject <- self$define_model_fit_object(top_model_params$fit.package, top_model_params$fit.algorithm, best_reg, useH2Oframe = self$useH2Oframe)
 
-      model.fit <- self$BestModelFitObject$fit(data, subset_idx = subset_idx, destination_frame = "alldata_H2Oframe", ...)
+      model.fit <- self$BestModelFitObject$fit(data, subset_idx = subset_idx, destination_frame = "alldata_H2Oframe")
 
       if (inherits(model.fit, "try-error")) stop("refitting of the best model failed")
       # **********************************************************************
@@ -280,11 +264,10 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       ## When missing newdata the predictions are for the training frame.
       ## No subset re-evaluation is needed (training frame was already subsetted by self$subset_exprs)
-
-      if (!use_best_retrained_model) {
-        probA1 <- self$ModelFitObject$predictP1(newdata, subset_idx = subset_idx, predict_model_names = predict_model_names)
-      } else {
+      if (use_best_retrained_model && !is.null(self$BestModelFitObject)) {
         probA1 <- self$BestModelFitObject$predictP1(newdata, subset_idx = subset_idx)
+      } else {
+        probA1 <- self$ModelFitObject$predictP1(newdata, subset_idx = subset_idx, predict_model_names = predict_model_names)
       }
 
       if (convertResToDT) probA1 <- as.data.table(probA1)
@@ -366,7 +349,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       setkeyv(resid_predsDT, cols = "subjID")
 
       ## 2. Evaluate the average loss for each person (average loss by rows within each subject)
-      # browser()
       # str(self$ModelFitObject$model.fit$fitted_models_all[[1]])
       # self$ModelFitObject$model.fit$grid_objects
       # fold_idx <- self$ModelFitObject$model.fit$fitted_models_all[[1]]$folds

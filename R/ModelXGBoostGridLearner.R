@@ -47,12 +47,15 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   add_args <- list(...)
 
   if (!missing(nfold)) stop("For model evaluation via cross-validation please specify the argument 'folds'; use of 'nfold' argument is not allowed here.")
+  if (!is.null(validation_data) && !is.null(folds)) stop("Cannot use validation_data and folds at the same time.")
 
-  if (!is.null(validation_data) && is.null(folds)) {
-    runCV <- FALSE
-  } else if (is.null(validation_data) && !is.null(folds)) {
-    runCV <- TRUE
-  } else stop("Must specify either validation_data or folds, but not both.")
+  runCV <- FALSE
+  if (is.null(validation_data) && !is.null(folds)) runCV <- TRUE
+
+  # if (!is.null(validation_data) && is.null(folds)) {
+  #   runCV <- FALSE
+  # } else
+  # }
 
   if ( missing(search_criteria) || is.null(search_criteria) ) search_criteria <- list(strategy = 'Cartesian')
   strategy <- search_criteria[["strategy"]]
@@ -78,26 +81,36 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
     #                                                  metric_name = "test_"%+%order_metric_name,
     #                                                  verbose = verbose)
     if (!runCV) {
+
       ## Test models based on holdout validation data
-      watchlist <- list(train = data, test = validation_data)
-      model_fit <- xgboost::xgb.train(params, data, nrounds, watchlist,
+      if (!is.null(validation_data)) {
+        watchlist <- list(train = data, test = validation_data)
+      } else {
+        watchlist <- list(test = data)
+      }
+      model_fit <- xgboost::xgb.train(params, data, as.integer(nrounds), watchlist,
                                       obj, feval, verbose, print_every_n, early_stopping_rounds, maximize,
-                                      callbacks = callbacks, eval_metric = metrics, maximize = maximize)
-                                      # callbacks = c(list(xgboost::cb.evaluation.log()), callbacks),
+                                      callbacks = c(list(xgboost::cb.evaluation.log()), callbacks),
+                                      eval_metric = metrics, maximize = maximize)
+
     } else {
       ## Test models based on cross-validation
       model_fit <- xgboost::xgb.cv(params, data, nrounds, nfold, label, missing,
                                    prediction, showsd, metrics, obj,
                                    feval, stratified, folds, verbose,
                                    print_every_n, early_stopping_rounds,
-                                   maximize, callbacks = callbacks)
-                                # callbacks = c(list(xgboost::cb.evaluation.log()), callbacks)
+                                   maximize,
+                                   # callbacks = callbacks)
+                                   callbacks = c(list(xgboost::cb.evaluation.log()), callbacks)
+                                   )
+
     }
     return(model_fit)
   }
 
   ## Convert to data frame grid
   gs <- hyper_params %>% purrr::cross_d()
+  if (nrow(gs) == 0L) gs <- data.frame(placeholder = TRUE)
 
   ## shuffle the rows to obtain random ordering of hyper-parameters
   if (random) {
@@ -116,6 +129,7 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   gs[["glob_params"]] <- rep.int(list(glob_params), nrow(gs))
 
   # gs
+  # str(gs[1, "xgb_fit"][[1]][[1]])
   # gs[1, "xgb_fit"][[1]][[1]]$evaluation_log
   # str(gs[1, "xgb_fit"][[1]][[1]])
   # gs[1, "xgb_fit"][[1]][[1]][['params']]

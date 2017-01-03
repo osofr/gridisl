@@ -4,8 +4,9 @@
 \alias{fit_cvSL}
 \title{Discrete SuperLearner with V-fold cross-validation.}
 \usage{
-fit_cvSL(ID, t_name, x, y, data, params, nfolds = 5, fold_column = NULL,
-  seed = NULL, verbose = getOption("longGriDiSL.verbose"))
+fit_cvSL(ID, t_name, x, y, data, models, nfolds = 5, fold_column = NULL,
+  refit = TRUE, seed = NULL, verbose = getOption("longGriDiSL.verbose"),
+  ...)
 }
 \arguments{
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}
@@ -18,18 +19,18 @@ fit_cvSL(ID, t_name, x, y, data, params, nfolds = 5, fold_column = NULL,
 
 \item{data}{Input dataset, can be a \code{data.frame} or a \code{data.table}.}
 
-\item{params}{Parameters specifying the type of modeling procedure to be used.}
+\item{models}{Parameters specifying the type of modeling procedure to be used.}
 
 \item{nfolds}{Number of folds to use in cross-validation.}
 
 \item{fold_column}{The name of the column in the input data that contains the cross-validation fold indicators (must be an ordered factor).}
 
+\item{refit}{Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
+When \code{FALSE}, it might be impossible to make predictions from this model fit.}
+
 \item{seed}{Random number seed for selecting a random holdout.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.}
-
-\item{expr_to_train}{Additional logical expression which will further subset observations (rows) for training data.
-Use this to restrict the model fitting to a specific subsample of the training dataset.}
 }
 \value{
 ...

@@ -2,9 +2,9 @@
 % Please edit documentation in R/SuperLearner_main.R
 \name{fit_model}
 \alias{fit_model}
-\title{Generic modeling function for any longitudinal data.}
+\title{Generic modeling function for longitudinal data.}
 \usage{
-fit_model(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column,
+fit_model(ID, t_name, x, y, train_data, valid_data, models, nfolds, fold_column,
   seed, useH2Oframe = FALSE, subset_exprs = NULL, subset_idx = NULL,
   verbose = getOption("longGriDiSL.verbose"))
 }
@@ -21,7 +21,7 @@ fit_model(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column,
 
 \item{valid_data}{Optional \code{data.frame} or \code{data.table} with validation data. When provided, this dataset will be used for scoring the model fit(s).}
 
-\item{params}{Parameters specifying the type of modeling procedure to be used.}
+\item{models}{Parameters specifying the type of modeling procedure to be used.}
 
 \item{nfolds}{...}
 
@@ -41,6 +41,6 @@ fit_model(ID, t_name, x, y, train_data, valid_data, params, nfolds, fold_column,
 ...
 }
 \description{
-Generic modeling function for any longitudinal data.
+Generic modeling function for longitudinal data.
 }
 

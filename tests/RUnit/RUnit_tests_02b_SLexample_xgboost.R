@@ -70,6 +70,7 @@ test.glm.XGBoost <- function() {
 
 test.holdoutSL.XGBoost <- function() {
   # library("longGriDiSL");
+  options(longGriDiSL.verbose = FALSE)
   options(longGriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -92,29 +93,36 @@ test.holdoutSL.XGBoost <- function() {
   #                          balance_classes = c(TRUE, FALSE))
   # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
 
+  hyper_params = list(eta = c(0.3, 0.1,0.01),
+                      max_depth = c(4,6,8,10),
+                      max_delta_step = c(0,1),
+                      subsample = 1,
+                      scale_pos_weight = 1)
+
   GRIDparams = list(fit.package = "xgboost",
                    fit.algorithm = "grid",
                    grid.algorithm = c("gbm"),
                    family = "gaussian",
                    search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
-                   params = list(eta = c(0.3, 0.1,0.01),
-                                 max_depth = c(4,6,8,10),
-                                 max_delta_step = c(0,1),
-                                 subsample = 1,
-                                 scale_pos_weight = 1),
+                   params = hyper_params,
                    seed = 123456
                    # glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
                    # stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10
                    )
 
-  ## CURRENTLY NOT WORKING:
-  # grid_mfit_xgboost <- fit_model(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-  #                                train_data = cpp, params  = GRIDparams)
+  GRIDparams2 <- defLearner(estimator = "xgboost_glm", family = "gaussian") +
+                 defGrid(estimator = "xgboost_gbm",
+                         search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
+                         param_grid = hyper_params, family = "gaussian", seed = 123456)
 
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
-  grid_mfit_xgboost_cv1 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                                    data = cpp_folds, params = GRIDparams, fold_column = "fold")
 
+  grid_mfit_xgboost_cv1 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                                    data = cpp_folds, models = GRIDparams2, fold_column = "fold")
+
+  grid_mfit_xgboost_cv2 <- fit(GRIDparams2, method = "cv",
+                               ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                               data = cpp_folds, fold_column = "fold")
 
 #     eta max_depth max_delta_step subsample scale_pos_weight              xgb_fit glob_params niter
 # 1: 0.01         6              1         1                1 <xgb.cv.synchronous>      <list>   160
@@ -128,8 +136,13 @@ test.holdoutSL.XGBoost <- function() {
 # 4:     100        100 <list>  100       0.9578688     0.01304842       1.242598    0.05493737
 
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+
   grid_mfit_xgboost_holdout <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                                              data = cpp_holdout, params = GRIDparams, hold_column = "hold")
+                                              data = cpp_holdout, models = GRIDparams, hold_column = "hold")
+
+  grid_mfit_xgboost_holdout2 <- fit(GRIDparams2, method = "holdout",
+                                    ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                                    data = cpp_holdout, hold_column = "hold")
 
   str(grid_mfit_xgboost_holdout)
   grid_mfit_xgboost_holdout$getfit

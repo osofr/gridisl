@@ -11,6 +11,7 @@ print.PredictionStack <- function(modelstack, model_stats = FALSE, all_fits = FA
   return(invisible(NULL))
 }
 
+
 #' @export
 make_PredictionStack <- function(...) {
   PredictionModels <- list(...)

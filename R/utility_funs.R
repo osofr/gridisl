@@ -33,7 +33,6 @@ add_CVfolds_ind = function(data, ID, nfolds = 5, fold_column = "fold", seed = NU
   if (fold_column %in% names(data)) data[, (fold_column) := NULL]
   nuniqueIDs <- nuniqueIDs()
   if (!is.null(seed)) set.seed(as.numeric(seed))  #If seed is specified, set seed prior to next step
-  x <- sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs]
 
   # format fold IDs as characters with leading 0. That way the ordering of the factor levels remains consistent betweeen R and h2oFRAME
   fold_IDs <- sprintf("%02d", seq(nfolds))
