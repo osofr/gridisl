@@ -39,7 +39,6 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     runCV = NULL,
     useH2Oframe = NULL,
     nodes = NULL,
-    best_model_idx = NULL,
     initialize = function(PredictionModels) {
       if (!all(unlist(lapply(PredictionModels, is.PredictionModel)))) {
        stop("All arguments must be of class 'PredictionModel'")
@@ -55,19 +54,14 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     },
 
     refit_best_model = function(...) {
-      # browser()
-      # MSE_tab <- data.table::rbindlist(lapply(self$PredictionModels, '[[', "getMSEtab"))
-      # setkeyv(MSE_tab, cols = "MSE")
-
-      ## 1. Out of all ensembles in self$PredictionModels, first find the idx that actually contains the best model
-      min_by_predmodel <- lapply(lapply(self$getMSE, unlist), min)
-      best_model_idx <- which.min(unlist(min_by_predmodel))
-      self$best_model_idx <- best_model_idx
+      ## 1. Out of all model objects in self$PredictionModels, first find the object idx that contains the best model
+      # min_by_predmodel <- lapply(lapply(self$getMSE, unlist), min)
+      # best_model_idx <- which.min(unlist(min_by_predmodel))
+      best_model_idx <- self$best_model_idx
       ## 2. Refit the best model for that PredictionModel object only
       model.fit <- self$PredictionModels[[best_model_idx]]$refit_best_model(...) # data, subset_exprs,
       ## 3. Clean up all PredictionModel obj in this ensemble:
       self$wipe.alldat
-
       return(invisible(model.fit))
     },
 
@@ -78,10 +72,8 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       ## obtain prediction from the best refitted model only
       if (best_only) {
 
-        if (length(self$PredictionModels) == 1L) self$best_model_idx <- 1
-
-        if (is.null(self$best_model_idx)) stop("The best refitted model doesn't appear to exist.")
-        best_pred_model <- self$PredictionModels[[self$best_model_idx]]
+        best_model_idx <- self$best_model_idx
+        best_pred_model <- self$PredictionModels[[best_model_idx]]
         # newdata, subset_exprs, predict_model_names = NULL, , convertResToDT,
         preds <- best_pred_model$predict(..., best_refit_only = TRUE)
         return(preds)
@@ -101,13 +93,10 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     # Predict the response E[Y|newdata] for out of sample observations  (validation set / holdouts);
     predict_out_of_sample = function(best_only, ...) {
       # browser()
-      MSE_tab <- self$getMSEtab
-
       ## obtain out-of-sample prediction from the best non-refitted model
       if (best_only) {
 
-        best_model_idx <- MSE_tab[1, ][["model_idx"]]
-        if (is.null(best_model_idx)) stop("Best model cannot be selected since the models were not scored yet")
+        best_model_idx <- self$best_model_idx
         ## NEED TO KNOW WHAT WAS THE NAME OF THE BEST MODEL WITHIN THE SAME GRID / ENSEMBLE:
         best_pred_model <- self$PredictionModels[[best_model_idx]]
         predict_model_names <- best_pred_model$get_best_model_names(K = 1)
@@ -136,10 +125,8 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       ## obtain prediction from the best non-refitted model only
       if (best_only) {
 
-        if (length(self$PredictionModels) == 1L) self$best_model_idx <- 1
-
-        if (is.null(self$best_model_idx)) stop("The best refitted model doesn't appear to exist.")
-        best_pred_model <- self$PredictionModels[[self$best_model_idx]]
+        best_model_idx <- self$best_model_idx
+        best_pred_model <- self$PredictionModels[[best_model_idx]]
         # newdata, subset_exprs, predict_model_names = NULL, , convertResToDT,
         preds <- best_pred_model$predict(..., best_refit_only = FALSE)
         return(preds)
@@ -166,24 +153,6 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       return(invisible(self))
     },
 
-    evalMSE = function(test_values) {
-      stop("...not implemented...")
-      return(invisible(self))
-    },
-
-    evalMSE_byID = function(test_values) {
-      stop("...not implemented...")
-      return(invisible(self))
-    },
-
-    # ------------------------------------------------------------------------------
-    # return a model object by name / ID
-    # ------------------------------------------------------------------------------
-    getmodel_byname = function(model_names, model_IDs) {
-      stop("...not implemented...")
-      # return(self$ModelFitObject$getmodel_byname(model_names, model_IDs))
-    },
-
     # ------------------------------------------------------------------------------
     # return top K models based on smallest validation / test MSE for each PredictionModel in a stack
     # ------------------------------------------------------------------------------
@@ -192,21 +161,27 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     },
 
     # ------------------------------------------------------------------------------
-    # return top K model objects ranked by prediction MSE on a holdout (CV) fold for each PredictionModel in a stack
+    # return top K model fits from **FOR EVERY MODEL** in self$PredictionModels
     # ------------------------------------------------------------------------------
     get_best_models = function(K = 1) {
-      best_models <- unlist(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_models(K = K)))
-      best_models <- best_models[names(self$get_best_MSEs(K))]
+      best_models <- NULL
+      for (idx in seq_along(self$PredictionModels))
+        best_models <- c(best_models, self$PredictionModels[[idx]]$get_best_models(K = K))
+      # best_models <- unlist(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_models(K = K)))
+      # best_models <- best_models[names(self$get_best_MSEs(K))]
       return(best_models)
     },
 
     # ------------------------------------------------------------------------------
-    # return the parameters of the top K models as a list (ranked by prediction MSE on a holdout (CV) fold)
+    # return the parameters of the top K models **FOR EVERY MODEL** in self$PredictionModels
     # ------------------------------------------------------------------------------
     get_best_model_params = function(K = 1) {
-      best_models <- unlist(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_model_params(K = K)))
+      best_model_params <- NULL
+      for (idx in seq_along(self$PredictionModels))
+        best_model_params <- c(best_model_params, self$PredictionModels[[idx]]$get_best_model_params(K = K))
+      # best_models <- unlist(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_model_params(K = K)))
       # best_models <- best_models[names(self$get_best_MSEs(K))]
-      return(best_models)
+      return(best_model_params)
     },
 
     # ------------------------------------------------------------------------------
@@ -214,20 +189,26 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     # ------------------------------------------------------------------------------
     get_best_MSE_table = function(K = 1) {
       res_tab_list <- lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_MSE_table(K = K))
-      res_tab <- do.call("rbind", res_tab_list)
-      res_tab <- res_tab[order(res_tab$MSE.CV, decreasing = FALSE), ]
+      # res_tab <- do.call("rbind", res_tab_list)
+      # res_tab <- res_tab[order(res_tab[["MSE"]], decreasing = FALSE), ]
+      res_tab <- data.table::rbindlist(res_tab_list)
+      data.table::setkeyv(res_tab, cols = "MSE")
       return(res_tab)
     },
-    define.subset.idx = function(data) {
-      stop("not applicable to this class")
-    },
+
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE, model_stats = FALSE, all_fits = FALSE) {
       return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$show(print_format = TRUE, model_stats = FALSE, all_fits = FALSE)))
     },
     summary = function(all_fits = FALSE) {
       return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$summary(all_fits = FALSE)))
-    }
+    },
+
+    evalMSE = function(test_values) { stop("...not implemented...") },
+    evalMSE_byID = function(test_values) { stop("...not implemented...") },
+    getmodel_byname = function(model_names, model_IDs) { stop("...not implemented...") },
+    define.subset.idx = function(data) { stop("not applicable to this class") }
+
   ),
 
   active = list(
@@ -237,21 +218,31 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     },
 
     getMSE = function() { return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$getMSE)) },
+    getRMSE = function() { return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$getRMSE)) },
+
+    best_model_idx = function() {
+      if (length(self$PredictionModels) == 1L) return(1L)
+
+      MSE_tab <- self$getMSEtab
+      metric_name <- "MSE"
+
+      top_model_info <- MSE_tab[which.min(MSE_tab[[metric_name]]), ]
+      best_model_idx <- top_model_info[["model_idx"]]
+
+      return(best_model_idx)
+    },
 
     getMSEtab = function() {
       MSE_tab <- data.table::rbindlist(lapply(self$PredictionModels, '[[', "getMSEtab"))
-      setkeyv(MSE_tab, cols = "MSE")
+      data.table::setkeyv(MSE_tab, cols = "MSE")
       return(MSE_tab)
     },
-
-    getRMSE = function() { return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$getRMSE)) },
 
     OData_train = function() { return(self$PredictionModels[[1]]$OData_train) },
     OData_valid = function() { return(self$PredictionModels[[1]]$OData_valid) },
 
     get_out_of_sample_preds = function() {
-      MSE_tab <- self$getMSEtab
-      best_model_idx <- MSE_tab[1, ][["model_idx"]]
+      best_model_idx <- self$best_model_idx
       return(self$PredictionModels[[best_model_idx]]$get_out_of_sample_preds)
     }
   )

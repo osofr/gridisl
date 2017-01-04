@@ -506,10 +506,10 @@ XGBoostClass <- R6Class(classname = "XGBoost",
     getmodel_byname = function(model_names, model_IDs) {
       if (!missing(model_names)) {
         return(self$model.fit$fitted_models_all[model_names])
-      } else {
-        if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
+      } else stop("Can only use 'model_names' for retrieving xgboost models")
+        # if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
         # return(lapply(model_IDs, h2o::h2o.getModel))
-      }
+      # }
     },
 
     getgridDT_byname = function(model_names, model_IDs) {

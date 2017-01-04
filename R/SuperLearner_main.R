@@ -242,6 +242,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, models, nfolds, 
   if (!is.null(subset_exprs)) {
     # ... Check that the subset_exprs is a valid expression ...
   }
+
   if (!is.null(subset_idx))
     if (!is.integer(subset_idx)) stop("subset_idx must be an integer vector, current class: " %+% class(subset_idx))
 
@@ -259,23 +260,16 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, models, nfolds, 
   modelfit_stack$runCV <- runCV
   modelfit_stack$useH2Oframe <- useH2Oframe
 
-  ## ------------------------------------------------------------------------------------------
-  ## If validation data supplied then score the models based on validation set
-  ## ------------------------------------------------------------------------------------------
-  if (!missing(valid_data) && !is.null(valid_data)) {
-    message("...re-evaluting MSE for every model based on validation data...")
+  if (!is.null(valid_data)) {
+    ## If validation data supplied then score the models based on validation set
     modelfit_stack$score_models(validation_data = valid_data, subset_exprs = subset_idx)
-    print("Internally evaluated holdout MSE, first averaged at subject level: "); print(data.frame(modelfit_stack$getMSE))
-    print("Internally evaluated holdout RMSE, first averaged at subject level: "); print(data.frame(modelfit_stack$getRMSE))
+  } else if (runCV) {
+    ## If CV was used, then score the models based on pre-saved out-of-sample predictions (CV model predictions from validation folds)
+    modelfit_stack$score_models(subset_exprs = subset_idx)
   }
 
-  ## ------------------------------------------------------------------------------------------
-  ## If CV was used, then score the models based on out-of-sample predictions on the training data (automatically done by h2o)
-  ## ------------------------------------------------------------------------------------------
-  if (runCV) {
-    modelfit_stack$score_models(subset_exprs = subset_idx)
-    print("Internally evaluated CV-MSE (based on holdout preds), first averaged at subject level: "); print(data.frame(modelfit_stack$getMSE))
-    print("Internally evaluated CV-RMSE (based on holdout preds), first averaged at subject level: "); print(data.frame(modelfit_stack$getRMSE))
+  if (!is.null(valid_data) || runCV) {
+    print("Internally evaluated holdout or CV MSE / RMSE, first averaged at subject level: "); print(modelfit_stack$getMSEtab)
   }
 
   return(modelfit_stack)

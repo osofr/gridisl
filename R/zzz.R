@@ -1,3 +1,5 @@
+options("datatable.print.nrows" = 20)
+options("datatable.print.class" = TRUE)
 
 #-----------------------------------------------------------------------------
 # Global State Vars (can be controlled globally with options(longGriDiSL.optname = ))

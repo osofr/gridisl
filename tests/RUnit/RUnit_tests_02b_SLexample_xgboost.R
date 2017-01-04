@@ -1,31 +1,53 @@
 ## ------------------------------------------------------------------------------------
-## Holdout Growth Curve SL with model scoring based on random holdouts
+## test xgboost glm, no model scoring (no cv or holdout)
 ## ------------------------------------------------------------------------------------
+test.XGBoost.simple <- function() {
+  options(longGriDiSL.verbose = FALSE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  cpp <- data.table::data.table(cpp)
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
+  hyper_params = list(eta = c(0.3, 0.1,0.01),
+                      max_depth = c(4,6,8,10),
+                      max_delta_step = c(0,1),
+                      subsample = 1,
+                      scale_pos_weight = 1)
+
+  GRIDparams2 <- defLearner(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
+                 defGrid(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
+                         search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
+                         param_grid = hyper_params, seed = 123456)
+
+  # cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  mfit_xgb <- fit(GRIDparams2, method = "none", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                  data = cpp)
+
+  ## can't predict from best model since no model selection method was specified (method = "none")
+  checkException(pred_alldat_best <- predict_SL(mfit_xgb, newdata = cpp_folds, add_subject_data = FALSE))
+  ## can't predict with xgboost when newdata is missing:
+  checkException(preds <- predict_generic(mfit_xgb, add_subject_data = TRUE, best_only = FALSE))
+
+  preds <- predict_generic(mfit_xgb, newdata = cpp, add_subject_data = TRUE, best_only = FALSE)
+  preds[]
+
+  ## out-of-sample / holdout predictions --- NEED A MORE INFORMATIVE ERROR
+  ## CURRENT ERROR: Error in model_obj$predict_out_of_sample(...) : attempt to apply non-function
+  checkException(preds <- predict_generic(mfit_xgb, add_subject_data = TRUE, best_only = FALSE, holdout = TRUE))
+}
+
+## ------------------------------------------------------------------------------------
+## test xgboost glm, model scoring with CV
+## ------------------------------------------------------------------------------------
 test.glm.XGBoost <- function() {
-  # library("longGriDiSL")
   # options(longGriDiSL.verbose = TRUE)
   options(longGriDiSL.verbose = FALSE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
-  # lambda = 0L, alpha = 0L
   alpha_opt <- c(0,1.0,seq(0.1,0.9,0.1))
   lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5, 2)
-
-  # GRIDparams = list(fit.package = "xgboost",
-  #                  fit.algorithm = "grid",
-  #                  grid.algorithm = c("glm"),
-  #                  family = "gaussian",
-  #                  search_criteria = list(strategy = "RandomDiscrete", max_models = 100),
-  #                  params = list(
-  #                                alpha = alpha_opt,
-  #                                lambda = lambda_opt),
-  #                  seed = 123456
-  #                  # glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
-  #                  # stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10
-  #                  )
 
   GRIDparams2 <- defGrid(estimator = "xgboost__glm", family = "gaussian", nrounds = 100,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 100),
@@ -52,7 +74,6 @@ test.glm.XGBoost <- function() {
 }
 
 test.holdout.XGBoost <- function() {
-  # library("longGriDiSL");
   options(longGriDiSL.verbose = FALSE)
   # options(longGriDiSL.verbose = TRUE)
 
@@ -100,16 +121,20 @@ test.holdout.XGBoost <- function() {
 
   holdout_preds <- get_out_of_sample_predictions(xgboost_holdout)
   print("Holdout MSE, using the holdout Y for prediction"); print(xgboost_holdout$getMSE)
+  print("Holdout MSE, using the holdout Y for prediction"); print(xgboost_holdout$getMSEtab)
 
   ## Predictions for new data based on best SL model trained on all data:
   preds_alldat <- predict_SL(xgboost_holdout, newdata = cpp_holdout, add_subject_data = TRUE)
   preds_alldat[]
 
-  # --------------------------------------------------------------------------------------------
-  ## Predict for best model trained on non-holdouts only: NOT IMPLEMENTED
-  # --------------------------------------------------------------------------------------------
-  preds_train_top2 <- predict_SL(xgboost_holdout, add_subject_data = TRUE, best_refit_only = FALSE)
-  preds_train_top2[]
+
+  ## ***** NOT IMPLEMENTED ****
+  ## Predict for best model trained on non-holdouts only
+  ## NOTE: The class for this already exists: xgboost_holdout$predict_within_sample()
+  ##       The only difficulty is figuring out the interface, i.e., what argument / function should be used
+  checkException(preds_train_top2 <- predict_SL(xgboost_holdout, add_subject_data = TRUE, best_refit_only = FALSE))
+  # preds_train_top2[]
+
 
   print("10 best MSEs among all learners: "); print(xgboost_holdout$get_best_MSEs(K = 5))
   models <- xgboost_holdout$get_best_models(K = 5)
@@ -173,11 +198,14 @@ test.CV.SL.XGBoost <- function() {
   checkTrue(ncol(preds_hold_best)==1)
   checkTrue(all.equal(holdout_preds[[1]], preds_hold_best[[1]]))
 
+  ## --------------------------------------------------------------------------------------------
+  ## ********** NEED MORE INFORMATIVE ERROR: "prediction for all models is not possible when doing cv with xgboost:" *****************
+  ## --------------------------------------------------------------------------------------------
+  ## no applicable method for 'predict' applied to an object of class "xgb.cv.synchronous"
   ## Predict for all models trained on non-holdouts only (should give error for xgboost, but work for h2o):
   checkException(preds_train_all <- predict_generic(mfit_cv, add_subject_data = TRUE, best_only = FALSE, holdout = FALSE))
   ## Predict for all models trained on non-holdouts only with newdata (should give error for xgboost, but work for h2o):
   checkException(preds_train_all2 <- predict_generic(mfit_cv, newdata = cpp_folds, add_subject_data = TRUE, best_only = FALSE, holdout = FALSE))
-
 
   ## --------------------------------------------------------------------------------------------
   ## ****** (NOT IMPLEMENTED YET) *******
@@ -190,7 +218,6 @@ test.CV.SL.XGBoost <- function() {
   # cv_valid_preds_newdata[]
   # checkTrue(all.equal(cv_valid_preds_rescore, cv_valid_preds_newdata))
 
-
   ## --------------------------------------------------------------------------------------------
   ## ****** (NOT IMPLEMENTED YET) *******
   ## --------------------------------------------------------------------------------------------
@@ -202,8 +229,6 @@ test.CV.SL.XGBoost <- function() {
   # preds_best_CV <- longGriDiSL:::predict_model(mfit_cv, bestK_only = 1, add_subject_data = FALSE)
   # preds_best_CV[]
   # checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
-
-
 
   ## Make report, save grid predictions and out of sample predictions
   # fname <- paste0(data.name, "_", "CV_gridSL_")
@@ -221,8 +246,8 @@ test.CV.SL.XGBoost <- function() {
 
   ## --------------------------------------------------------------------------------------------
   ## ****** (NOT IMPLEMENTED YET) *******
-  ## --------------------------------------------------------------------------------------------
   ## CHECKING CV IMPLEMENTATION VS. INTERNAL xgboost CV
+  ## --------------------------------------------------------------------------------------------
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 10, seed = 23)
   mfit_cv <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                       data = cpp_folds, params = GRIDparams, fold_column = "fold")
@@ -250,7 +275,6 @@ test.CV.SL.XGBoost <- function() {
     print(test2); checkTrue(test1)
   }
 }
-
 
 ## --------------------------------------------------------------------------------------------
 ## ****** (NOT IMPLEMENTED YET) *******

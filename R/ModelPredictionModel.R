@@ -382,20 +382,12 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       return(list(MSE_mean = MSE_mean, RMSE_mean = RMSE_mean, MSE_var = MSE_var, MSE_sd = MSE_sd))
     },
 
-
-
-
-
     ## ------------------------------------------------------------------------------
     ## return a model object by name / ID
     ## ------------------------------------------------------------------------------
     getmodel_byname = function(model_names, model_IDs) {
       return(self$ModelFitObject$getmodel_byname(model_names, model_IDs))
     },
-
-
-
-
 
     ## ------------------------------------------------------------------------------
     ## return top K models based on smallest validation / test MSE
@@ -412,22 +404,12 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (is.null(self$getMSE)) stop("The validation / holdout MSE has not been evaluated, making model model ranking impossible.
   Please call evalMSE_byID() and provide a vector of validation / test values.")
 
-
-
       ## ***********************************
       ## This throws everything off, since the model may not be uniquely idenfified.
       ## Need to use MSE as locate the model best K models adresses
       ## ***********************************
       return(sort(unlist(self$getMSE))[1:K])
-
-
-
-
     },
-
-
-
-
 
     ## ------------------------------------------------------------------------------
     ## return top K model object names
@@ -439,9 +421,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         return(names(self$get_best_MSEs(K)))
       }
     },
-
-
-
 
     ## ------------------------------------------------------------------------------
     ## return top K model objects ranked by prediction MSE on a holdout (CV) fold
@@ -466,21 +445,24 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     get_best_MSE_table = function(K = 1) {
       top_MSE_CV <- self$get_best_MSEs(K)
       top_model_names <- names(top_MSE_CV)
-      top_model_ids <- self$getmodel_ids[top_model_names]
       top_model_pos <- unlist(lapply(top_model_names, function(model_n) which(names(self$getmodel_ids) %in% model_n)))
+      top_model_ids <- unlist(self$getmodel_ids[top_model_names])
+      if (is.null(top_model_ids)) top_model_ids <- rep.int(NA, length(top_MSE_CV))
 
-      datMSE <- data.frame(model = names(self$getmodel_ids[top_model_pos]),
+      ## switch to data.table::data.table:
+      datMSE <- data.table::data.table(model = names(self$getmodel_ids[top_model_pos]),
                            algorithm = unlist(self$getmodel_algorithms[top_model_pos]),
-                           MSE.CV = unlist(self$getMSE[top_model_pos]),
+                           MSE = unlist(self$getMSE[top_model_pos]),
+                           RMSE = unlist(self$getRMSE[top_model_pos]),
                            MSE.sd = unlist(self$getMSEsd[top_model_pos]),
-                           model.id = unlist(top_model_ids),
+                           model.id = top_model_ids,
                            model.pos = top_model_pos
                            )
 
-      datMSE$CIlow <- datMSE$MSE.CV - 1.96*datMSE$MSE.sd
-      datMSE$CIhi <- datMSE$MSE.CV + 1.96*datMSE$MSE.sd
-      datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV)])
-      rownames(datMSE) <- NULL
+      datMSE[["CIlow"]] <- datMSE[["MSE"]] - 1.96 * datMSE[["MSE.sd"]]
+      datMSE[["CIhi"]] <- datMSE[["MSE"]] + 1.96 * datMSE[["MSE.sd"]]
+      datMSE[["model"]] <- factor(datMSE[["model"]], levels = datMSE[["model"]][order(datMSE[["MSE"]])])
+      # rownames(datMSE) <- NULL
       return(datMSE)
     },
 
@@ -492,9 +474,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         cat("fit.algorithm: " %+% self$fit.algorithm %+%"\n")
         # cat("grid.algorithm: " %+% self$grid.algorithm %+%"\n")
 
-        if (self$is.fitted && model_stats) {
-          self$ModelFitObject$show(all_fits = all_fits)
-        }
+        if (self$is.fitted && model_stats) self$ModelFitObject$show(all_fits = all_fits)
+
         return(invisible(NULL))
 
       } else {
@@ -524,20 +505,31 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     # getsubset = function() { self$subset_idx },
     getoutvarnm = function() { self$outvar },
     getoutvarval = function() { self$ModelFitObject$getY },
-    getMSE = function() { private$MSE[["MSE_mean"]] },
+
     getMSEtab = function() {
-      MSE_list <- private$MSE[["MSE_mean"]]
+      MSE_list <- self$getMSE
+      RMSE_list <- self$getRMSE
+      MSE.sd_list <- self$getMSEsd
+
+      if (length(MSE_list) == 0L)
+        stop("It looks like the CV/holdout MSEs have not been evaluated for the model calling order: " %+% self$model_idx %+%
+             ". Cannot make prediction or select the best model unless some model selection criteria is specified during fit() call.
+             Please make sure the argument 'method' is set to either 'cv' or 'holdout'.")
+
       data.table::data.table(
         MSE = unlist(MSE_list),
-        names = names(MSE_list),
+        RMSE = unlist(RMSE_list),
+        MSE.sd = unlist(MSE.sd_list),
+        model = names(MSE_list),
         order = seq_along(MSE_list),
         model_idx = self$model_idx
-        )
+      )
     },
+
+    getMSE = function() { private$MSE[["MSE_mean"]] },
     getRMSE = function() { private$MSE[["RMSE_mean"]] },
     getMSEvar = function() { private$MSE[["MSE_var"]] },
     getMSEsd = function() { private$MSE[["MSE_sd"]] },
-    # getEstVar = function() { private$MSE[["est_var"]] },
     getfit = function() { self$ModelFitObject$model.fit },
     getRetrainedfit = function() { self$BestModelFitObject$model.fit },
     getmodel_ids = function() { self$ModelFitObject$getmodel_ids },

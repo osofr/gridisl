@@ -9,7 +9,6 @@ print.ModelStack <- function(modelstack, ...) {
   return(invisible(NULL))
 }
 
-
 # ---------------------------------------------------------------------------------------
 # Define modeling algorithm(s), package and parameters
 # @param estimator A character string name of package and estimator (algorithm) name, separated by "__".
@@ -62,7 +61,6 @@ defGrid <- function(estimator, search_criteria, param_grid, ...) {
   return(GRIDparams)
 }
 
-
 # S3 method '+' for adding two ModelStack objects
 # Summary measure lists in both get added as c(,) into the summary measures in sVar1 object
 #' @rdname defGrid
@@ -70,9 +68,9 @@ defGrid <- function(estimator, search_criteria, param_grid, ...) {
 #' @param learner2 An object returned by a call to \code{defLearner} or \code{defGrid} functions.
 #' @export
 `+.ModelStack` <- function(learner1, learner2) {
-  assert_that(is.ModelStack(sVar1))
-  assert_that(is.ModelStack(sVar2))
-  newStack <- append(sVar1, sVar2)
+  assert_that(is.ModelStack(learner1))
+  assert_that(is.ModelStack(learner2))
+  newStack <- append(learner1, learner2)
   class(newStack) <- c(class(newStack), "ModelStack")
   return(newStack)
 }

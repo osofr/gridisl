@@ -15,23 +15,23 @@ evalMSEerror <- function(preds, data) {
   return(list(metric = "RMSE", value = err))
 }
 
-  ## get all parameters (list) used by each model
-  # get_all_params <- function(fit) fit[['params']]
-  ## record the optimal CV nrounds (ntrees) for each parameter
-  # get_cv_best_iter <- function(fit) fit[['best_iteration']]
-  ## record the optimal ntreelimit to be used for prediction with CV model (should be equal to best_iteration)
-  # get_cv_best_ntreelimit <- function(fit) fit[['best_ntreelimit']]
-  ## get the name of the evaluation metric used by each model (should be all the same)
-  # get_metric_name <- function(fit) fit[['params']][['eval_metric']]
-  ## evaluate the cv metric for each parameter
-  # get_cv_metrics <- function(fit) fit$evaluation_log[fit[['best_iteration']],]
+## get all parameters (list) used by each model
+# get_all_params <- function(fit) fit[['params']]
+## record the optimal CV nrounds (ntrees) for each parameter
+# get_cv_best_iter <- function(fit) fit[['best_iteration']]
+## record the optimal ntreelimit to be used for prediction with CV model (should be equal to best_iteration)
+# get_cv_best_ntreelimit <- function(fit) fit[['best_ntreelimit']]
+## get the name of the evaluation metric used by each model (should be all the same)
+# get_metric_name <- function(fit) fit[['params']][['eval_metric']]
+## evaluate the cv metric for each parameter
+# get_cv_metrics <- function(fit) fit$evaluation_log[fit[['best_iteration']],]
 
-  # cb.cv.predict(save_models = FALSE)
-  ## This callback function saves predictions for all of the test folds, and also allows to save the folds' models.
-  ## It is a "finalizer" callback and it uses early stopping information whenever it is available,
-  ## thus it must be run after the early stopping callback if the early stopping is used.
-  ## Callback function expects the following values to be set in its calling frame:
-  ## bst_folds, basket, data, end_iteration, params, num_parallel_tree, num_class.
+# cb.cv.predict(save_models = FALSE)
+## This callback function saves predictions for all of the test folds, and also allows to save the folds' models.
+## It is a "finalizer" callback and it uses early stopping information whenever it is available,
+## thus it must be run after the early stopping callback if the early stopping is used.
+## Callback function expects the following values to be set in its calling frame:
+## bst_folds, basket, data, end_iteration, params, num_parallel_tree, num_class.
 
 
 ## Peforming simple hyperparameter grid search for xgboost with cross-validation
@@ -49,13 +49,8 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   if (!missing(nfold)) stop("For model evaluation via cross-validation please specify the argument 'folds'; use of 'nfold' argument is not allowed here.")
   if (!is.null(validation_data) && !is.null(folds)) stop("Cannot use validation_data and folds at the same time.")
 
-  runCV <- FALSE
+  runCV <- FALSE # by default runs xgb.train, if validation data is provided it will be used as a test metric
   if (is.null(validation_data) && !is.null(folds)) runCV <- TRUE
-
-  # if (!is.null(validation_data) && is.null(folds)) {
-  #   runCV <- FALSE
-  # } else
-  # }
 
   if ( missing(search_criteria) || is.null(search_criteria) ) search_criteria <- list(strategy = 'Cartesian')
   strategy <- search_criteria[["strategy"]]
@@ -72,14 +67,14 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
     if (length(add_args) > 0) params <- c(params, add_args)
     # browser()
 
-    ## 1. Explicit use of the cb.evaluation.log callback allows to run xgb.train silently but still store the evaluation results
-    ##    Apparently this is not needed, the early stopping works as intended even without this callback when verbose = 0.
+    ## 1. Explicit use of the cb.evaluation.log callback allows to run xgb.train / xgb.cv silently but still storing the evaluation results
     ## 2. Early stopping: Can directly specify which validation metric should be used for early stopping.
     ##    When omitted, but 'early_stopping_rounds' is specified the LAST dataset in watchlist() is used for early stopping
     #     if (!is.null(early_stopping_rounds))
     #       early_stop_call_back <- xgboost::cb.early.stop(early_stopping_rounds, maximize = maximize,
     #                                                  metric_name = "test_"%+%order_metric_name,
     #                                                  verbose = verbose)
+
     if (!runCV) {
 
       ## Test models based on holdout validation data
@@ -94,6 +89,7 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
                                       eval_metric = metrics, maximize = maximize)
 
     } else {
+
       ## Test models based on cross-validation
       model_fit <- xgboost::xgb.cv(params, data, nrounds, nfold, label, missing,
                                    prediction, showsd, metrics, obj,
@@ -128,18 +124,6 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   glob_params <- list(missing = missing, obj = obj, feval = feval, maximize = maximize)
   gs[["glob_params"]] <- rep.int(list(glob_params), nrow(gs))
 
-  # gs
-  # str(gs[1, "xgb_fit"][[1]][[1]])
-  # gs[1, "xgb_fit"][[1]][[1]]$evaluation_log
-  # str(gs[1, "xgb_fit"][[1]][[1]])
-  # gs[1, "xgb_fit"][[1]][[1]][['params']]
-  # str(gs[1, "xgb_fit"][[1]])
-  # fit_obj <- gs[1, "xgb_fit"][[1]][[1]]
-  # str(fit_obj)
-  # str(fit_obj$params$eval_metric)
-  # fit_obj$evaluation_log[fit_obj[['best_iteration']],]
-  # browser()
-
   gs <- gs %>%
     dplyr::mutate(niter = purrr::map_dbl(xgb_fit, "niter", .null = NA)) %>%
     dplyr::mutate(nrounds = purrr::map_dbl(xgb_fit, "best_iteration", .null = NA)) %>%
@@ -155,14 +139,27 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   # gs <- gs %>% arrange_("test_"%+%metric_used%+%"_mean") %>% data.table::as.data.table()
 
   gs <- data.table::as.data.table(gs)
-  # gs[["params"]]
+
 
   ## Sort the data.table with grid model fits by user-supplied test metric value (lowest to highest)
   if (!is.null(order_metric_name)) data.table::setkeyv(gs, cols = "test_"%+%order_metric_name%+%ifelse(runCV, "_mean", ""))
 
-  print(gs)
+  print("grid fits ordered by test metric (lowest to highest):"); print(gs)
+  # print(gs, topn = 5, nrows = 10, class = TRUE)
   # print(gs[, c(names(params), "nrounds", "ntreelimit",  "train_rmse_mean", "test_rmse_mean")])
 
   return(gs)
+
+  # gs
+  # str(gs[1, "xgb_fit"][[1]][[1]])
+  # gs[1, "xgb_fit"][[1]][[1]]$evaluation_log
+  # str(gs[1, "xgb_fit"][[1]][[1]])
+  # gs[1, "xgb_fit"][[1]][[1]][['params']]
+  # str(gs[1, "xgb_fit"][[1]])
+  # fit_obj <- gs[1, "xgb_fit"][[1]][[1]]
+  # str(fit_obj)
+  # str(fit_obj$params$eval_metric)
+  # fit_obj$evaluation_log[fit_obj[['best_iteration']],]
+  # gs[["params"]]
   # # print(object.size(model.fit), units = "Kb")
 }
