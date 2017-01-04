@@ -248,7 +248,7 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
     get.x = function() { private$x },
     get.Y = function() { private$Yvals },
 
-    getmodel_ids = function() { return(assign_model_name_id(model_algorithm = self$model.fit$model_algorithms[[1]], name = self$model_contrl$name)) },
+    getmodel_ids = function() { return(assign_model_name_id(params = self$params, model_algorithm = self$model.fit$model_algorithms[[1]], name = self$model_contrl$name)) },
     getmodel_algorithms = function() { self$model.fit$model_algorithms }
   ),
 

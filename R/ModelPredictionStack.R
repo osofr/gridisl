@@ -78,6 +78,8 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       ## obtain prediction from the best refitted model only
       if (best_only) {
 
+        if (length(self$PredictionModels) == 1L) self$best_model_idx <- 1
+
         if (is.null(self$best_model_idx)) stop("The best refitted model doesn't appear to exist.")
         best_pred_model <- self$PredictionModels[[self$best_model_idx]]
         # newdata, subset_exprs, predict_model_names = NULL, , convertResToDT,
@@ -133,6 +135,8 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
 
       ## obtain prediction from the best non-refitted model only
       if (best_only) {
+
+        if (length(self$PredictionModels) == 1L) self$best_model_idx <- 1
 
         if (is.null(self$best_model_idx)) stop("The best refitted model doesn't appear to exist.")
         best_pred_model <- self$PredictionModels[[self$best_model_idx]]

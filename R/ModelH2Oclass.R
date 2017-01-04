@@ -314,7 +314,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
     getmodel_ids = function() {
       if (is.null(self$model.fit$model_ids)) {
-        return(assign_model_name_id(self$model.fit$fitted_models_all[[1]], self$model.fit$model_algorithms[[1]], self$model_contrl$name))
+        return(assign_model_name_id(params = self$params, self$model.fit$fitted_models_all[[1]], self$model.fit$model_algorithms[[1]], self$model_contrl$name))
         # model_ids <- list(self$model.fit$H2O.model.object@model_id)
         # new_names <- self$model.fit$model_algorithms[[1]]
         # if (!is.null(self$model_contrl$name)) new_names <- new_names %+% "." %+% self$model_contrl$name
