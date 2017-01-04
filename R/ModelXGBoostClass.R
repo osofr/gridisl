@@ -227,6 +227,9 @@ fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_colum
   # Assign names to each grid model, keep individual learner names intact (unless a $name arg was passed by the user):
   GRIDmodel_names <- "grid." %+% unlist(model_algorithms) %+% "." %+% (1:ngridmodels)
 
+  if (!is.null(params$model_idx))
+    GRIDmodel_names <- "m." %+% params$model_idx %+% "." %+% GRIDmodel_names
+
   model_names <- c(GRIDmodel_names)
   # learner_names <- names(fitted_models_all)[-(1:ngridmodels)]
   # model_names <- c(GRIDmodel_names, learner_names)
@@ -526,8 +529,7 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       gridmodel_obj <- self$getgridDT_byname(model_names[1])
 
       ## Top model is always going to be a call for training a single final xbg model (no CV /validation data)
-      top_params <- list(fit.package = self$model_contrl$fit.package,
-                         fit.algorithm = "xgb.train")
+      top_params <- list(fit.package = self$model_contrl$fit.package, fit.algorithm = "xgb.train")
 
       # str(model_obj)
       # model_obj$call
@@ -629,13 +631,6 @@ XGBoostClass <- R6Class(classname = "XGBoost",
 
   active = list( # 2 types of active bindings (w and wout args)
     emptydata = function() { },
-
-    # get_train_H2Oframe = function() {private$train_H2Oframe},
-    # get_train_H2Oframe_ID = function() {private$train_H2Oframe_ID},
-
-    # get_valid_H2Oframe = function() {private$valid_H2Oframe},
-    # get_valid_H2Oframe_ID = function() {private$valid_H2Oframe_ID},
-
     getmodel_ids = function() {
       if (is.null(self$model.fit$model_ids)) {
         return(assign_model_name_id(self$model.fit$fitted_models_all[[1]], self$model.fit$model_algorithms[[1]], self$model_contrl$name))
@@ -652,10 +647,4 @@ XGBoostClass <- R6Class(classname = "XGBoost",
     getmodel_algorithms = function() { self$model.fit$model_algorithms }
   )
 
-  # private = list(
-  #   train_H2Oframe = NULL,
-  #   train_H2Oframe_ID = NULL,
-  #   valid_H2Oframe = NULL,
-  #   valid_H2Oframe_ID = NULL
-  # )
 )

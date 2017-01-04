@@ -100,9 +100,9 @@ test.holdoutSL.GLM <- function() {
                               hold_column = "hold") # , use_new_features = TRUE
 
     # print("Holdout MSE, using the holdout Y for prediction"); print(mfit_holdGLM$getMSE)
-    holdPredDT <- longGriDiSL:::predict_holdout(mfit_holdGLM, predict_only_bestK_models = 5, add_subject_data = TRUE)
+    holdPredDT <- longGriDiSL:::predict_holdout(mfit_holdGLM, bestK_only = 5, add_subject_data = TRUE)
     print("GLM holdPredDT"); print(holdPredDT[])
-    preds_best_train <- longGriDiSL:::predict_model(mfit_holdGLM, predict_only_bestK_models = 1, add_subject_data = TRUE)
+    preds_best_train <- longGriDiSL:::predict_model(mfit_holdGLM, bestK_only = 1, add_subject_data = TRUE)
     print("GLM preds_best_train"); print(preds_best_train[])
     preds_best_all <- predict_SL(mfit_holdGLM, newdata = cpp_holdout, add_subject_data = TRUE)
     print("GLM preds_best_all"); print(preds_best_all[])
@@ -194,18 +194,18 @@ test.holdoutSL.GBM <- function() {
   preds_train <- longGriDiSL:::predict_model(mfit_hold2, add_subject_data = TRUE)
   preds_train[]
   ## Same but only for the top model
-  preds_train_top <- longGriDiSL:::predict_model(mfit_hold2, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  preds_train_top <- longGriDiSL:::predict_model(mfit_hold2, bestK_only = 1, add_subject_data = TRUE)
   preds_train_top[]
   ## Same with predict_SL
-  preds_train_top2 <- predict_SL(mfit_hold2, add_subject_data = TRUE, use_best_retrained_model = FALSE)
+  preds_train_top2 <- predict_SL(mfit_hold2, add_subject_data = TRUE, best_refit_only = FALSE)
   preds_train_top2[]
   checkTrue(all.equal(preds_train_top, preds_train_top2))
 
   ## Predictions for all holdout data points for all models trained on non-holdout data:
-  preds_holdout <- longGriDiSL:::predict_holdout(mfit_hold2, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  preds_holdout <- longGriDiSL:::predict_holdout(mfit_hold2, bestK_only = 1, add_subject_data = TRUE)
   preds_holdout[]
   ## Same with predict_SL
-  preds_holdout2 <- predict_SL(mfit_hold2, add_subject_data = TRUE, pred_holdout = TRUE)
+  preds_holdout2 <- predict_SL(mfit_hold2, add_subject_data = TRUE, holdout = TRUE)
   preds_holdout2[]
   checkTrue(all.equal(preds_train_top, preds_train_top2))
 
@@ -213,14 +213,14 @@ test.holdoutSL.GBM <- function() {
   preds_newdat_alldat <- predict_SL(mfit_hold2, newdata = cpp_holdout, add_subject_data = TRUE)
   preds_newdat_alldat[]
   ## Same but for model trained only on non-holdouts
-  preds_newdat <- predict_SL(mfit_hold2, newdata = cpp_holdout, add_subject_data = TRUE, use_best_retrained_model = FALSE)
+  preds_newdat <- predict_SL(mfit_hold2, newdata = cpp_holdout, add_subject_data = TRUE, best_refit_only = FALSE)
   preds_newdat[]
   ## Same as above
-  preds_newdat2 <- longGriDiSL:::predict_model(mfit_hold2, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  preds_newdat2 <- longGriDiSL:::predict_model(mfit_hold2, newdata = cpp_holdout, bestK_only = 1, add_subject_data = TRUE)
   preds_newdat2[]
   checkTrue(all.equal(preds_newdat, preds_newdat2))
 
-  holdPredDT <- longGriDiSL:::predict_holdout(mfit_hold2, predict_only_bestK_models = 5, add_subject_data = TRUE)
+  holdPredDT <- longGriDiSL:::predict_holdout(mfit_hold2, bestK_only = 5, add_subject_data = TRUE)
   holdPredDT[]
 
   print("10 best MSEs among all learners: "); print(mfit_hold2$get_best_MSEs(K = 5))
@@ -299,15 +299,15 @@ test.CV.SL <- function() {
   preds_best_CV[]
   preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, add_subject_data = TRUE)
   preds_best_CV[]
-  preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = FALSE)
+  preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, bestK_only = 1, add_subject_data = FALSE)
   preds_best_CV[]
   checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
 
   # Same with predict_SL:
-  preds_best_CV2 <- predict_SL(mfit_cv1, use_best_retrained_model = FALSE, add_subject_data = FALSE)
+  preds_best_CV2 <- predict_SL(mfit_cv1, best_refit_only = FALSE, add_subject_data = FALSE)
   preds_best_CV2[]
   # Same but with newdata:
-  preds_best_CV3 <- predict_SL(mfit_cv1, newdata = cpp_folds, use_best_retrained_model = FALSE, add_subject_data = FALSE)
+  preds_best_CV3 <- predict_SL(mfit_cv1, newdata = cpp_folds, best_refit_only = FALSE, add_subject_data = FALSE)
   preds_best_CV3[]
   checkTrue(all.equal(preds_best_CV2, preds_best_CV3))
 
@@ -319,18 +319,18 @@ test.CV.SL <- function() {
   cv_valid_preds[]
   cv_valid_preds_2 <- longGriDiSL:::predict_holdout(mfit_cv1)
   cv_valid_preds_2[]
-  cv_valid_preds_2 <- longGriDiSL:::predict_holdout(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = FALSE)
+  cv_valid_preds_2 <- longGriDiSL:::predict_holdout(mfit_cv1, bestK_only = 1, add_subject_data = FALSE)
   cv_valid_preds_2[]
   checkTrue(all.equal(cv_valid_preds, cv_valid_preds_2))
-  cv_valid_preds_2 <- longGriDiSL:::predict_holdout(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  cv_valid_preds_2 <- longGriDiSL:::predict_holdout(mfit_cv1, bestK_only = 1, add_subject_data = TRUE)
   cv_valid_preds_2[]
 
   ## SAME BUT WITH predict_SL, NEW RESCORING ON TRAINING DATA:
-  cv_valid_preds_rescore <- predict_SL(mfit_cv1, add_subject_data = TRUE, pred_holdout = TRUE)
+  cv_valid_preds_rescore <- predict_SL(mfit_cv1, add_subject_data = TRUE, holdout = TRUE)
   cv_valid_preds_rescore[]
   checkTrue(all.equal(cv_valid_preds_2, cv_valid_preds_rescore))
   ## SAME BUT WITH predict_SL, RESCORING ON newdata:
-  cv_valid_preds_newdata <- predict_SL(mfit_cv1, newdata = cpp_folds, add_subject_data = TRUE, pred_holdout = TRUE)
+  cv_valid_preds_newdata <- predict_SL(mfit_cv1, newdata = cpp_folds, add_subject_data = TRUE, holdout = TRUE)
   cv_valid_preds_newdata[]
   checkTrue(all.equal(cv_valid_preds_rescore, cv_valid_preds_newdata))
 

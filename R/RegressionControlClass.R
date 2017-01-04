@@ -6,9 +6,10 @@ RegressionClass <- R6Class("RegressionClass",
   class = TRUE,
   portable = TRUE,
   public = list(
+    model_idx = 1,
     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
-    fit.package = character(),
-    fit.algorithm = character(),
+    # fit.package = character(),
+    # fit.algorithm = character(),
     outvar = character(),          # vector of regression outcome variable names
     predvars = character(),        # vector of predictor names
     runCV = FALSE,
@@ -19,22 +20,24 @@ RegressionClass <- R6Class("RegressionClass",
                                    # Each item is a vector of different subsetting expressions (form stratified models)
                                    # These expressions are evaluated in the envir of the data, must evaluate to a logical vector
     model_contrl = list(),
-    initialize = function(ReplMisVal0 = TRUE,
-                          fit.package = getopt("fit.package"),
-                          fit.algorithm = getopt("fit.algorithm"),
+    initialize = function(model_idx = 1,
+                          ReplMisVal0 = TRUE,
                           outvar,
                           predvars,
                           runCV = FALSE,
                           fold_column = NULL,
                           subset_vars = NULL,
                           subset_exprs = NULL,
-                          model_contrl = NULL) {
+                          model_contrl = list()) {
 
+# fit.package = getopt("fit.package"),
+# fit.algorithm = getopt("fit.algorithm"),
 # browser()
 ## Confirm the args are of the same type as the initials
       self$ReplMisVal0 <- ReplMisVal0
-      self$fit.package <- fit.package
-      self$fit.algorithm <- fit.algorithm
+      self$model_idx <- model_idx
+      # self$fit.package <- fit.package
+      # self$fit.algorithm <- fit.algorithm
 
       assert_that(is.character(outvar))
       assert_that(is.character(predvars) || is.null(predvars))
@@ -64,6 +67,8 @@ RegressionClass <- R6Class("RegressionClass",
         if (!is.ModelStack(model_contrl) && (any(is.null(names(model_contrl))) || any(names(model_contrl) %in% ""))) stop("all items in list 'model_contrl' must be named")
       }
 
+      if (!"fit.package" %in% names(self$model_contrl)) self$model_contrl[['fit.package']] <- getopt("fit.package")
+      if (!"fit.algorithm" %in% names(self$model_contrl)) self$model_contrl[['fit.algorithm']] <- getopt("fit.algorithm")
       self$model_contrl <- model_contrl
 
       return(self)

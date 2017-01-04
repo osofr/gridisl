@@ -96,9 +96,9 @@ test.shared_h2o_database <- function() {
   ## return predictions for all models in the ensemble for training data
   fit_preds <- predict_model(grid_mfit_val_h2o); head(fit_preds[])
   ## Same without newdata, predict for training data
-  fit_preds_best_nonew <- predict_model(grid_mfit_val_h2o, predict_only_bestK_models = 1); head(fit_preds_best_nonew[])
+  fit_preds_best_nonew <- predict_model(grid_mfit_val_h2o, bestK_only = 1); head(fit_preds_best_nonew[])
   ## add subj-spec data
-  fit_preds_best_nonew <- predict_model(grid_mfit_val_h2o, predict_only_bestK_models = 1, add_subject_data = TRUE); fit_preds_best_nonew[]
+  fit_preds_best_nonew <- predict_model(grid_mfit_val_h2o, bestK_only = 1, add_subject_data = TRUE); fit_preds_best_nonew[]
   ## return predictions for all models in the ensemble
   fit_preds <- predict_model(grid_mfit_val_h2o, newdata = cpp); head(fit_preds[])
   ## + add subject-level features to predictions
@@ -132,7 +132,7 @@ test.shared_h2o_database <- function() {
   MSE_2 <- eval_MSE(grid_mfit_cv, OData_train)
   checkTrue(all.equal(MSE_1, MSE_2))
 
-  fit_preds <- predict_model(grid_mfit_cv, newdata = OData_train, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  fit_preds <- predict_model(grid_mfit_cv, newdata = OData_train, bestK_only = 1, add_subject_data = TRUE)
   fit_preds[]
 }
 
@@ -196,9 +196,9 @@ test.genericSL.subset <- function() {
   MSE_2 <- eval_MSE(grid_mfit_cv, OData_train)
   checkTrue(all.equal(MSE_1, MSE_2))
 
-  fit_preds <- predict_model(grid_mfit_cv, newdata = OData_train, predict_only_bestK_models = 1, add_subject_data = FALSE)
+  fit_preds <- predict_model(grid_mfit_cv, newdata = OData_train, bestK_only = 1, add_subject_data = FALSE)
   fit_preds[]
-  fit_holdout <- predict_holdout(grid_mfit_cv, newdata = OData_train, predict_only_bestK_models = 1, add_subject_data = FALSE)
+  fit_holdout <- predict_holdout(grid_mfit_cv, newdata = OData_train, bestK_only = 1, add_subject_data = FALSE)
   fit_holdout[]
 
   ## ----------------------------------------------------------------
@@ -213,16 +213,16 @@ test.genericSL.subset <- function() {
   MSE_2b <- eval_MSE(grid_mfit_cv_b, OData_train, subset_idx = subset_idx)
   checkTrue(all.equal(MSE_1b, MSE_2b))
 
-  fit_preds_b <- predict_model(grid_mfit_cv_b, newdata = OData_train, predict_only_bestK_models = 1, add_subject_data = FALSE, subset_idx = subset_idx)
+  fit_preds_b <- predict_model(grid_mfit_cv_b, newdata = OData_train, bestK_only = 1, add_subject_data = FALSE, subset_idx = subset_idx)
   fit_preds_b[]
 
-  fit_preds_b <- predict_model(grid_mfit_cv_b, newdata = OData_train, predict_only_bestK_models = 1, add_subject_data = TRUE, subset_idx = subset_idx)
+  fit_preds_b <- predict_model(grid_mfit_cv_b, newdata = OData_train, bestK_only = 1, add_subject_data = TRUE, subset_idx = subset_idx)
   fit_preds_b[]
 
-  fit_holdout_b <- predict_holdout(grid_mfit_cv_b, newdata = OData_train, predict_only_bestK_models = 1, add_subject_data = FALSE, subset_idx = subset_idx)
+  fit_holdout_b <- predict_holdout(grid_mfit_cv_b, newdata = OData_train, bestK_only = 1, add_subject_data = FALSE, subset_idx = subset_idx)
   fit_holdout_b[]
 
-  fit_holdout_b <- predict_holdout(grid_mfit_cv_b, newdata = OData_train, predict_only_bestK_models = 1, add_subject_data = TRUE, subset_idx = subset_idx)
+  fit_holdout_b <- predict_holdout(grid_mfit_cv_b, newdata = OData_train, bestK_only = 1, add_subject_data = TRUE, subset_idx = subset_idx)
   fit_holdout_b[]
 }
 
@@ -294,17 +294,17 @@ test.generic.h2oSL <- function() {
   fit_preds_nonew[]
 
   ## just return a K column matrix of predictions for top K models (ranked by validation MSE)
-  fit_preds_best <- predict_model(grid_mfit_val, newdata = cpp, predict_only_bestK_models = 1)
+  fit_preds_best <- predict_model(grid_mfit_val, newdata = cpp, bestK_only = 1)
   head(fit_preds_best[])
   ## + subj-spec data
-  fit_preds_best <- predict_model(grid_mfit_val, newdata = cpp, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  fit_preds_best <- predict_model(grid_mfit_val, newdata = cpp, bestK_only = 1, add_subject_data = TRUE)
   fit_preds_best[]
 
   ## Same without newdata, predict for training data
-  fit_preds_best_nonew <- predict_model(grid_mfit_val, predict_only_bestK_models = 1)
+  fit_preds_best_nonew <- predict_model(grid_mfit_val, bestK_only = 1)
   head(fit_preds_best_nonew[])
   ## + subj-spec data
-  fit_preds_best_nonew <- predict_model(grid_mfit_val, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  fit_preds_best_nonew <- predict_model(grid_mfit_val, bestK_only = 1, add_subject_data = TRUE)
   fit_preds_best_nonew[]
 
   ## get the model objects for top K models:
@@ -324,10 +324,10 @@ test.generic.h2oSL <- function() {
   fit_preds_all[]
   head(cpp)
 
-  fit_preds_best <- predict_model(grid_mfit_cv, newdata = cpp, predict_only_bestK_model = 1)
+  fit_preds_best <- predict_model(grid_mfit_cv, newdata = cpp, bestK_only = 1)
   head(fit_preds_best[])
 
-  fit_preds_best <- predict_model(grid_mfit_cv, predict_only_bestK_model = 1)
+  fit_preds_best <- predict_model(grid_mfit_cv, bestK_only = 1)
   head(fit_preds_best[]); nrow(fit_preds_best)
 
   grid_mfit_cv$show(model_stats = TRUE, all_fits = TRUE)
@@ -345,7 +345,7 @@ test.generic.h2oSL <- function() {
   fit_preds_all <- predict_model(grid_mfit_cv, newdata = cpp)
   head(fit_preds_all[])
 
-  fit_preds_best <- predict_model(grid_mfit_cv, newdata = cpp, predict_only_bestK_model = 1)
+  fit_preds_best <- predict_model(grid_mfit_cv, newdata = cpp, bestK_only = 1)
   head(fit_preds_best[])
 
   # eval_MSE_cv(grid_mfit_cv)

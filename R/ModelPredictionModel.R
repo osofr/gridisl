@@ -1,18 +1,21 @@
-
 #' Generate model names / IDs
 #'
+#' @param params Original list of parametes for this model (outcome variable name, predictor names, stratification criteria and model id)
 #' @param H2O.model.object H2O model object (if used)
 #' @param model_algorithm The name of the modeling algorithm
 #' @param name Additional name previously specified in \code{model_contrl} list
 #' @export
-assign_model_name_id <- function(H2O.model.object, model_algorithm, name = NULL) {
+assign_model_name_id <- function(params, H2O.model.object, model_algorithm, name = NULL) {
   if (!missing(H2O.model.object) && inherits(H2O.model.object, "H2OModel")) {
     model_ids <- list(H2O.model.object@model_id)
   } else {
     model_ids <- list(model_algorithm)
   }
   new_names <- model_algorithm
+
   if (!is.null(name)) new_names <- new_names %+% "." %+% name
+  if (!is.null(params$model_idx)) new_names <- "m." %+% params$model_idx %+% "." %+% new_names
+
   names(model_ids) <- new_names
   return(model_ids)
 }
@@ -33,7 +36,7 @@ create_fit_object <- function(model.fit, model_alg, fitfunname, params, coef, no
   fitted_models_all <- vector(mode = "list", length = 1)
   fitted_models_all[[1]] <- model.fit
 
-  model_ids <- assign_model_name_id(model.fit, model_alg, model_contrl$name)
+  model_ids <- assign_model_name_id(params, model.fit, model_alg, model_contrl$name)
   names(fitted_models_all) <- names(model_ids)
 
   extra_params <- list(...)
@@ -58,7 +61,7 @@ create_fit_object <- function(model.fit, model_alg, fitfunname, params, coef, no
 #' @param reg RegressionClass Object
 #' @export
 create_fit_params <- function(reg) {
-  return(list(outvar = reg$outvar, predvars = reg$predvars, stratify = reg$subset_exprs[[1]]))
+  return(list(outvar = reg$outvar, predvars = reg$predvars, stratify = reg$subset_exprs[[1]], model_idx = reg$model_idx))
 }
 
 #----------------------------------------------------------------------------------
@@ -116,6 +119,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
   public = list(
     # classify = FALSE,
     reg = NULL,
+    model_idx = integer(),
     outvar = character(),   # outcome name(s)
     predvars = character(), # names of predictor vars
     runCV = logical(),
@@ -124,7 +128,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     OData_train = NULL, # object of class DataStorageClass used for training
     OData_valid = NULL, # object of class DataStorageClass used for scoring models (contains validation data)
     ModelFitObject = NULL, # object of class ModelFitObject that is used in fitting / prediction
-    # use_best_retrained_model = FALSE,
+    # best_refit_only = FALSE,
     BestModelFitObject = NULL,
     fit.package = character(),
     fit.algorithm = character(),
@@ -142,25 +146,9 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       self$useH2Oframe <- useH2Oframe
       self$reg <- reg
       self$runCV <- reg$runCV
-
-
-
-      ## NEEDS TO BE REMOVED WHEN DOING MODEL STACKING.
-      ## PredictionModel should be completely olivious of the underlying model type(s)
-      if ("fit.package" %in% names(self$model_contrl)) {
-        self$fit.package <- self$model_contrl[['fit.package']]
-        assert_that(is.character(self$fit.package))
-      } else {
-        self$fit.package <- reg$fit.package[1]
-      }
-
-      if ("fit.algorithm" %in% names(self$model_contrl)) {
-        self$fit.algorithm <- self$model_contrl[['fit.algorithm']]
-        assert_that(is.character(self$fit.algorithm))
-      } else {
-        self$fit.algorithm <- reg$fit.algorithm[1]
-      }
-
+      self$model_idx <- reg$model_idx
+      self$fit.package <- reg$model_contrl$fit.package[1L]
+      self$fit.algorithm <- reg$model_contrl$fit.algorithm[1L]
 
       assert_that(is.string(reg$outvar))
       self$outvar <- reg$outvar
@@ -176,18 +164,16 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       self$ModelFitObject <- self$define_model_fit_object(self$fit.package, self$fit.algorithm, reg, self$useH2Oframe, ...)
 
-      if (gvars$verbose) {
-        print("New instance of " %+% class(self)[1] %+% " :"); self$show()
-      }
+      if (gvars$verbose) { print("New instance of " %+% class(self)[1] %+% " :"); self$show() }
+
       invisible(self)
     },
 
     define_model_fit_object = function(fit.package, fit.algorithm, reg, useH2Oframe, ...) {
       # ***************************************************************************
       # Add any additional options passed on to modeling functions as extra args
-      # ****** NOTE: This needs to be changed to S3 dispatch for greater flexibility ******
-      # ***************************************************************************
       # Calling the constructor for the fitting model class, dispatching on class name stored in fit.package
+      # ***************************************************************************
       class(fit.package) <- fit.package
       ModelFitObject <- newFitModel(fit.package, fit.algorithm, reg, useH2Oframe, ...)
 
@@ -214,6 +200,10 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       # self$subset_train <- self$subset_idx
       model.fit <- self$ModelFitObject$fit(data, subset_idx = subset_idx, validation_data = validation_data, ...)
 
+      # **********************************************************************
+      # This should not be a fatal error, especially if we are doing a stack / ensemble and only some models have failed
+      # Should be able to continue, after removing the failed models
+      # **********************************************************************
       if (inherits(model.fit, "try-error")) {
         stop("running " %+% self$ModelFitObject$fit.class %+% " resulted in error...")
         # self$ModelFitObject <- glmModelClass$new(fit.algorithm = "GLM", fit.package = "speedglm", reg = reg, ...)
@@ -230,7 +220,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     refit_best_model = function(data, subset_exprs = NULL, ...) {
-      # browser()
       expand.dots <- list(...)
 
       if (gvars$verbose) print("refitting the best model: "); self$show()
@@ -257,14 +246,14 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     # Predict the response E[Y|newdata];
-    predict = function(newdata, subset_exprs = NULL, predict_model_names = NULL, use_best_retrained_model = FALSE, convertResToDT = TRUE, ...) {
+    predict = function(newdata, subset_exprs = NULL, predict_model_names = NULL, best_refit_only = FALSE, convertResToDT = TRUE, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to attempting to make predictions.")
       if (is.null(subset_exprs) && !missing(newdata)) subset_exprs <- self$subset_exprs
       if (!missing(newdata)) subset_idx <- newdata$evalsubst(subset_exprs = subset_exprs)
 
       ## When missing newdata the predictions are for the training frame.
       ## No subset re-evaluation is needed (training frame was already subsetted by self$subset_exprs)
-      if (use_best_retrained_model && !is.null(self$BestModelFitObject)) {
+      if (best_refit_only && !is.null(self$BestModelFitObject)) {
         probA1 <- self$BestModelFitObject$predictP1(newdata, subset_idx = subset_idx)
       } else {
         probA1 <- self$ModelFitObject$predictP1(newdata, subset_idx = subset_idx, predict_model_names = predict_model_names)
@@ -281,11 +270,11 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
 
       if (missing(newdata) && self$runCV) {
-        ## For CV without missing data use the default h2o out-of-sample (holdout) predictions
+        ## For CV with missing data use the default h2o/xgboost out-of-sample (holdout) predictions
         probA1 <- self$ModelFitObject$predictP1_out_of_sample_cv(predict_model_names = predict_model_names)
 
       } else if (missing(newdata) && !self$runCV) {
-        ## For holdouts use the validation data (if it was used)
+        ## For holdout validation use the validation data (if it is available)
         newdata <- self$OData_valid
         if (!is.null(newdata)) stop("Must supply the validation data for making holdout predictions")
         subset_idx <- newdata$evalsubst(subset_exprs = subset_exprs) # self$define.subset.idx(newdata)
@@ -304,7 +293,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       return(probA1)
     },
 
-    # Predict the response E[Y|newdata] based for CV fold models and using validation data;
+    # Score models (so far only MSE) based on either out of sample CV model preds or validation data preds;
     score_models = function(validation_data, subset_exprs = NULL, ...) {
       if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
       if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
@@ -358,24 +347,21 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       # for (fold_i in seq_along(fold_idx)) resid_predsDT[fold_idx[[fold_i]], ("fold") := fold_i]
 
-      ## 3. Evaluate test error averaging across all rows of input data
+      ## 3A. Evaluate test error averaging across all rows of input data
       # resid_predsDT[, lapply(.SD, mean, na.rm = TRUE)][, lapply(.SD, sqrt)]
 
-      ## 3A. Evaluate test error averaging across the folds
+      ## 3B. Evaluate test error averaging across the folds
       # mean_byfold <- resid_predsDT[, lapply(.SD, mean, na.rm = TRUE), by = c("fold", "subjID")]
       # mean_byfold <- mean_byfold[, lapply(.SD, mean, na.rm = TRUE), by = "fold"]
-
       # mean_byfold <- resid_predsDT[, lapply(.SD, mean, na.rm = TRUE), by = "fold"]
       # mean_byfold[, subjID := NULL][, fold := NULL]
-
       # mean_byfold <- resid_predsDT[, lapply(.SD, mean, na.rm = TRUE)]
       # mean_byfold[, subjID := NULL][, fold := NULL]
-
       # n <- nrow(resid_predsDT)
       # MSE_mean <- as.list(mean_byfold[, lapply(.SD, mean, na.rm = TRUE)])
       # RMSE_mean <- data.frame(lapply(MSE_mean, sqrt))
 
-      # 3B. Evaluate the mean, var, sd loss averaging at the subject level first, then averaging across subjects
+      # 3C. Evaluate the mean, var, sd loss averaging at the subject level first, then averaging across subjects
       mean_bysubj <- resid_predsDT[, lapply(.SD, mean, na.rm = TRUE), by = subjID]
       mean_bysubj[, subjID := NULL]
       n <- nrow(resid_predsDT)
@@ -396,20 +382,28 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       return(list(MSE_mean = MSE_mean, RMSE_mean = RMSE_mean, MSE_var = MSE_var, MSE_sd = MSE_sd))
     },
 
-    # ------------------------------------------------------------------------------
-    # return a model object by name / ID
-    # ------------------------------------------------------------------------------
+
+
+
+
+    ## ------------------------------------------------------------------------------
+    ## return a model object by name / ID
+    ## ------------------------------------------------------------------------------
     getmodel_byname = function(model_names, model_IDs) {
       return(self$ModelFitObject$getmodel_byname(model_names, model_IDs))
     },
 
-    # ------------------------------------------------------------------------------
-    # return top K models based on smallest validation / test MSE
-    # ------------------------------------------------------------------------------
+
+
+
+
+    ## ------------------------------------------------------------------------------
+    ## return top K models based on smallest validation / test MSE
+    ## ------------------------------------------------------------------------------
     get_best_MSEs = function(K = 1) {
       if (!self$is.fitted) stop("Please fit the model prior to calling get_best_models()")
 
-      if (!is.integerish(K)) stop("K argument must be an integer <= the total number of models")
+      if (!is.integerish(K)) stop("K argument must be an integer <= the total number of models in this ensemble")
       if (K > length(self$getmodel_ids)) {
         message("K value exceeds the total number of models; K is being truncated to " %+% length(self$getmodel_ids))
         K <- length(self$getmodel_ids)
@@ -418,12 +412,26 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (is.null(self$getMSE)) stop("The validation / holdout MSE has not been evaluated, making model model ranking impossible.
   Please call evalMSE_byID() and provide a vector of validation / test values.")
 
+
+
+      ## ***********************************
+      ## This throws everything off, since the model may not be uniquely idenfified.
+      ## Need to use MSE as locate the model best K models adresses
+      ## ***********************************
       return(sort(unlist(self$getMSE))[1:K])
+
+
+
+
     },
 
-    # ------------------------------------------------------------------------------
-    # return top K model object names
-    # ------------------------------------------------------------------------------
+
+
+
+
+    ## ------------------------------------------------------------------------------
+    ## return top K model object names
+    ## ------------------------------------------------------------------------------
     get_best_model_names = function(K = 1) {
       if (length(self$getmodel_ids) == 1) {
         return(names(self$getmodel_ids))
@@ -432,9 +440,12 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       }
     },
 
-    # ------------------------------------------------------------------------------
-    # return top K model objects ranked by prediction MSE on a holdout (CV) fold
-    # ------------------------------------------------------------------------------
+
+
+
+    ## ------------------------------------------------------------------------------
+    ## return top K model objects ranked by prediction MSE on a holdout (CV) fold
+    ## ------------------------------------------------------------------------------
     get_best_models = function(K = 1) {
       top_model_names <- self$get_best_model_names(K)
       message("fetching top " %+% K %+% " models ranked by the smallest holdout / validation MSE")
@@ -479,6 +490,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         cat("Model: E[" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% "]" %+% ";\\ Stratify: " %+% self$subset_exprs %+% "\n")
         cat("fit.package: " %+% self$fit.package %+% "\n")
         cat("fit.algorithm: " %+% self$fit.algorithm %+%"\n")
+        # cat("grid.algorithm: " %+% self$grid.algorithm %+%"\n")
 
         if (self$is.fitted && model_stats) {
           self$ModelFitObject$show(all_fits = all_fits)
@@ -513,6 +525,15 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     getoutvarnm = function() { self$outvar },
     getoutvarval = function() { self$ModelFitObject$getY },
     getMSE = function() { private$MSE[["MSE_mean"]] },
+    getMSEtab = function() {
+      MSE_list <- private$MSE[["MSE_mean"]]
+      data.table::data.table(
+        MSE = unlist(MSE_list),
+        names = names(MSE_list),
+        order = seq_along(MSE_list),
+        model_idx = self$model_idx
+        )
+    },
     getRMSE = function() { private$MSE[["RMSE_mean"]] },
     getMSEvar = function() { private$MSE[["MSE_var"]] },
     getMSEsd = function() { private$MSE[["MSE_sd"]] },

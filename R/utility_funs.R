@@ -15,7 +15,17 @@ NULL
 is.DataStorageClass <- function(DataStorageClass) "DataStorageClass"%in%class(DataStorageClass)
 is.PredictionModel <- function(PredictionModel) "PredictionModel"%in%class(PredictionModel)
 is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(PredictionStack)
+is.ModelStack <- function(obj) "ModelStack" %in% class(obj)
 
+capture.exprs <- function(...) {
+  # sVar.exprs <- eval(substitute(alist(...)))
+  sVar.exprs <- list(...)
+  if (is.null(names(sVar.exprs))) names(sVar.exprs) <- rep_len("", length(sVar.exprs))
+  if (length(sVar.exprs)!=0 && any(names(sVar.exprs)%in%"")) {
+    stop("all parameters passed to ... must be named")
+  }
+  return(sVar.exprs)
+}
 # ---------------------------------------------------------------------------------------
 #' Define and fit growth models evaluated on holdout observations.
 #'

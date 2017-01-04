@@ -4,9 +4,11 @@
 \alias{assign_model_name_id}
 \title{Generate model names / IDs}
 \usage{
-assign_model_name_id(H2O.model.object, model_algorithm, name = NULL)
+assign_model_name_id(params, H2O.model.object, model_algorithm, name = NULL)
 }
 \arguments{
+\item{params}{Original list of parametes for this model (outcome variable name, predictor names, stratification criteria and model id)}
+
 \item{H2O.model.object}{H2O model object (if used)}
 
 \item{model_algorithm}{The name of the modeling algorithm}

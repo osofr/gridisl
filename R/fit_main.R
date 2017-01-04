@@ -1,20 +1,3 @@
-is.ModelStack <- function(obj) "ModelStack" %in% class(obj)
-
-capture.exprs <- function(...) {
-  # sVar.exprs <- eval(substitute(alist(...)))
-  sVar.exprs <- list(...)
-
-  # if (length(sVar.exprs)>0) { # deparse into characters when expr is.call, but keep as-is otherwise
-  #   sVar.exprs <- lapply(sVar.exprs, function(x) if (is.character(x)) {x} else {deparse(x)})
-  # }
-  # if not a single argument was named, names attribute of sVar.exprs will be null => add names attribute
-  if (is.null(names(sVar.exprs))) names(sVar.exprs) <- rep_len("", length(sVar.exprs))
-  if (length(sVar.exprs)!=0 && any(names(sVar.exprs)%in%"")) {
-    stop("all parameters passed to ... must be named")
-  }
-  return(sVar.exprs)
-}
-
 #' S3 methods for printing a collection of learners
 #'
 #' Prints the stack models
@@ -27,15 +10,17 @@ print.ModelStack <- function(modelstack, ...) {
 }
 
 # ---------------------------------------------------------------------------------------
-#' Define modeling algorithm(s), package and parameters
-#' @param estimator A character string name of package and estimator (algorithm) name, separated by "_".
-#' @param ... Additional modeling parameters to be passed to modeling function.
+# Define modeling algorithm(s), package and parameters
+# @param estimator A character string name of package and estimator (algorithm) name, separated by "__".
+# @param ... Additional modeling parameters to be passed to modeling function.
+#' @rdname defGrid
 #' @export
 defLearner <- function(estimator, ...) {
-  pkg_est <- strsplit(estimator, "_", fixed = TRUE)[[1]]
+  pkg_est <- strsplit(estimator, "__", fixed = TRUE)[[1]]
   pkg <- pkg_est[1]
   if (length(pkg_est) > 1) est <- pkg_est[2] else est <- NULL
   learner <- defGrid(estimator, ...)
+
   if (!(pkg %in% c("h2o", "xgboost"))) {
     learner[[1]][["fit.algorithm"]] <- learner[[1]][["grid.algorithm"]]
     learner[[1]][["grid.algorithm"]] <- NULL
@@ -44,14 +29,16 @@ defLearner <- function(estimator, ...) {
 }
 
 # ---------------------------------------------------------------------------------------
-#' Define a grid of modeling algorithm(s), package and parameters
-#' @param estimator A character string name of package and estimator (algorithm) name, separated by "_".
+#' Interface for defining models
+#'
+#' Use \code{defLearner} to define a single model and \code{defGrid} to define a grid of multple models.
+#' @param estimator A character string name of package and estimator (algorithm) name, separated by "__".
 #' @param search_criteria Search criteria
 #' @param param_grid Grid of modeling parameters
 #' @param ... Additional modeling parameters to be passed to modeling function.
 #' @export
 defGrid <- function(estimator, search_criteria, param_grid, ...) {
-  pkg_est <- strsplit(estimator, "_", fixed = TRUE)[[1]]
+  pkg_est <- strsplit(estimator, "__", fixed = TRUE)[[1]]
   pkg <- pkg_est[1]
   if (length(pkg_est) > 1) est <- pkg_est[2] else est <- NULL
 

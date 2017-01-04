@@ -4,18 +4,14 @@
 \alias{predict_generic}
 \title{Generic predict for new data}
 \usage{
-predict_generic(modelfit, newdata, predict_only_bestK_models,
-  add_subject_data = FALSE, subset_idx = NULL,
-  use_best_retrained_model = FALSE, pred_holdout = FALSE,
+predict_generic(modelfit, newdata, add_subject_data = FALSE,
+  subset_idx = NULL, best_only = TRUE, holdout = FALSE,
   force_data.table = TRUE, verbose = getOption("longGriDiSL.verbose"))
 }
 \arguments{
-\item{modelfit}{Model fit object returned by \code{\link{fit_model}} function.}
+\item{modelfit}{Model fit object returned by \code{\link{fit}} functions. Must be an object of class \code{PredictionModel} or \code{PredictionStack}.}
 
 \item{newdata}{Subject-specific data for which predictions should be obtained.}
-
-\item{predict_only_bestK_models}{Specify the total number of top-ranked models (validation or C.V. MSE) for which predictions should be obtained.
-Leave missing to obtain predictions for all models that were fit as part of this ensemble.}
 
 \item{add_subject_data}{Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
 When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).}
@@ -23,11 +19,14 @@ When \code{FALSE} (default) only the actual predictions are returned (as a matri
 \item{subset_idx}{A vector of row indices in \code{newdata} for which the predictions should be obtain.
 Default is \code{NULL} in which case all observations in \code{newdata} will be used for prediction.}
 
-\item{use_best_retrained_model}{Set to \code{TRUE} to obtained the predictions from the best scoring model that was re-trained on all observed data.}
+\item{best_only}{Set to \code{TRUE} (default) to obtain predictions from the top-ranked model (based on validation or CV MSE).
+When \code{FALSE} the attempt will to made to obtain predictions from all models.
+Note that when \code{holdout} is \code{FALSE} and \code{best_only} is \code{TRUE},
+the predictions will be based on the best scoring model that was re-trained on all available data.}
 
-\item{pred_holdout}{Set to \code{TRUE} for out-of-sample predictions for validation folds or holdouts.}
+\item{holdout}{Set to \code{TRUE} for out-of-sample predictions for validation folds or holdouts.}
 
-\item{force_data.table}{...}
+\item{force_data.table}{Force the prediction result to be \code{data.table}.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
 Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.}

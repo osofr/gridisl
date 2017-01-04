@@ -5,15 +5,15 @@
 \title{Predict for holdout or CV SuperLearner fits}
 \usage{
 predict_SL(modelfit, newdata, add_subject_data = FALSE, subset_idx = NULL,
-  use_best_retrained_model = TRUE, pred_holdout = FALSE,
-  force_data.table = TRUE, verbose = getOption("longGriDiSL.verbose"))
+  holdout = FALSE, force_data.table = TRUE,
+  verbose = getOption("longGriDiSL.verbose"))
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.}
 
 \item{newdata}{Subject-specific data for which predictions should be obtained.
 If missing then the predictions for the training data will be typically returned.
-See \code{pred_holdout} for discussion of alternative cases.}
+See \code{holdout} for discussion of alternative cases.}
 
 \item{add_subject_data}{Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
 When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).}
@@ -21,9 +21,7 @@ When \code{FALSE} (default) only the actual predictions are returned (as a matri
 \item{subset_idx}{A vector of row indices in \code{newdata} for which the predictions should be obtain.
 Default is \code{NULL} in which case all observations in \code{newdata} will be used for prediction.}
 
-\item{use_best_retrained_model}{Set to \code{TRUE} to obtained the predictions from the best scoring model that was re-trained on all observed data.}
-
-\item{pred_holdout}{Set to \code{TRUE} for out-of-sample predictions for validation folds (out-of-sample observations) or holdouts.
+\item{holdout}{Set to \code{TRUE} for out-of-sample predictions for validation folds (out-of-sample observations) or holdouts.
 When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
 1. For \code{\link{fit_holdoutSL}} the default holdout predictions will be based on validation data.
 2. For \code{\link{fit_cvSL}} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.}
