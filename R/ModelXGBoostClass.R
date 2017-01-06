@@ -12,23 +12,19 @@
 
 ## ******
 ## TO DO: Implement out of sample CV prediction for best grid model (use ntreelimit as an arg to predict)
-## TO DO: Implement a grid for xgboost that may include several learners (e.g., grid-based glm, gbm, drf and individual learner (no grid)
-##        In fit.xgb.grid we could then rbind the data.table that contains these learners
-
 ## TO DO: Automatically initiate the h2o cluster (h2o.init(2)) if its hasn't been started.
-
 ## TO DO fit.xgb.train(): Add validation_data to watchlist as watchlist <- list(train = dtrain, eval = dtest)?
-
 ## TO DO RFs: Add random forests to the grid (for RFs, the arg 'ntreelimit' might differ from 'best_iteration')
 ## TO DO RFs: Investigate difference between 'best_iteration' & 'best_ntreelimit' (different only for RFs).
 ##            Which one should be used for prediction with RFs?
 ## TO DO: Add support for booster 'dart'
-
 ## TO DO (xgb.grid): Add arg "nthread = value" to the main function call (will be passed on to params)
 ## TO DO: Determine optimal number of nthreads based on type of evaluation (parallel fits as in stremr or a single fit)
-
 ## TO DO: Implement an option for performing grid search in parallel (over nmodels)
 
+## (DONE, no longer needed due to new interface):
+##        Implement a grid for xgboost that may include several learners (e.g., grid-based glm, gbm, drf and individual learner (no grid)
+##        In fit.xgb.grid we could then rbind the data.table that contains these learners
 ## (DONE, running parallel xgboost): Tested parallel grid searches with xgboost from stremr. Still need to test performance on real data.
 ## (DONE, retraining best model): Fix re-training of the best grid model (based on params, nrounds, ntreelimit, etc)
 ## (DONE, importing purr, dplyr in xgb.grid: Avoids loading the entire namespace of tidyverse package, imports %>%
@@ -112,7 +108,7 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   ## These defaults can be over-ridden in model_contrl
   # ********************************************************************************
   mainArgs <- list(data = train_data,
-                   nrounds = 500,
+                   nrounds = 50,
                    # nrounds = 1000,
                    # early_stopping_rounds = 10,
                    # metrics = list(evalMSEerror),
@@ -160,24 +156,23 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   }
 
   ## THE grid of hyper-parameters, can be either specified in a list with names: "glm"/"gbm"/"params"
-  grid_params <- model_contrl[[grid.algorithm]]
+  ## Disabling this due to possible ambiguity, unified interface always assumes that hyper_params come from 'params' item
+  # grid_params <- model_contrl[[grid.algorithm]]
 
-  if (is.null(grid_params)) {
-    grid_params <- model_contrl[["params"]]
-    model_contrl[["params"]] <- NULL
-  }
-
+  # if (is.null(grid_params)) {
+  grid_params <- model_contrl[["params"]]
+  model_contrl[["params"]] <- NULL
   if (is.null(grid_params)) grid_params <- list()
     # stop("must specify hyper parameters for grid search with '" %+%
     #   algo_fun_name %+%
     #   "' by defining a SuperLearner params list item named '" %+% grid.algorithm %+% "'")
 
-  if (!is.null(grid_params[["search_criteria"]])) {
-    search_criteria <- grid_params[["search_criteria"]]
-    grid_params[["search_criteria"]] <- NULL
-  } else {
-    search_criteria <- model_contrl[["search_criteria"]]
-  }
+  # if (!is.null(grid_params[["search_criteria"]])) {
+  #   search_criteria <- grid_params[["search_criteria"]]
+  #   grid_params[["search_criteria"]] <- NULL
+  # } else {
+  search_criteria <- model_contrl[["search_criteria"]]
+  # }
 
   mainArgs[["hyper_params"]] <- grid_params
   mainArgs[["search_criteria"]] <- search_criteria
@@ -188,12 +183,16 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   ## Keep only the relevant args in mainArgs list (DISABLING FOR NOW):
   # mainArgs <- keep_only_fun_args(mainArgs, fun = algo_fun)
 
-  ## Add user args in model_contrl that pertain to learner fun algo_fun
-  ## This will replace any existing args in mainArgs or will add new ones
+  ## 1. Add all user args in model_contrl that also appear in args (signature) of the learner algo_fun
+  ##    This will replace any default args predefined in mainArgs, but will also add new ones
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = algo_fun)
+  ## 2. Put the rest of the arguments that appear in mainArgs in mainArgs[["hyper_params"]]
+  add_param_names <- names(model_contrl)[(!(names(model_contrl) %in% c(names(mainArgs), "fit.package", "fit.algorithm", "grid.algorithm", "family")))]
+  new_params <- model_contrl[add_param_names]
+  mainArgs[["hyper_params"]] <- c(mainArgs[["hyper_params"]], new_params)
 
   ## Remove any args from mainArgs that also appear in hyper_params:
-  common_hyper_args <- intersect(names(mainArgs), names(grid_params))
+  common_hyper_args <- intersect(names(mainArgs), names(mainArgs[["hyper_params"]]))
   if(length(common_hyper_args) > 0) mainArgs <- mainArgs[!(names(mainArgs) %in% common_hyper_args)]
 
   ## TO DO: What if 'params' is specified as part of model_contrl?
@@ -211,9 +210,13 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
 
 #' @export
 fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_column, ...) {
-  family <- model_contrl$family
-  grid.algorithms <- model_contrl$grid.algorithm
-  learners <- model_contrl$learner
+  family <- model_contrl[["family"]]
+
+  grid.algorithms <- model_contrl[["grid.algorithm"]]
+  if (is.null(grid.algorithms)) grid.algorithms <- model_contrl[["fit.algorithm"]]
+
+  ## no longer used:
+  # learners <- model_contrl$learner
   if (is.null(family)) family <- "binomial"
 
   grid_model_fit <- fit_single_xgboost_grid(grid.algorithm = grid.algorithms[[1]], train_data = train_data, family = family,
@@ -399,12 +402,11 @@ XGBoostClass <- R6Class(classname = "XGBoost",
     fold_column = character(),
     model_contrl = list(),
     classify = FALSE,
-    fit.class = c("gbm", "grid"),
+    fit.class = c("glm", "gbm", "grid"),
     model.fit = list(),
     outfactors = NA,
 
     useDMatrix = FALSE,
-
 
     initialize = function(fit.algorithm, fit.package, reg, useDMatrix = FALSE, ...) {
       self$reg <- reg
@@ -420,13 +422,21 @@ XGBoostClass <- R6Class(classname = "XGBoost",
 
       ## *** IN THE FUTURE THIS needs to be changed accordingly for running either single gbm model fit or for CV grid search (when implemented).
       self$fit.class <- fit.algorithm
-      if (fit.algorithm %in% c("glm", "drf", "gbm")) {
-        class(self$fit.class) <- c(class(self$fit.class), "xgb.train")
-      } else if (fit.algorithm %in% "grid") {
+
+      if (fit.algorithm %in% c("glm", "drf", "gbm", "grid")) {
         class(self$fit.class) <- c(class(self$fit.class), "xgb.grid")
       } else {
         class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
       }
+
+      # if (fit.algorithm %in% c("glm", "drf", "gbm")) {
+      #   class(self$fit.class) <- c(class(self$fit.class), "xgb.train")
+      # } else if (fit.algorithm %in% "grid") {
+      #   class(self$fit.class) <- c(class(self$fit.class), "xgb.grid")
+      # } else {
+      #   class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
+      # }
+
       invisible(self)
     },
 
@@ -574,12 +584,10 @@ XGBoostClass <- R6Class(classname = "XGBoost",
         load_subset_t <- system.time({
           IDs <- data$get.outvar(subset_idx, data$nodes$IDnode)
           Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
-
           ## gives an error when all columns happen to be integer type:
           # fit_dmat <- xgboost::xgb.DMatrix(as.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE]), label = Yvals)
           ## still gives the same error:
           # fit_dmat <- xgboost::xgb.DMatrix(data.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE]), label = Yvals)
-
           # Another option is to stop at data.matrix and pass it directly to xgboost, passing Y's as separate arg
           Xmat <- as.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE])
           if (is.integer(Xmat)) Xmat[,1] <- as.numeric(Xmat[,1])

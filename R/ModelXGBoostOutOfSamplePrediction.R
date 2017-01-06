@@ -40,7 +40,6 @@
 ## where k is the total number of models trained by this ensemble (with h2o.grid, etc) and is equal to length(models_list)
 ## ----------------------------------------------------------------------------------------------------------------------------------
 xgb_predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subset_idx, predict_model_names, ...) {
-  # h2o.no_progress()
   models_list <- m.fit$fitted_models_all
   if (!missing(predict_model_names) && !is.null(predict_model_names)) models_list <- models_list[predict_model_names]
 

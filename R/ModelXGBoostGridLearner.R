@@ -83,6 +83,7 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
       } else {
         watchlist <- list(test = data)
       }
+
       model_fit <- xgboost::xgb.train(params, data, as.integer(nrounds), watchlist,
                                       obj, feval, verbose, print_every_n, early_stopping_rounds, maximize,
                                       callbacks = c(list(xgboost::cb.evaluation.log()), callbacks),

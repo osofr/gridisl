@@ -1,0 +1,266 @@
+test.SL.H2O.GLM_GBM_change_covars <- function() {
+  require("h2o")
+  h2o::h2o.init(nthreads = -1)
+  options(longGriDiSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  ## ------------------------------------------------------------------------------------
+  ## SL with random holdout:
+  ## ------------------------------------------------------------------------------------
+  GRIDparams <- defLearner(estimator = "speedglm__glm", family = "gaussian") +
+
+               defLearner(estimator = "speedglm__glm", family = "gaussian",
+                          x = c("agedays", "apgar1", "apgar5", "parity")) +
+
+               defLearner(estimator = "h2o__glm", family = "gaussian",
+                          x = c("agedays", "apgar1", "apgar5", "parity")) +
+
+                defGrid(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
+                         search_criteria = list(strategy = "Cartesian"),
+                         stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
+                         param_grid = list(learn_rate = c(0.01),
+                                           max_depth = c(5, 6),
+                                           sample_rate = 0.8,
+                                           col_sample_rate = 0.5),
+                         x = c("agedays", "apgar1", "apgar5", "parity"),
+                         seed = 23)
+
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  mfit_hold <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                    data = cpp_holdout, method = "holdout", hold_column = "hold")
+
+  ## ------------------------------------------------------------------------------------
+  ## SL with CV (CANNOT USE speedglm or glm with V-fold CV yet):
+  ## ------------------------------------------------------------------------------------
+  GRIDparams <- defLearner(estimator = "h2o__glm", family = "gaussian",
+                           x = c("agedays", "apgar1", "apgar5", "parity")) +
+                defGrid(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
+                         search_criteria = list(strategy = "Cartesian"),
+                         stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
+                         param_grid = list(learn_rate = c(0.01),
+                                           max_depth = c(5, 6),
+                                           sample_rate = 0.8,
+                                           col_sample_rate = 0.5),
+                         x = c("agedays", "apgar1", "apgar5", "parity"),
+                         seed = 23)
+
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  mfit_cv <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                    data = cpp_folds, method = "cv", fold_column = "fold")
+
+  h2o::h2o.shutdown(prompt = FALSE)
+}
+
+test.GBM_xgboost_onelearner <- function() {
+  options(longGriDiSL.verbose = TRUE)
+  # options(longGriDiSL.verbose = FALSE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  lapply(cpp[, covars], class)
+
+  ## ------------------------------------------------------------------------------------------------------
+  ## Single GBM w/ h2o vs. xgboost
+  ## ------------------------------------------------------------------------------------------------------
+  GRIDparams <- defLearner(estimator = "xgboost__gbm", family = "gaussian",
+                           nrounds = 500,
+                           eta = 0.01, # (learning_rate alias)
+                           # min_split_loss = , # default 0 (gamma alias)
+                           max_depth = 5,
+                           min_child_weight = 10, # [default=1, range: [0,∞]]
+                            #  In linear regression mode, this simply corresponds to minimum number of instances needed to be in each node.
+                            # The larger, the more conservative the algorithm will be.
+                           # max_delta_step = , # [default=0]
+                            # Maximum delta step we allow each tree's weight estimation to be.
+                            # If the value is set to 0, it means there is no constraint.
+                            # If it is set to a positive value, it can help making the update step more conservative.
+                            # Usually this parameter is not needed, but it might help in logistic regression when class is extremely imbalanced.
+                            # Set it to value of 1-10 might help control the update
+                           subsample = 0.8,
+                           colsample_bytree = 0.5,
+                           # colsample_bylevel = , # [default=1]
+                           # lambda = , #  [default=1] L2 regularization term on weights, increase this value will make model more conservative.
+                           # alpha =  ,# [default=0, alias: reg_alpha] L1 regularization term on weights, increase this value will make model more conservative.
+                           # early_stopping_rounds = 50,
+                           seed = 23)
+
+  ## SL with random holdout:
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  mfit_hold <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                    data = cpp_holdout, method = "holdout", hold_column = "hold")
+  ## SL with CV:
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  mfit_cv <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                    data = cpp_folds, method = "cv", fold_column = "fold")
+
+
+}
+
+## ------------------------------------------------------------------------------------------------------
+## New syntax for learners. Compare gbm w/ xgboost vs. h2o
+## ------------------------------------------------------------------------------------------------------
+test.GBM_xgboost_vs_H2O <- function() {
+  require("h2o")
+  h2o::h2o.init(nthreads = -1)
+  options(longGriDiSL.verbose = TRUE)
+  # options(longGriDiSL.verbose = FALSE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  lapply(cpp[, covars], class)
+
+  ## ------------------------------------------------------------------------------------------------------
+  ## Single GBM w/ h2o vs. xgboost with (roughly) equivalent parameter settings as evaluated by holdout MSE & CV-MSE
+  ## ------------------------------------------------------------------------------------------------------
+  GRIDparams <- defLearner(estimator = "h2o__gbm", family = "gaussian",
+                           ntrees = 500,
+                           learn_rate = 0.01,
+                           # learn_rate_annealing = , # [default=1]
+                           max_depth = 5,
+                           min_rows = 10, # [default=10]
+                           # nbins = ,# [default=20]
+                           # nbins_top_level = ,# [default=1024]
+                           # nbins_cats = , # [default=1024]
+                           # sample_rate = 0.8,
+                           # sample_rate_per_class = , # [default=?]
+                           # col_sample_rate = , # [default=1]
+                           # col_sample_rate_change_per_level = , # [default=1, range: 0.0-2.0]
+                           # col_sample_rate_per_tree = 0.5,  # [default=1]
+                           # min_split_improvement = , # [default=1e-05]
+                           # histogram_type = , # ["AUTO", "UniformAdaptive", "Random", "QuantilesGlobal", "RoundRobin"]
+                           # categorical_encoding = , # ["AUTO", "Enum", "OneHotInternal", "OneHotExplicit", "Binary", "Eigen"]
+
+                           # stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
+                           seed = 23) +
+                defLearner(estimator = "xgboost__gbm", family = "gaussian",
+                           nrounds = 500,
+                           learning_rate = 0.01, # (alias eta)
+                           # min_split_loss = 2, # [default=0, range: [1,∞]] (alias gamma)
+                            # minimum loss reduction required to make a further partition on a leaf node of the tree.
+                            # The larger, the more conservative the algorithm will be.
+                           max_depth = 5,
+                           min_child_weight = 10, # [default=1, range: [0,∞]]
+                            #  In linear regression mode, this simply corresponds to minimum number of instances needed to be in each node.
+                            # The larger, the more conservative the algorithm will be.
+                           # max_delta_step = , # [default=0]
+                            # Maximum delta step we allow each tree's weight estimation to be.
+                            # If the value is set to 0, it means there is no constraint.
+                            # If it is set to a positive value, it can help making the update step more conservative.
+                            # Usually this parameter is not needed, but it might help in logistic regression when class is extremely imbalanced.
+                            # Set it to value of 1-10 might help control the update
+                           # subsample = 0.8,
+                           # colsample_bytree = 0.5,
+                           # colsample_bylevel = , # [default=1, range: (0,1]]
+                           # lambda = , #  [default=1] L2 regularization term on weights, increase this value will make model more conservative.
+                           # alpha =  ,# [default=0, alias: reg_alpha] L1 regularization term on weights, increase this value will make model more conservative.
+                           # early_stopping_rounds = 50,
+                           seed = 23)
+
+  ## SL with random holdout:
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  mfit_hold <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                    data = cpp_holdout, method = "holdout", hold_column = "hold")
+  ## SL with CV:
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  mfit_cv <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                    data = cpp_folds, method = "cv", fold_column = "fold")
+
+  ## ------------------------------------------------------------------------------------------------------
+  ## Grid GBM h2o vs xgboost
+  ## ------------------------------------------------------------------------------------------------------
+  GRIDparams <- defGrid(estimator = "h2o__gbm", family = "gaussian",
+                          ntrees = 500,
+                          param_grid = list(
+                            learn_rate = c(0.01, 0.02, 0.5, 0.3),
+                            max_depth = 5,
+                            sample_rate = c(0.8, 0.9, 1),
+                            col_sample_rate = c(0.5, 0.6, 0.7, 0.8, 0.9)
+                          ),
+                          stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
+                          seed = 23) +
+
+                defGrid(estimator = "xgboost__gbm", family = "gaussian",
+                          nrounds = 500,
+                          param_grid = list(
+                            eta = c(0.01, 0.02, 0.5, 0.3),
+                            max_depth = 5,
+                            max_delta_step = c(0,1),
+                            subsample = c(0.8, 0.9, 1),
+                            colsample_bytree = c(0.5, 0.6, 0.7, 0.8, 0.9)
+                            ),
+                          early_stopping_rounds = 50,
+                          seed = 23)
+
+  ## SL with random holdout:
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  mfit_hold <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                    data = cpp_holdout, method = "holdout", hold_column = "hold")
+
+  ## SL with CV:
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  mfit_cv <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                    data = cpp_folds, method = "cv", fold_column = "fold")
+
+  h2o::h2o.shutdown(prompt = FALSE)
+}
+
+test.H2O_GRID_GBM_GLM <- function() {
+  require("h2o")
+  h2o::h2o.init(nthreads = -1)
+  options(longGriDiSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  ## ------------------------------------------------------------------------------------------------------
+  ## New syntax for learners. Define learners (gbm grid, glm grid and glm learner)
+  ## ------------------------------------------------------------------------------------------------------
+  alpha_opt <- c(0,1,seq(0.1,0.9,0.1))
+  lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
+
+  gbm_hyper_params <- list(ntrees = c(100, 200, 300, 500),
+                           learn_rate = c(0.005, 0.01, 0.03, 0.06),
+                           max_depth = c(3, 4, 5, 6, 9),
+                           sample_rate = c(0.7, 0.8, 0.9, 1.0),
+                           col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
+                           balance_classes = c(TRUE, FALSE))
+
+  GRIDparams <- defGrid(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
+                         search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
+                         stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
+                         param_grid = gbm_hyper_params, seed = 23) +
+
+                defLearner(estimator = "h2o__glm", family = "gaussian",
+                          alpha = 0.3, nlambdas = 50, lambda_search = TRUE) +
+
+                defGrid(estimator = "h2o__glm", family = "gaussian",
+                         search_criteria = list(strategy = "Cartesian"),
+                         param_grid = list(alpha = seq(0,1,0.1)),
+                         nlambdas = 50, lambda_search = TRUE) +
+
+                defGrid(estimator = "h2o__glm", family = "gaussian",
+                         search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
+                         param_grid = list(alpha = alpha_opt, lambda = lambda_opt), seed = 23)
+  # old early stop params for gbm:
+  # stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10,
+
+  ## ------------------------------------------------------------------------------------
+  ## SL with random holdout:
+  ## ------------------------------------------------------------------------------------
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  mfit_hold <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                    data = cpp_holdout, method = "holdout", hold_column = "hold")
+
+  ## ------------------------------------------------------------------------------------
+  ## SL with CV:
+  ## ------------------------------------------------------------------------------------
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  mfit_cv <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                    data = cpp_folds, method = "cv", fold_column = "fold")
+
+  h2o::h2o.shutdown(prompt = FALSE)
+}

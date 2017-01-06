@@ -249,7 +249,9 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, models, nfolds, 
   modelfits <- vector(mode = "list", length = length(models))
   for (learner_idx in seq_along(models)) {
     ## Define R6 regression class (specify subset_exprs to select only specific obs during fitting, e.g., only non-holdouts)
-    regobj <- RegressionClass$new(model_idx = learner_idx, outvar = y, predvars = x, runCV = runCV, subset_exprs = subset_exprs, fold_column = fold_column, model_contrl = models[[learner_idx]])
+    regobj <- RegressionClass$new(model_idx = learner_idx, outvar = y, predvars = x, runCV = runCV,
+                                  subset_exprs = subset_exprs,
+                                  fold_column = fold_column, model_contrl = models[[learner_idx]])
     ## Define a modeling object, perform fitting (real data is being passed for the first time here):
     modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)
     modelfit <- modelfit$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx)
@@ -392,13 +394,35 @@ predict_SL <- function(modelfit, newdata,
 }
 
 # ---------------------------------------------------------------------------------------
-# Predict for new dataset
-predict_model <- function(modelfit, newdata, best_only,
+# Predict for new dataset for models trained on non-holdouts only
+predict_nonholdouts <- function(modelfit, newdata,
+                          best_only = TRUE,
                           add_subject_data = FALSE,
                           subset_idx = NULL,
                           verbose = getOption("longGriDiSL.verbose")) {
-  return(predict_generic(modelfit, newdata, add_subject_data, subset_idx, best_only = best_only,
-                         holdout = FALSE, force_data.table = TRUE, verbose))
+  gvars$verbose <- verbose
+  nodes <- modelfit$OData_train$nodes
+  if (!missing(newdata))
+    newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,
+                                           x = modelfit$predvars, y = modelfit$outvar,
+                                           useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
+  if (!best_only) message("obtaining predictions for all models...")
+  preds <- modelfit$predict_within_sample(newdata, subset_exprs = subset_idx, best_only = best_only, convertResToDT = TRUE)
+
+  preds <- data.table::as.data.table(preds)
+  if (best_only) names(preds)[1] <- "nonholdout.preds"
+  if (add_subject_data) {
+    if (missing(newdata)) newdata <- modelfit$OData_train
+    covars <- c(nodes$IDnode, nodes$tnode, modelfit$outvar)
+    ## to protect against an error if some variables are dropped from new data
+    sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
+    predsDT <- newdata$dat.sVar[, sel_covars, with = FALSE]
+    if (!is.null(subset_idx)) predsDT <- predsDT[subset_idx, ]
+    predsDT[, (colnames(preds)) := preds]
+    preds <- predsDT
+  }
+
+  return(preds)
 }
 
 # ---------------------------------------------------------------------------------------
@@ -406,7 +430,8 @@ predict_model <- function(modelfit, newdata, best_only,
 # When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
 # 1. For \code{fit_holdoutSL} the default holdout predictions will be based on validation data.
 # 2. For \code{fit_cvSL} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
-predict_holdout <- function(modelfit, newdata, best_only,
+predict_holdout <- function(modelfit, newdata,
+                            best_only = TRUE,
                             add_subject_data = FALSE,
                             subset_idx = NULL,
                             verbose = getOption("longGriDiSL.verbose")) {

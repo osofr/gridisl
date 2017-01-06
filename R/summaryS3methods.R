@@ -15,6 +15,7 @@ pander.H2OBinomialMetrics <- function(H2OBinomialMetricsObject, type) {
   h2o_metrics <- H2OBinomialMetricsObject@metrics
   # modelID <- h2o_metrics$model$name
   categor <- h2o_metrics$model_category
+  # metricsDF <- t(data.frame(h2o_metrics[names(h2o_metrics) %in% c("nobs", "MSE", "RMSE", "mean_residual_deviance", "mae", "rmsle", "logloss", "AUC", "Gini")]))
   metricsDF <- t(data.frame(h2o_metrics[names(h2o_metrics) %in% c("nobs", "MSE", "RMSE", "r2", "mean_residual_deviance", "mae", "rmsle", "logloss", "AUC", "Gini")]))
   metricsDF <- data.frame(metric = rownames(metricsDF), value = as.numeric(metricsDF[,1]), stringsAsFactors = FALSE)
 
@@ -115,6 +116,7 @@ summary.GLMmodel <- function(model.fit, format_table = TRUE, ...) {
 #' @return The markdown-formated model summary returned by \code{pander::pander_return}.
 #' @export
 summary.H2ORegressionModel <- function(h2o.model, only.coefs = FALSE, ...) {
+
   # h2o.model <- model.fit$H2O.model.object
   modelID <- h2o.model@model$training_metrics@metrics$model$name
   out <- NULL

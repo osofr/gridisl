@@ -15,11 +15,11 @@ print.ModelStack <- function(modelstack, ...) {
 # @param ... Additional modeling parameters to be passed to modeling function.
 #' @rdname defGrid
 #' @export
-defLearner <- function(estimator, ...) {
+defLearner <- function(estimator, x, ...) {
   pkg_est <- strsplit(estimator, "__", fixed = TRUE)[[1]]
   pkg <- pkg_est[1]
   if (length(pkg_est) > 1) est <- pkg_est[2] else est <- NULL
-  learner <- defGrid(estimator, ...)
+  learner <- defGrid(estimator, x, ...)
 
   if (!(pkg %in% c("h2o", "xgboost"))) {
     learner[[1]][["fit.algorithm"]] <- learner[[1]][["grid.algorithm"]]
@@ -33,11 +33,15 @@ defLearner <- function(estimator, ...) {
 #'
 #' Use \code{defLearner} to define a single model and \code{defGrid} to define a grid of multple models.
 #' @param estimator A character string name of package and estimator (algorithm) name, separated by "__".
+#' @param x A vector containing the subset of the names of the predictor variables to use in building this
+#' particular learner or grid. This argument can be used to over-ride the values of \code{x} provided to \code{fit} function.
+#' As such, the names supplied here must always be a subset of the names specified to \code{fit}.
+#' When this argument is missing (default) the column names provided to \code{fit} are used as predictors in building this model / grid.
 #' @param search_criteria Search criteria
 #' @param param_grid Grid of modeling parameters
-#' @param ... Additional modeling parameters to be passed to modeling function.
+#' @param ... Additional modeling parameters to be passed on directly to the modeling function.
 #' @export
-defGrid <- function(estimator, search_criteria, param_grid, ...) {
+defGrid <- function(estimator, x, search_criteria, param_grid, ...) {
   pkg_est <- strsplit(estimator, "__", fixed = TRUE)[[1]]
   pkg <- pkg_est[1]
   if (length(pkg_est) > 1) est <- pkg_est[2] else est <- NULL
@@ -46,6 +50,7 @@ defGrid <- function(estimator, search_criteria, param_grid, ...) {
   sVar.exprs <- capture.exprs(...)
 
   GRIDparams = list(fit.package = pkg, fit.algorithm = "grid", grid.algorithm = est)
+  if (!missing(x)) GRIDparams[["x"]] <- x
   if (!missing(search_criteria)) GRIDparams[["search_criteria"]] <- search_criteria
   if (!missing(param_grid)) GRIDparams[["params"]] <- param_grid
 

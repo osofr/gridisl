@@ -1,78 +1,6 @@
-## ------------------------------------------------------------------------------------
-## face / brokenstick based on random holdouts
-## ------------------------------------------------------------------------------------
-test.holdoutfit_h2o <- function() {
-  # library("longGriDiSL")
-  options(longGriDiSL.verbose = TRUE)
-  data(cpp)
-  cpp <- cpp[!is.na(cpp[, "haz"]), ]
-  # covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
-  # define holdout col:
-  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
-  holdout_col <- cpp_holdout[["hold"]]
-
-  ID <- "subjid"
-  t_name <- "agedays"
-  x <- "agedays"
-  y <- "haz"
-
-  run_algo <- function(fit.package, fit.algorithm) {
-    mfit_cor_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
-                                    data = cpp_holdout, hold_column = "hold",
-                                    params = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = FALSE, name = "correct"))
-    print("Holdout MSE, hiding the holdout Y for prediction"); print(mfit_cor_hold$getMSE)
-    # speed or reg GLM MSE: [1] 1.813257
-    # h2o GLM MSE: [1] 1.619442
-    # GBM MSE [1] 1.531809
-    # DRF MSE [1] 1.531855
-    # deeplearning MSE [1] 1.543277
-
-    # predict for previously used holdout / validation set:
-    preds_holdout_2 <- longGriDiSL:::predict_holdout(mfit_cor_hold)
-    print(nrow(preds_holdout_2)) # [1] 453
-    print(head(preds_holdout_2[]))
-
-    ## Obtain predictions for model trained on non-holdout obs:
-    preds_train <- predict_model(mfit_cor_hold, newdata = cpp_holdout, add_subject_data = TRUE)
-    preds_train[]
-    ## Obtain predictions for a model trained on all data:
-    preds_alldat_train <- predict_SL(mfit_cor_hold, newdata = cpp_holdout, add_subject_data = TRUE)
-    preds_alldat_train[]
-
-    return(list(mfit_cor_hold =  mfit_cor_hold))
-  }
-
-  res_GLM1 <- run_algo("speedglm", "glm")
-  res_GLM2 <- run_algo("glm", "glm")
-  res_GLM3 <- run_algo("h2o", "glm")
-  res_GBM <- run_algo("h2o", "gbm")
-  res_DRF <- run_algo("h2o", "randomForest")
-  res_DP <- run_algo("h2o", "deeplearning")
-  res_XGBM <- run_algo("xgboost", "gbm")
-
-  mfits_stack <- make_PredictionStack(res_GLM3$mfit_cor_hold, res_GBM$mfit_cor_hold,
-                                      res_DRF$mfit_cor_hold, res_DP$mfit_cor_hold, res_XGBM$mfit_cor_hold
-                                      )
-
-  print(mfits_stack$get_best_MSEs(K = 2))
-  print(mfits_stack$get_best_MSE_table(K = 2))
-  make_report_rmd(mfits_stack, data = cpp_holdout, K = 2,
-                  file.name = paste0("BS_ALL_", getOption("longGriDiSL.file.name")),
-                  format = "html", openFile = FALSE)
-
-  # get the model objects for top K models:
-  top_model <- mfits_stack$get_best_models(K = 1)
-  mfits_stack$show(model_stats = TRUE, all_fits = TRUE)
-
-  train_dat <- get_train_data(res_GBM$mfit_cor_hold)
-  val_dat <- get_validation_data(res_GBM$mfit_cor_hold)
-
-}
-
-test.holdoutSL.GLM <- function() {
-  # library("longGriDiSL")
-  require("h2o")
-  library("data.table")
+test.H2O_holdoutSL_GLM_old_syntax <- function() {
+  # require("h2o")
+  # library("data.table")
   h2o::h2o.init(nthreads = -1)
   options(longGriDiSL.verbose = TRUE)
   data(cpp)
@@ -90,27 +18,15 @@ test.holdoutSL.GLM <- function() {
   GLM.GRIDparams = list(name = "GLM",
                        fit.package = "h2o", fit.algorithm = "grid",
                        grid.algorithm = c("glm"), seed = 23, glm = glm_hyper_params, family = "gaussian")
+
   ## add holdout indicator column
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
 
   mfit_holdGLM <- fit_holdoutSL(ID = "subjid", t_name = "agedays",
-                              y = "haz",
-                              x = c("agedays", covars),
-                              data = cpp_holdout, params = GLM.GRIDparams,
-                              hold_column = "hold") # , use_new_features = TRUE
-
-    # print("Holdout MSE, using the holdout Y for prediction"); print(mfit_holdGLM$getMSE)
-    holdPredDT <- longGriDiSL:::predict_holdout(mfit_holdGLM, bestK_only = 5, add_subject_data = TRUE)
-    print("GLM holdPredDT"); print(holdPredDT[])
-    preds_best_train <- longGriDiSL:::predict_model(mfit_holdGLM, bestK_only = 1, add_subject_data = TRUE)
-    print("GLM preds_best_train"); print(preds_best_train[])
-    preds_best_all <- predict_SL(mfit_holdGLM, newdata = cpp_holdout, add_subject_data = TRUE)
-    print("GLM preds_best_all"); print(preds_best_all[])
-
-    print("TOP MSE: "); print(min(unlist(mfit_holdGLM$getMSE)), na.rm = TRUE)
-    print(mfit_holdGLM$get_best_MSEs(5))
-    print(mfit_holdGLM$get_best_MSEs(15))
-    BEST_GLM_model <- mfit_holdGLM$get_best_models(K = 1)[[1]]
+                                y = "haz",
+                                x = c("agedays", covars),
+                                data = cpp_holdout, models = list(GLM.GRIDparams),
+                                hold_column = "hold") # , use_new_features = TRUE
 
     make_report_rmd(mfit_holdGLM, data = cpp_holdout,
                     K = 10,
@@ -118,13 +34,41 @@ test.holdoutSL.GLM <- function() {
                     title = paste0("Growth Curve Imputation with GLM"),
                     format = "html", keep_md = TRUE, openFile = TRUE)
 
+    ## PREDICT FOR BEST MODEL RE-TRAINED ON ALL DATA:
+    preds_best_all <- predict_SL(mfit_holdGLM, newdata = cpp_holdout, add_subject_data = TRUE)
+    print("GLM preds_best_all"); print(preds_best_all[])
+
+    print("Holdout MSE, using the holdout Y for prediction"); print(mfit_holdGLM$getMSEtab)
+    print("TOP MSE: "); print(min(unlist(mfit_holdGLM$getMSE)), na.rm = TRUE)
+    print(mfit_holdGLM$get_best_MSEs(5))
+    BEST_GLM_model <- mfit_holdGLM$get_best_models(K = 1)[[1]]
+
+    ## ------------------------------------------------------------------------------------
+    ## ***** Prediction on holdout obs, for models trained on non-holdouts only *****
+    ## ------------------------------------------------------------------------------------
+    holdPredDT <- longGriDiSL:::predict_holdout(mfit_holdGLM, best_only = FALSE, add_subject_data = TRUE)
+    print("GLM holdPredDT"); print(holdPredDT[])
+    holdPredDT <- longGriDiSL:::predict_holdout(mfit_holdGLM, best_only = TRUE, add_subject_data = TRUE)
+    print("GLM holdPredDT"); print(holdPredDT[])
+
+    ## ------------------------------------------------------------------------------------
+    ## ***** Prediction on non-holdout obs, for models trained on non-holdouts only *****
+    ## ------------------------------------------------------------------------------------
+    preds_best_train <- longGriDiSL:::predict_nonholdouts(mfit_holdGLM, best_only = TRUE, add_subject_data = FALSE)
+    print("GLM preds_best_train"); print(preds_best_train[])
+    preds_best_train <- longGriDiSL:::predict_nonholdouts(mfit_holdGLM, best_only = TRUE, add_subject_data = TRUE)
+    print("GLM preds_best_train"); print(preds_best_train[])
+    preds_best_train <- longGriDiSL:::predict_nonholdouts(mfit_holdGLM, best_only = FALSE, add_subject_data = TRUE)
+    print("GLM preds_best_train"); print(preds_best_train[])
+
+    h2o::h2o.shutdown(prompt = FALSE)
 }
+
 
 ## ------------------------------------------------------------------------------------
 ## Holdout Growth Curve SL with model scoring based on random holdouts
 ## ------------------------------------------------------------------------------------
-test.holdoutSL.GBM <- function() {
-  # library("longGriDiSL")
+test.H2O_holdoutSL_GRID_GBM_old_syntax <- function() {
   require("h2o")
   h2o::h2o.init(nthreads = -1)
   options(longGriDiSL.verbose = TRUE)
@@ -163,7 +107,7 @@ test.holdoutSL.GBM <- function() {
   ## Fit the model based on additional special features (summaries) of the outcomes:
   # --------------------------------------------------------------------------------------------
   mfit_hold2 <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                              data = cpp_holdout, params = GRIDparams, hold_column = "hold")
+                              data = cpp_holdout, models = list(GRIDparams), hold_column = "hold")
 
   train_dat <- get_train_data(mfit_hold2)
   print(train_dat)
@@ -173,6 +117,7 @@ test.holdoutSL.GBM <- function() {
   checkTrue(nrow(val_dat)==sum(cpp_holdout[["hold"]]))
 
   print("Holdout MSE, using the holdout Y for prediction"); print(mfit_hold2$getMSE)
+  print("Holdout MSE, using the holdout Y for prediction"); print(mfit_hold2$getMSEtab)
   # $grid.glm.1
   # [1] 1.797792
   # $grid.glm.2
@@ -191,37 +136,26 @@ test.holdoutSL.GBM <- function() {
   preds_alldat[]
 
   ## Predictions for training data from all models trained on non-holdout data (default):
-  preds_train <- longGriDiSL:::predict_model(mfit_hold2, add_subject_data = TRUE)
+  preds_train <- longGriDiSL:::predict_nonholdouts(mfit_hold2, add_subject_data = TRUE)
   preds_train[]
   ## Same but only for the top model
-  preds_train_top <- longGriDiSL:::predict_model(mfit_hold2, bestK_only = 1, add_subject_data = TRUE)
+  preds_train_top <- longGriDiSL:::predict_nonholdouts(mfit_hold2, best_only = TRUE, add_subject_data = TRUE)
   preds_train_top[]
-  ## Same with predict_SL
-  preds_train_top2 <- predict_SL(mfit_hold2, add_subject_data = TRUE, best_refit_only = FALSE)
-  preds_train_top2[]
-  checkTrue(all.equal(preds_train_top, preds_train_top2))
 
-  ## Predictions for all holdout data points for all models trained on non-holdout data:
-  preds_holdout <- longGriDiSL:::predict_holdout(mfit_hold2, bestK_only = 1, add_subject_data = TRUE)
+  ## Predictions for all holdout data points for best models trained on non-holdout data:
+  preds_holdout <- longGriDiSL:::predict_holdout(mfit_hold2, best_only = TRUE, add_subject_data = TRUE)
   preds_holdout[]
-  ## Same with predict_SL
+  ## Same with predict_generic
   preds_holdout2 <- predict_SL(mfit_hold2, add_subject_data = TRUE, holdout = TRUE)
   preds_holdout2[]
-  checkTrue(all.equal(preds_train_top, preds_train_top2))
+  checkTrue(all.equal(preds_holdout, preds_holdout2))
 
   ## Predictions of the best trained model for new data
   preds_newdat_alldat <- predict_SL(mfit_hold2, newdata = cpp_holdout, add_subject_data = TRUE)
   preds_newdat_alldat[]
   ## Same but for model trained only on non-holdouts
-  preds_newdat <- predict_SL(mfit_hold2, newdata = cpp_holdout, add_subject_data = TRUE, best_refit_only = FALSE)
+  preds_newdat <- predict_nonholdouts(mfit_hold2, newdata = cpp_holdout, best_only = TRUE, add_subject_data = TRUE)
   preds_newdat[]
-  ## Same as above
-  preds_newdat2 <- longGriDiSL:::predict_model(mfit_hold2, newdata = cpp_holdout, bestK_only = 1, add_subject_data = TRUE)
-  preds_newdat2[]
-  checkTrue(all.equal(preds_newdat, preds_newdat2))
-
-  holdPredDT <- longGriDiSL:::predict_holdout(mfit_hold2, bestK_only = 5, add_subject_data = TRUE)
-  holdPredDT[]
 
   print("10 best MSEs among all learners: "); print(mfit_hold2$get_best_MSEs(K = 5))
   models <- mfit_hold2$get_best_models(K = 5)
@@ -231,15 +165,16 @@ test.holdoutSL.GBM <- function() {
   make_report_rmd(mfit_hold2, data = cpp_holdout, K = 10, format = "html", openFile = FALSE)
 
   ## Save the best performing h2o model fit to disk:
-  save_best_h2o_model(mfit_hold2, file.path = "/Users/olegsofrygin/GoogleDrive/HBGDki/ImputationSL/sofware")
+  # save_best_h2o_model(mfit_hold2, file.path = "/Users/olegsofrygin/GoogleDrive/HBGDki/ImputationSL/sofware")
+  h2o::h2o.shutdown(prompt = FALSE)
 }
 
 ## ------------------------------------------------------------------------------------
 ## Growth Curve SL with model scoring based on full V-FOLD CROSS-VALIDATION
 ## ------------------------------------------------------------------------------------
-test.CV.SL <- function() {
+test.H2O_cvSL_GRID_GBM_old_syntax <- function() {
   # library("longGriDiSL")
-  require("data.table")
+  # require("data.table")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
   options(longGriDiSL.verbose = TRUE)
@@ -283,7 +218,7 @@ test.CV.SL <- function() {
   ## -> Internal CV metrics must match all manual model scoring results
   ## ------------------------------------------------------------------------------------------------
   mfit_cv1 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                       data = cpp_folds, params = GRIDparams, fold_column = "fold")
+                       data = cpp_folds, models = list(GRIDparams), fold_column = "fold")
 
   ## Best (re-trained) model predictions on data used for CV training (default):
   preds_alldat1 <- predict_SL(mfit_cv1, add_subject_data = FALSE)
@@ -295,11 +230,11 @@ test.CV.SL <- function() {
   checkTrue(all.equal(preds_alldat1, preds_alldat2))
 
   ## Predictions for best CV model (not re-trained, trained only on non-holdouts), must match:
-  preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, add_subject_data = FALSE)
+  preds_best_CV <- longGriDiSL:::predict_nonholdouts(mfit_cv1, add_subject_data = FALSE)
   preds_best_CV[]
-  preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, add_subject_data = TRUE)
+  preds_best_CV <- longGriDiSL:::predict_nonholdouts(mfit_cv1, add_subject_data = TRUE)
   preds_best_CV[]
-  preds_best_CV <- longGriDiSL:::predict_model(mfit_cv1, bestK_only = 1, add_subject_data = FALSE)
+  preds_best_CV <- longGriDiSL:::predict_nonholdouts(mfit_cv1, bestK_only = 1, add_subject_data = FALSE)
   preds_best_CV[]
   checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
 
@@ -451,7 +386,7 @@ test.CV.SL <- function() {
 ## ------------------------------------------------------------------------------------
 ## Holdout Growth Curve SL based on residuals from initial glm regression (model scoring based on random holdouts)
 ## ------------------------------------------------------------------------------------
-test.residual.holdoutSL <- function() {
+test.H2O_residual_holdoutSL_old_syntax <- function() {
   # library("longGriDiSL")
   require("h2o")
   h2o::h2o.init(nthreads = -1)

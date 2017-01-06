@@ -142,6 +142,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     ReplMisVal0 = logical(),
 
     initialize = function(reg, useH2Oframe = FALSE, ...) {
+
       self$model_contrl <- reg$model_contrl
       self$useH2Oframe <- useH2Oframe
       self$reg <- reg
@@ -151,9 +152,18 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       self$fit.algorithm <- reg$model_contrl$fit.algorithm[1L]
 
       assert_that(is.string(reg$outvar))
-      self$outvar <- reg$outvar
       assert_that(is.character(reg$predvars))
+
+      if ("x" %in% names(self$model_contrl)) {
+        new.x <- self$model_contrl[["x"]]
+        message("over-riding default predictors with new ones: " %+% paste0(new.x, collapse=","))
+        assert_that(is.character(new.x))
+        reg$predvars <- new.x
+      }
+
+      self$outvar <- reg$outvar
       self$predvars <- reg$predvars
+
       # self$subset_vars <- reg$subset_vars[[1]]
       self$subset_exprs <- reg$subset_exprs[[1]]
       assert_that(length(self$subset_exprs) <= 1)

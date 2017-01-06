@@ -18,8 +18,8 @@ print.PredictionStack <- function(modelstack, model_stats = FALSE, all_fits = FA
 #' @export
 make_PredictionStack <- function(...) {
   PredictionModels <- list(...)
-  if (!all(unlist(lapply(PredictionModels, is.PredictionModel)))) {
-    stop("All arguments must be of class 'PredictionModel'")
+  if (!all(unlist(lapply(PredictionModels, is.PredictionModel))) && !all(unlist(lapply(PredictionModels, is.PredictionStack)))) {
+    stop("All arguments must be of class 'PredictionModel' or 'PredictionStack'")
   }
   class(PredictionModels) <- c(class(PredictionModels), "PredictionStack")
   return(PredictionStack$new(PredictionModels))
@@ -40,8 +40,8 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     useH2Oframe = NULL,
     nodes = NULL,
     initialize = function(PredictionModels) {
-      if (!all(unlist(lapply(PredictionModels, is.PredictionModel)))) {
-       stop("All arguments must be of class 'PredictionModel'")
+      if (!all(unlist(lapply(PredictionModels, is.PredictionModel))) && !all(unlist(lapply(PredictionModels, is.PredictionStack)))) {
+       stop("All arguments must be of class 'PredictionModel' or 'PredictionStack'")
       }
       assert_that("PredictionStack" %in% class(PredictionModels))
       self$PredictionModels <- PredictionModels
@@ -127,8 +127,9 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
 
         best_model_idx <- self$best_model_idx
         best_pred_model <- self$PredictionModels[[best_model_idx]]
-        # newdata, subset_exprs, predict_model_names = NULL, , convertResToDT,
-        preds <- best_pred_model$predict(..., best_refit_only = FALSE)
+        predict_model_names <- best_pred_model$get_best_model_names(K = 1)
+        preds <- best_pred_model$predict(..., predict_model_names = predict_model_names, best_refit_only = FALSE)
+
         return(preds)
 
       ## try to obtain predictions from all models, non-refitted (i.e., trained on non-holdout observations only)

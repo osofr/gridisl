@@ -1,5 +1,5 @@
 predict_h2o_new <- function(model_id, frame_id, convertResToDT = TRUE) {
-  # h2o.no_progress()
+  # h2o::h2o.no_progress()
   # waitOnJob = FALSE,
   url <- paste0('Predictions/models/', model_id, '/frames/',  frame_id)
   res <- h2o:::.h2o.__remoteSend(url, method = "POST", h2oRestApiVersion = 4)
@@ -77,7 +77,7 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   pAoutDT <- as.data.table(pAoutDT)
 
   if (nrow(H2Oframe) > 0) {
-    h2o.no_progress()
+    h2o::h2o.no_progress()
     old.exprs <- getOption("expressions")
     if (length(models_list) >= 400) options("expressions" = length(models_list)*50)
     pAout_h2o <- NULL
@@ -90,7 +90,7 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
     }
 
     options("expressions" = old.exprs)
-    h2o.show_progress()
+    h2o::h2o.show_progress()
     names(pAout_h2o) <- names(models_list)
   }
   return(pAout_h2o)
@@ -215,6 +215,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       # top_params_tmp <- model_obj@parameters ## only the user-set parameters are stored here
       top_params_tmp <- model_obj@allparameters ## alternative is to grab the exact params used in the model, including defaults
       top_params_tmp$model_id <- NULL
+      top_params_tmp$r2_stopping <- NULL
       top_params_tmp$training_frame <- NULL
       top_params_tmp$validation_frame <- NULL
       top_params_tmp$x <- NULL

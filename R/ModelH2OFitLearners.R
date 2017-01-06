@@ -30,7 +30,7 @@ replace_add_user_args <- function(mainArgs, userArgs, fun) {
 ## S3 method for fitting h2o GLM with binomial() family (logistic regression):
 ## use solver="L_BFGS" when doing classification and use "IRLSM" when not
 fit.h2oglm <- function(fit.class, params, training_frame, y, x, fold_column, model_contrl, validation_frame  = NULL, ...) {
-  if (gvars$verbose) h2o.show_progress() else h2o.no_progress()
+  if (gvars$verbose) h2o::h2o.show_progress() else h2o::h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                   intercept = TRUE,
                   # family = "gaussian",
@@ -74,7 +74,7 @@ fit.h2oglm <- function(fit.class, params, training_frame, y, x, fold_column, mod
 
 ## S3 method for h2o randomForest fit (Random Forest):
 fit.h2orandomForest <- function(fit.class, params, training_frame, y, x, fold_column, model_contrl, validation_frame  = NULL, ...) {
-  if (gvars$verbose) h2o.show_progress() else h2o.no_progress()
+  if (gvars$verbose) h2o::h2o.show_progress() else h2o::h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    ntrees = 100,
                    # balance_classes = TRUE,
@@ -104,7 +104,7 @@ fit.h2orandomForest <- function(fit.class, params, training_frame, y, x, fold_co
 ## S3 method for h2o gbm fit, takes BinDat data object:
 ## use "bernoulli" when doing classification and use "gaussian" when not
 fit.h2ogbm <- function(fit.class, params, training_frame, y, x, fold_column, model_contrl, validation_frame  = NULL, ...) {
-  if (gvars$verbose) h2o.show_progress() else h2o.no_progress()
+  if (gvars$verbose) h2o::h2o.show_progress() else h2o::h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    # distribution = "bernoulli",
                    # distribution = "gaussian",
@@ -135,7 +135,7 @@ fit.h2ogbm <- function(fit.class, params, training_frame, y, x, fold_column, mod
 ## S3 method for h2o deeplearning fit, takes BinDat data object:
 ## use "bernoulli" when doing classification and use "gaussian" when doing regression
 fit.h2odeeplearning <- function(fit.class, params, training_frame, y, x, fold_column, model_contrl, validation_frame  = NULL, ...) {
-  if (gvars$verbose) h2o.show_progress() else h2o.no_progress()
+  if (gvars$verbose) h2o::h2o.show_progress() else h2o::h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
                    # distribution = "bernoulli",
                    # distribution = "gaussian",

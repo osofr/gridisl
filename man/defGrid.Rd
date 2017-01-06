@@ -6,16 +6,21 @@
 \alias{defLearner}
 \title{Interface for defining models}
 \usage{
-defLearner(estimator, ...)
+defLearner(estimator, x, ...)
 
-defGrid(estimator, search_criteria, param_grid, ...)
+defGrid(estimator, x, search_criteria, param_grid, ...)
 
 \method{+}{ModelStack}(learner1, learner2)
 }
 \arguments{
 \item{estimator}{A character string name of package and estimator (algorithm) name, separated by "__".}
 
-\item{...}{Additional modeling parameters to be passed to modeling function.}
+\item{x}{A vector containing the subset of the names of the predictor variables to use in building this
+particular learner or grid. This argument can be used to over-ride the values of \code{x} provided to \code{fit} function.
+As such, the names supplied here must always be a subset of the names specified to \code{fit}.
+When this argument is missing (default) the column names provided to \code{fit} are used as predictors in building this model / grid.}
+
+\item{...}{Additional modeling parameters to be passed on directly to the modeling function.}
 
 \item{search_criteria}{Search criteria}
 
