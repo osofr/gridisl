@@ -6,7 +6,7 @@
 \usage{
 predict_SL(modelfit, newdata, add_subject_data = FALSE, subset_idx = NULL,
   holdout = FALSE, force_data.table = TRUE,
-  verbose = getOption("longGriDiSL.verbose"))
+  verbose = getOption("GriDiSL.verbose"))
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.}
@@ -28,7 +28,7 @@ When \code{newdata} is missing there are two possible types of holdout predictio
 
 \item{force_data.table}{...}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
 }
 \value{
 A data.table of subject level predictions (subject are rows, columns are different models)

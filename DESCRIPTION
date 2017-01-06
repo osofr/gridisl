@@ -1,9 +1,9 @@
-Package: longGriDiSL
-Title: Grid-based Discrete SuperLearner for Longitudinal Data
-Version: 0.0.5.9000
+Package: GriDiSL
+Title: Machine Learning Toolkit with Grid-Search Discrete SuperLearner for Longitudinal Data
+Version: 0.0.6.9000
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"))
-Description: Grid-based Discrete SuperLearner for Longitudinal Data.
+Description: Machine Learning Toolkit with Grid-Search Discrete SuperLearner for Longitudinal Data.
 Depends:
     R (>= 3.2.1)
 Imports:

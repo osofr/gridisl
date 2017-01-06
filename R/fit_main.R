@@ -108,16 +108,16 @@ fit <- function(...) { UseMethod("fit") }
 #' @param seed Random number seed for selecting a random holdout.
 #' @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 #' When \code{FALSE}, it might be impossible to make predictions from this model fit.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
 #' @param ... Additional arguments that will be passed on to \code{fit_model} function.
 #' @return ...
-# @seealso \code{\link{longGriDiSL-package}} for the general overview of the package,
-# @example tests/examples/1_longGriDiSL_example.R
+# @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
+# @example tests/examples/1_GriDiSL_example.R
 #' @export
 fit.ModelStack <- function(models, method = c("none", "cv", "holdout"), data, ID, t_name, x, y,
                            nfolds = NULL, fold_column = NULL,
                            hold_column = NULL, hold_random = FALSE, seed = NULL, refit = TRUE,
-                           verbose = getOption("longGriDiSL.verbose"), ...) {
+                           verbose = getOption("GriDiSL.verbose"), ...) {
   method <- method[1L]
 
   gvars$verbose <- verbose

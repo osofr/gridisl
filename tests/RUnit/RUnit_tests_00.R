@@ -9,13 +9,13 @@ if(FALSE) {
   load_all("./") # load all R files in /R and datasets in /data. Ignores NAMESPACE:
 
   setwd("..");
-  install("longGriDiSL", build_vignettes = FALSE) # INSTALL W/ devtools:
-  library("longGriDiSL")
+  install("GriDiSL", build_vignettes = FALSE) # INSTALL W/ devtools:
+  library("GriDiSL")
   # system("echo $PATH") # see the current path env var
-  # system("R CMD Rd2pdf longGriDiSL")  # just create the pdf manual from help files
+  # system("R CMD Rd2pdf GriDiSL")  # just create the pdf manual from help files
   # CHECK AND BUILD PACKAGE:
   getwd()
-  # setwd("./longGriDiSL"); setwd(".."); getwd()
+  # setwd("./GriDiSL"); setwd(".."); getwd()
   devtools::check() # runs full check
   devtools::check(args = c("--no-vignettes"), build_args = c("--no-build-vignettes")) # runs faster
   devtools::build_win(args = "--compact-vignettes") # build package on CRAN servers (windows os?)
@@ -27,7 +27,7 @@ if(FALSE) {
   devtools::revdep_check_summary(res)
   # revdep_check_save_logs(res)
 
-  # devtools::install_github('osofr/longGriDiSL', build_vignettes = FALSE, dependencies = FALSE)
+  # devtools::install_github('osofr/GriDiSL', build_vignettes = FALSE, dependencies = FALSE)
 
   setwd("..")
 }

@@ -2,8 +2,8 @@
 ## face / brokenstick based on random holdouts
 ## ------------------------------------------------------------------------------------
 test.holdoutfit_all <- function() {
-  # options(longGriDiSL.verbose = TRUE)
-  options(longGriDiSL.verbose = FALSE)
+  # options(GriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = FALSE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   # covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -36,7 +36,7 @@ test.holdoutfit_all <- function() {
     # xgboost gbm MSE: [1] 1.531563
 
     # predict for previously used holdout / validation set:
-    preds_hold <- longGriDiSL:::predict_holdout(mfit_cor_hold)
+    preds_hold <- GriDiSL:::predict_holdout(mfit_cor_hold)
     print(nrow(preds_hold)) # [1] 453
     print(preds_hold[])
 
@@ -72,7 +72,7 @@ test.holdoutfit_all <- function() {
   print(mfits_stack$get_best_MSE_table(K = 1))
   checkException(print(mfits_stack$getMSEtab(K = 1)))
   make_report_rmd(mfits_stack, data = cpp_holdout, K = 2,
-                  file.name = paste0("BS_ALL_", getOption("longGriDiSL.file.name")),
+                  file.name = paste0("BS_ALL_", getOption("GriDiSL.file.name")),
                   format = "html", openFile = FALSE)
 
   # get the model objects for top K models:

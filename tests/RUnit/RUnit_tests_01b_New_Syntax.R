@@ -1,7 +1,7 @@
 test.SL.H2O.GLM_GBM_change_covars <- function() {
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(longGriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -54,8 +54,8 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
 }
 
 test.GBM_xgboost_onelearner <- function() {
-  options(longGriDiSL.verbose = TRUE)
-  # options(longGriDiSL.verbose = FALSE)
+  options(GriDiSL.verbose = TRUE)
+  # options(GriDiSL.verbose = FALSE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -80,7 +80,7 @@ test.GBM_xgboost_onelearner <- function() {
                             # Usually this parameter is not needed, but it might help in logistic regression when class is extremely imbalanced.
                             # Set it to value of 1-10 might help control the update
                            subsample = 0.8,
-                           colsample_bytree = 0.5,
+                           colsample_bytree = 0.3,
                            # colsample_bylevel = , # [default=1]
                            # lambda = , #  [default=1] L2 regularization term on weights, increase this value will make model more conservative.
                            # alpha =  ,# [default=0, alias: reg_alpha] L1 regularization term on weights, increase this value will make model more conservative.
@@ -105,13 +105,13 @@ test.GBM_xgboost_onelearner <- function() {
 test.GBM_xgboost_vs_H2O <- function() {
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(longGriDiSL.verbose = TRUE)
-  # options(longGriDiSL.verbose = FALSE)
+  options(GriDiSL.verbose = TRUE)
+  # options(GriDiSL.verbose = FALSE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
-  lapply(cpp[, covars], class)
+  # lapply(cpp[, covars], class)
 
   ## ------------------------------------------------------------------------------------------------------
   ## Single GBM w/ h2o vs. xgboost with (roughly) equivalent parameter settings as evaluated by holdout MSE & CV-MSE
@@ -129,35 +129,39 @@ test.GBM_xgboost_vs_H2O <- function() {
                            # sample_rate_per_class = , # [default=?]
                            # col_sample_rate = , # [default=1]
                            # col_sample_rate_change_per_level = , # [default=1, range: 0.0-2.0]
-                           # col_sample_rate_per_tree = 0.5,  # [default=1]
+                           col_sample_rate_per_tree = 0.3,  # [default=1]
                            # min_split_improvement = , # [default=1e-05]
                            # histogram_type = , # ["AUTO", "UniformAdaptive", "Random", "QuantilesGlobal", "RoundRobin"]
                            # categorical_encoding = , # ["AUTO", "Enum", "OneHotInternal", "OneHotExplicit", "Binary", "Eigen"]
 
-                           # stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
+                           stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
                            seed = 23) +
                 defLearner(estimator = "xgboost__gbm", family = "gaussian",
                            nrounds = 500,
-                           learning_rate = 0.01, # (alias eta)
-                           # min_split_loss = 2, # [default=0, range: [1,∞]] (alias gamma)
+                           learning_rate = 0.01, # (alias eta), try around 5 in range (0.01-0.1)
+                           # min_split_loss = 1, # [default=0, range: [1,∞]] (alias gamma)
                             # minimum loss reduction required to make a further partition on a leaf node of the tree.
-                            # The larger, the more conservative the algorithm will be.
+                            # The larger, the more conservative the algorithm will be. Usually OK to leave at 0.
+                            # Other guidelines suggest gamme range is [0,1], suggested values: [0.05, 0.1, seq(0.3, 1, by = 0.2), 1.0]
                            max_depth = 5,
                            min_child_weight = 10, # [default=1, range: [0,∞]]
-                            #  In linear regression mode, this simply corresponds to minimum number of instances needed to be in each node.
+                            # In linear regression mode, this simply corresponds to minimum number of instances needed to be in each node.
                             # The larger, the more conservative the algorithm will be.
+                            # Helps with rare events, start with 1/sqrt(event rate)
                            # max_delta_step = , # [default=0]
                             # Maximum delta step we allow each tree's weight estimation to be.
                             # If the value is set to 0, it means there is no constraint.
                             # If it is set to a positive value, it can help making the update step more conservative.
                             # Usually this parameter is not needed, but it might help in logistic regression when class is extremely imbalanced.
                             # Set it to value of 1-10 might help control the update
-                           # subsample = 0.8,
-                           # colsample_bytree = 0.5,
-                           # colsample_bylevel = , # [default=1, range: (0,1]]
+                           # subsample = 0.8, [default=1, range: (0,1]], good value is to leave at 1
+                           colsample_bytree = 0.3, # [default=1, range: (0,1]], good values: (0.3-0.5)
+                           # colsample_bylevel = , # [default=1, range: (0,1]],
                            # lambda = , #  [default=1] L2 regularization term on weights, increase this value will make model more conservative.
+                            # try seq(0.01, 0.1, by = 0.04), 0.1, 1.0
                            # alpha =  ,# [default=0, alias: reg_alpha] L1 regularization term on weights, increase this value will make model more conservative.
-                           # early_stopping_rounds = 50,
+                            # try 0, 0.1, 0.5, 1.0
+                           early_stopping_rounds = 50,
                            seed = 23)
 
   ## SL with random holdout:
@@ -177,8 +181,8 @@ test.GBM_xgboost_vs_H2O <- function() {
                           param_grid = list(
                             learn_rate = c(0.01, 0.02, 0.5, 0.3),
                             max_depth = 5,
-                            sample_rate = c(0.8, 0.9, 1),
-                            col_sample_rate = c(0.5, 0.6, 0.7, 0.8, 0.9)
+                            sample_rate = c(0.3, 0.5, 0.8, 0.9, 1),
+                            col_sample_rate_per_tree = c(0.3, 0.4, 0.5, 0.7, 0.9, 1.0)
                           ),
                           stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
                           seed = 23) +
@@ -189,8 +193,8 @@ test.GBM_xgboost_vs_H2O <- function() {
                             eta = c(0.01, 0.02, 0.5, 0.3),
                             max_depth = 5,
                             max_delta_step = c(0,1),
-                            subsample = c(0.8, 0.9, 1),
-                            colsample_bytree = c(0.5, 0.6, 0.7, 0.8, 0.9)
+                            subsample = c(0.3, 0.5, 0.8, 0.9, 1),
+                            colsample_bytree = c(0.3, 0.4, 0.5, 0.7, 0.9, 1.0)
                             ),
                           early_stopping_rounds = 50,
                           seed = 23)
@@ -211,7 +215,7 @@ test.GBM_xgboost_vs_H2O <- function() {
 test.H2O_GRID_GBM_GLM <- function() {
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(longGriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")

@@ -6,7 +6,7 @@
 \usage{
 fit_holdoutSL(ID, t_name, x, y, data, models, hold_column = NULL,
   hold_random = TRUE, refit = TRUE, seed = NULL,
-  verbose = getOption("longGriDiSL.verbose"), ...)
+  verbose = getOption("GriDiSL.verbose"), ...)
 }
 \arguments{
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}
@@ -32,7 +32,7 @@ When \code{FALSE}, it might be impossible to make predictions from this model fi
 
 \item{seed}{Random number seed for selecting a random holdout.}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
 }
 \value{
 ...

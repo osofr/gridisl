@@ -340,12 +340,14 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (!self$is.fitted) stop("Please fit the model prior to evaluating MSE.")
       if (!is.vector(test_values)) stop("test_values must be a vector of outcomes.")
 
+
       ## 1. Evaluate the empirical loss at each person-time prediction (apply loss function to each row):
       resid_predsDT <- as.data.table(predsDT)[, lapply(.SD, loss_fun_MSE, test_values)][, ("subjID") := IDs]
       NA_predictions <- resid_predsDT[, lapply(.SD, function(x) any(is.na(x)))]
       nNA_predictions <- resid_predsDT[, lapply(.SD, function(x) sum(is.na(x)))]
       # system.time(resid_predsDT2 <- as.data.table(private$probA1[, ] - test_values)[, ("subjID") := IDs])
       setkeyv(resid_predsDT, cols = "subjID")
+
 
       ## 2. Evaluate the average loss for each person (average loss by rows within each subject)
       # str(self$ModelFitObject$model.fit$fitted_models_all[[1]])
@@ -354,32 +356,27 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       # fold_idx2 <- self$ModelFitObject$model.fit$fitted_models_all[[2]]$folds
       # fold_idx3 <- self$ModelFitObject$model.fit$fitted_models_all[[3]]$folds
       # fold_idx4 <- self$ModelFitObject$model.fit$fitted_models_all[[4]]$folds
-
       # for (fold_i in seq_along(fold_idx)) resid_predsDT[fold_idx[[fold_i]], ("fold") := fold_i]
 
-      ## 3A. Evaluate test error averaging across all rows of input data
-      # resid_predsDT[, lapply(.SD, mean, na.rm = TRUE)][, lapply(.SD, sqrt)]
 
-      ## 3B. Evaluate test error averaging across the folds
-      # mean_byfold <- resid_predsDT[, lapply(.SD, mean, na.rm = TRUE), by = c("fold", "subjID")]
-      # mean_byfold <- mean_byfold[, lapply(.SD, mean, na.rm = TRUE), by = "fold"]
-      # mean_byfold <- resid_predsDT[, lapply(.SD, mean, na.rm = TRUE), by = "fold"]
-      # mean_byfold[, subjID := NULL][, fold := NULL]
-      # mean_byfold <- resid_predsDT[, lapply(.SD, mean, na.rm = TRUE)]
-      # mean_byfold[, subjID := NULL][, fold := NULL]
-      # n <- nrow(resid_predsDT)
-      # MSE_mean <- as.list(mean_byfold[, lapply(.SD, mean, na.rm = TRUE)])
-      # RMSE_mean <- data.frame(lapply(MSE_mean, sqrt))
+      # 3A. Evaluate the mean, var, sd loss averaging at the subject level first, then averaging across subjects
+      # mean_bysubj <- resid_predsDT[, lapply(.SD, mean, na.rm = TRUE), by = subjID]
+      # mean_bysubj[, subjID := NULL]
+      # n <- nrow(mean_bysubj)
+      # MSE_mean <- as.list(mean_bysubj[, lapply(.SD, mean, na.rm = TRUE)])
+      # RMSE_mean <- lapply(MSE_mean, sqrt)
+      # MSE_var <- as.list(mean_bysubj[, lapply(.SD, var, na.rm = TRUE)])
+      # MSE_sd <- as.list(mean_bysubj[, lapply(.SD, sd, na.rm = TRUE)] * (1 / sqrt(n)))
 
-      # 3C. Evaluate the mean, var, sd loss averaging at the subject level first, then averaging across subjects
-      mean_bysubj <- resid_predsDT[, lapply(.SD, mean, na.rm = TRUE), by = subjID]
-      mean_bysubj[, subjID := NULL]
+
+      # 3B. Evaluate the mean, var, SD loss averaging across all rows of the data
+      resid_predsDT[, subjID := NULL]
       n <- nrow(resid_predsDT)
-
-      MSE_mean <- as.list(mean_bysubj[, lapply(.SD, mean, na.rm = TRUE)])
+      MSE_mean <- as.list(resid_predsDT[, lapply(.SD, mean, na.rm = TRUE)])
       RMSE_mean <- lapply(MSE_mean, sqrt)
-      MSE_var <- as.list(mean_bysubj[, lapply(.SD, var, na.rm = TRUE)])
-      MSE_sd <- as.list(mean_bysubj[, lapply(.SD, sd, na.rm = TRUE)] * (1 / sqrt(n)))
+      MSE_var <- as.list(resid_predsDT[, lapply(.SD, var, na.rm = TRUE)])
+      MSE_sd <- as.list(resid_predsDT[, lapply(.SD, sd, na.rm = TRUE)] * (1 / sqrt(n)))
+
 
       if (any(as.logical(NA_predictions)))
           warning("Some of the test set predictions of the following model fits were missing (NA) and hence were excluded from MSE evaluation.

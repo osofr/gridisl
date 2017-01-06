@@ -55,7 +55,7 @@ openFileInOS <- function(f) {
 #' @return String specifying the path to the main report file.
 #' @export
 make_report_rmd <- function(modelfit, data, K = 5, format = c("html", "pdf", "word"),
-                            file.name = getOption('longGriDiSL.file.name'), file.path = getOption('longGriDiSL.file.path'),
+                            file.name = getOption('GriDiSL.file.name'), file.path = getOption('GriDiSL.file.path'),
                             openFile = TRUE, keep_md = FALSE, keep_tex = FALSE, ...) {
   optArgReport <- list(...)
 
@@ -132,7 +132,7 @@ call. = FALSE)
   ## path issue on Windows
   file.path     <- gsub('\\', '/', file.path, fixed = TRUE)
   # find the full path to the report template:
-  report.file <- system.file('report', "report-script-rmd.R", package = 'longGriDiSL')
+  report.file <- system.file('report', "report-script-rmd.R", package = 'GriDiSL')
 
   ## set working directory where to write the report:
   opts.bak <- options() # backup options
@@ -144,7 +144,7 @@ call. = FALSE)
   outfile <- file.name %+% "." %+% ifelse(format %in% "word", "docx", format)
 
   message("writing report to directory: " %+% getwd())
-  figure.dir <- file.path(getwd(), "figure/longGriDiSL-")
+  figure.dir <- file.path(getwd(), "figure/GriDiSL-")
   report.html <- tryCatch(rmarkdown::render(report.file,
                           output_dir = getwd(), intermediates_dir = getwd(), output_file = file.name%+%".html", clean = TRUE,
                           output_options = list(keep_md = keep_md, toc = TRUE, toc_float = TRUE,

@@ -2,7 +2,7 @@ test.H2O_holdoutSL_GLM_old_syntax <- function() {
   # require("h2o")
   # library("data.table")
   h2o::h2o.init(nthreads = -1)
-  options(longGriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -30,7 +30,7 @@ test.H2O_holdoutSL_GLM_old_syntax <- function() {
 
     make_report_rmd(mfit_holdGLM, data = cpp_holdout,
                     K = 10,
-                    file.name = paste0("GLMs_", getOption("longGriDiSL.file.name")),
+                    file.name = paste0("GLMs_", getOption("GriDiSL.file.name")),
                     title = paste0("Growth Curve Imputation with GLM"),
                     format = "html", keep_md = TRUE, openFile = TRUE)
 
@@ -46,19 +46,19 @@ test.H2O_holdoutSL_GLM_old_syntax <- function() {
     ## ------------------------------------------------------------------------------------
     ## ***** Prediction on holdout obs, for models trained on non-holdouts only *****
     ## ------------------------------------------------------------------------------------
-    holdPredDT <- longGriDiSL:::predict_holdout(mfit_holdGLM, best_only = FALSE, add_subject_data = TRUE)
+    holdPredDT <- GriDiSL:::predict_holdout(mfit_holdGLM, best_only = FALSE, add_subject_data = TRUE)
     print("GLM holdPredDT"); print(holdPredDT[])
-    holdPredDT <- longGriDiSL:::predict_holdout(mfit_holdGLM, best_only = TRUE, add_subject_data = TRUE)
+    holdPredDT <- GriDiSL:::predict_holdout(mfit_holdGLM, best_only = TRUE, add_subject_data = TRUE)
     print("GLM holdPredDT"); print(holdPredDT[])
 
     ## ------------------------------------------------------------------------------------
     ## ***** Prediction on non-holdout obs, for models trained on non-holdouts only *****
     ## ------------------------------------------------------------------------------------
-    preds_best_train <- longGriDiSL:::predict_nonholdouts(mfit_holdGLM, best_only = TRUE, add_subject_data = FALSE)
+    preds_best_train <- GriDiSL:::predict_nonholdouts(mfit_holdGLM, best_only = TRUE, add_subject_data = FALSE)
     print("GLM preds_best_train"); print(preds_best_train[])
-    preds_best_train <- longGriDiSL:::predict_nonholdouts(mfit_holdGLM, best_only = TRUE, add_subject_data = TRUE)
+    preds_best_train <- GriDiSL:::predict_nonholdouts(mfit_holdGLM, best_only = TRUE, add_subject_data = TRUE)
     print("GLM preds_best_train"); print(preds_best_train[])
-    preds_best_train <- longGriDiSL:::predict_nonholdouts(mfit_holdGLM, best_only = FALSE, add_subject_data = TRUE)
+    preds_best_train <- GriDiSL:::predict_nonholdouts(mfit_holdGLM, best_only = FALSE, add_subject_data = TRUE)
     print("GLM preds_best_train"); print(preds_best_train[])
 
     h2o::h2o.shutdown(prompt = FALSE)
@@ -71,7 +71,7 @@ test.H2O_holdoutSL_GLM_old_syntax <- function() {
 test.H2O_holdoutSL_GRID_GBM_old_syntax <- function() {
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(longGriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -136,14 +136,14 @@ test.H2O_holdoutSL_GRID_GBM_old_syntax <- function() {
   preds_alldat[]
 
   ## Predictions for training data from all models trained on non-holdout data (default):
-  preds_train <- longGriDiSL:::predict_nonholdouts(mfit_hold2, add_subject_data = TRUE)
+  preds_train <- GriDiSL:::predict_nonholdouts(mfit_hold2, add_subject_data = TRUE)
   preds_train[]
   ## Same but only for the top model
-  preds_train_top <- longGriDiSL:::predict_nonholdouts(mfit_hold2, best_only = TRUE, add_subject_data = TRUE)
+  preds_train_top <- GriDiSL:::predict_nonholdouts(mfit_hold2, best_only = TRUE, add_subject_data = TRUE)
   preds_train_top[]
 
   ## Predictions for all holdout data points for best models trained on non-holdout data:
-  preds_holdout <- longGriDiSL:::predict_holdout(mfit_hold2, best_only = TRUE, add_subject_data = TRUE)
+  preds_holdout <- GriDiSL:::predict_holdout(mfit_hold2, best_only = TRUE, add_subject_data = TRUE)
   preds_holdout[]
   ## Same with predict_generic
   preds_holdout2 <- predict_SL(mfit_hold2, add_subject_data = TRUE, holdout = TRUE)
@@ -173,11 +173,11 @@ test.H2O_holdoutSL_GRID_GBM_old_syntax <- function() {
 ## Growth Curve SL with model scoring based on full V-FOLD CROSS-VALIDATION
 ## ------------------------------------------------------------------------------------
 test.H2O_cvSL_GRID_GBM_old_syntax <- function() {
-  # library("longGriDiSL")
+  # library("GriDiSL")
   # require("data.table")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(longGriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -230,11 +230,11 @@ test.H2O_cvSL_GRID_GBM_old_syntax <- function() {
   checkTrue(all.equal(preds_alldat1, preds_alldat2))
 
   ## Predictions for best CV model (not re-trained, trained only on non-holdouts), must match:
-  preds_best_CV <- longGriDiSL:::predict_nonholdouts(mfit_cv1, add_subject_data = FALSE)
+  preds_best_CV <- GriDiSL:::predict_nonholdouts(mfit_cv1, add_subject_data = FALSE)
   preds_best_CV[]
-  preds_best_CV <- longGriDiSL:::predict_nonholdouts(mfit_cv1, add_subject_data = TRUE)
+  preds_best_CV <- GriDiSL:::predict_nonholdouts(mfit_cv1, add_subject_data = TRUE)
   preds_best_CV[]
-  preds_best_CV <- longGriDiSL:::predict_nonholdouts(mfit_cv1, bestK_only = 1, add_subject_data = FALSE)
+  preds_best_CV <- GriDiSL:::predict_nonholdouts(mfit_cv1, bestK_only = 1, add_subject_data = FALSE)
   preds_best_CV[]
   checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
 
@@ -252,12 +252,12 @@ test.H2O_cvSL_GRID_GBM_old_syntax <- function() {
   # cv_valid_preds[, ("out_of_sample_cv_preds") := get_out_of_sample_CV_predictions(mfit_cv1)]
   cv_valid_preds <- get_out_of_sample_predictions(mfit_cv1)
   cv_valid_preds[]
-  cv_valid_preds_2 <- longGriDiSL:::predict_holdout(mfit_cv1)
+  cv_valid_preds_2 <- GriDiSL:::predict_holdout(mfit_cv1)
   cv_valid_preds_2[]
-  cv_valid_preds_2 <- longGriDiSL:::predict_holdout(mfit_cv1, bestK_only = 1, add_subject_data = FALSE)
+  cv_valid_preds_2 <- GriDiSL:::predict_holdout(mfit_cv1, bestK_only = 1, add_subject_data = FALSE)
   cv_valid_preds_2[]
   checkTrue(all.equal(cv_valid_preds, cv_valid_preds_2))
-  cv_valid_preds_2 <- longGriDiSL:::predict_holdout(mfit_cv1, bestK_only = 1, add_subject_data = TRUE)
+  cv_valid_preds_2 <- GriDiSL:::predict_holdout(mfit_cv1, bestK_only = 1, add_subject_data = TRUE)
   cv_valid_preds_2[]
 
   ## SAME BUT WITH predict_SL, NEW RESCORING ON TRAINING DATA:
@@ -282,7 +282,7 @@ test.H2O_cvSL_GRID_GBM_old_syntax <- function() {
   ## Make report, save grid predictions and out of sample predictions
   # fname <- paste0(data.name, "_", "CV_gridSL_")
   make_report_rmd(mfit_cv1, K = 10, data = cpp_folds,
-                  # file.name = paste0(fname, getOption("longGriDiSL.file.name")),
+                  # file.name = paste0(fname, getOption("GriDiSL.file.name")),
                   title = paste0("Growth Curve Imputation with cpp Data"),
                   format = "html", keep_md = TRUE, openFile = FALSE)
 
@@ -387,10 +387,10 @@ test.H2O_cvSL_GRID_GBM_old_syntax <- function() {
 ## Holdout Growth Curve SL based on residuals from initial glm regression (model scoring based on random holdouts)
 ## ------------------------------------------------------------------------------------
 test.H2O_residual_holdoutSL_old_syntax <- function() {
-  # library("longGriDiSL")
+  # library("GriDiSL")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(longGriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -442,7 +442,7 @@ test.H2O_residual_holdoutSL_old_syntax <- function() {
   # [1] 1.776226
 
   ## Predictions for all holdout data points for all models trained on non-holdout data only:
-  preds_holdout_all <- longGriDiSL:::predict_holdout(mfit_resid_hold, add_subject_data = TRUE)
+  preds_holdout_all <- GriDiSL:::predict_holdout(mfit_resid_hold, add_subject_data = TRUE)
   preds_holdout_all[]
   ## Predictions for new data based on best SL model re-trained on all data:
   preds_alldat <- predict_SL(mfit_resid_hold, newdata = cpp_holdout, add_subject_data = TRUE)

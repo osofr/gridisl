@@ -2,7 +2,7 @@
 ## test xgboost glm, no model scoring (no cv or holdout)
 ## ------------------------------------------------------------------------------------
 test.XGBoost.simple <- function() {
-  options(longGriDiSL.verbose = FALSE)
+  options(GriDiSL.verbose = FALSE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   cpp <- data.table::data.table(cpp)
@@ -40,8 +40,8 @@ test.XGBoost.simple <- function() {
 ## test xgboost glm, model scoring with CV
 ## ------------------------------------------------------------------------------------
 test.glm.XGBoost <- function() {
-  # options(longGriDiSL.verbose = TRUE)
-  options(longGriDiSL.verbose = FALSE)
+  # options(GriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = FALSE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -74,8 +74,8 @@ test.glm.XGBoost <- function() {
 }
 
 test.holdout.XGBoost <- function() {
-  options(longGriDiSL.verbose = FALSE)
-  # options(longGriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = FALSE)
+  # options(GriDiSL.verbose = TRUE)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -154,9 +154,9 @@ test.holdout.XGBoost <- function() {
 ## Growth Curve SL with model scoring based on full V-FOLD CROSS-VALIDATION
 ## ------------------------------------------------------------------------------------
 test.CV.SL.XGBoost <- function() {
-  # library("longGriDiSL");
-  options(longGriDiSL.verbose = FALSE)
-  # options(longGriDiSL.verbose = TRUE)
+  # library("GriDiSL");
+  options(GriDiSL.verbose = FALSE)
+  # options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -222,18 +222,18 @@ test.CV.SL.XGBoost <- function() {
   ## ****** (NOT IMPLEMENTED YET) *******
   ## --------------------------------------------------------------------------------------------
   ## Predictions for best CV model (not re-trained, trained only on non-holdouts), must match:
-  # preds_best_CV <- longGriDiSL:::predict_model(mfit_cv, add_subject_data = FALSE)
+  # preds_best_CV <- GriDiSL:::predict_model(mfit_cv, add_subject_data = FALSE)
   # preds_best_CV[]
-  # preds_best_CV <- longGriDiSL:::predict_model(mfit_cv, add_subject_data = TRUE)
+  # preds_best_CV <- GriDiSL:::predict_model(mfit_cv, add_subject_data = TRUE)
   # preds_best_CV[]
-  # preds_best_CV <- longGriDiSL:::predict_model(mfit_cv, bestK_only = 1, add_subject_data = FALSE)
+  # preds_best_CV <- GriDiSL:::predict_model(mfit_cv, bestK_only = 1, add_subject_data = FALSE)
   # preds_best_CV[]
   # checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
 
   ## Make report, save grid predictions and out of sample predictions
   # fname <- paste0(data.name, "_", "CV_gridSL_")
   make_report_rmd(mfit_cv, K = 10, data = cpp_folds,
-                  # file.name = paste0(fname, getOption("longGriDiSL.file.name")),
+                  # file.name = paste0(fname, getOption("GriDiSL.file.name")),
                   title = paste0("Growth Curve Imputation with cpp Data"),
                   format = "html", keep_md = TRUE, openFile = FALSE)
 
@@ -281,10 +281,10 @@ test.CV.SL.XGBoost <- function() {
 ## --------------------------------------------------------------------------------------------
 ## Holdout Growth Curve SL based on residuals from initial glm regression (model scoring based on random holdouts)
 test.residual.holdoutSL.xgboost <- function() {
-  # library("longGriDiSL")
+  # library("GriDiSL")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(longGriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -323,7 +323,7 @@ test.residual.holdoutSL.xgboost <- function() {
   print("Holdout MSE, using the residual holdout Y prediction"); print(mfit_resid_hold$getMSE)
 
   ## Predictions for all holdout data points for all models trained on non-holdout data only:
-  preds_holdout_all <- longGriDiSL:::predict_holdout(mfit_resid_hold, add_subject_data = TRUE)
+  preds_holdout_all <- GriDiSL:::predict_holdout(mfit_resid_hold, add_subject_data = TRUE)
   preds_holdout_all[]
   ## Predictions for new data based on best SL model re-trained on all data:
   preds_alldat <- predict_SL(mfit_resid_hold, newdata = cpp_holdout, add_subject_data = TRUE)

@@ -1,4 +1,4 @@
-#' @useDynLib longGriDiSL
+#' @useDynLib GriDiSL
 #' @import R6
 #' @importFrom magrittr %>%
 #' @importFrom Rcpp sourceCpp
@@ -111,15 +111,15 @@ add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed =
 #' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
 #' @param covars Names of predictors (covariates) in the data.
 #' @param OUTCOME Character name of the column containing outcomes.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
 #' @return An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
-# @example tests/examples/1_longGriDiSL_example.R
+# @example tests/examples/1_GriDiSL_example.R
 #' @export
-importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("longGriDiSL.verbose")) {
+importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("GriDiSL.verbose")) {
   gvars$verbose <- verbose
   # if (verbose) {
   #   current.options <- capture.output(str(gvars$opts))
-  #   print("Using the following longGriDiSL options/settings: ")
+  #   print("Using the following GriDiSL options/settings: ")
   #   cat('\n')
   #   cat(paste0(current.options, collapse = '\n'), '\n')
   # }

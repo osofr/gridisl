@@ -39,7 +39,7 @@ get_out_of_sample_predictions <- function(modelfit) {
 #'
 #' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
 #' @export
-save_best_model <- function(modelfit, file.path = getOption('longGriDiSL.file.path')) {
+save_best_model <- function(modelfit, file.path = getOption('GriDiSL.file.path')) {
   stop("...not implemented...")
   assert_that(is.PredictionModel(modelfit))
   best_model_name <- modelfit$get_best_model_names(K = 1)
@@ -90,12 +90,12 @@ validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Ofram
 #' @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 #' When \code{FALSE}, it might be impossible to make predictions from this model fit.
 #' @param seed Random number seed for selecting a random holdout.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
 #' @return ...
-# @seealso \code{\link{longGriDiSL-package}} for the general overview of the package,
-# @example tests/examples/1_longGriDiSL_example.R
+# @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
+# @example tests/examples/1_GriDiSL_example.R
 #' @export
-fit_holdoutSL <- function(ID, t_name, x, y, data, models, hold_column = NULL, hold_random = TRUE, refit = TRUE, seed = NULL, verbose = getOption("longGriDiSL.verbose"), ...) {
+fit_holdoutSL <- function(ID, t_name, x, y, data, models, hold_column = NULL, hold_random = TRUE, refit = TRUE, seed = NULL, verbose = getOption("GriDiSL.verbose"), ...) {
   gvars$verbose <- verbose
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)
@@ -147,12 +147,12 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, models, hold_column = NULL, ho
 #' @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 #' When \code{FALSE}, it might be impossible to make predictions from this model fit.
 #' @param seed Random number seed for selecting a random holdout.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
 #' @return ...
-# @seealso \code{\link{longGriDiSL-package}} for the general overview of the package,
-# @example tests/examples/1_longGriDiSL_example.R
+# @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
+# @example tests/examples/1_GriDiSL_example.R
 #' @export
-fit_cvSL <- function(ID, t_name, x, y, data, models, nfolds = 5, fold_column = NULL, refit = TRUE, seed = NULL, verbose = getOption("longGriDiSL.verbose"), ...) {
+fit_cvSL <- function(ID, t_name, x, y, data, models, nfolds = 5, fold_column = NULL, refit = TRUE, seed = NULL, verbose = getOption("GriDiSL.verbose"), ...) {
   gvars$verbose <- verbose
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)
@@ -191,14 +191,14 @@ fit_cvSL <- function(ID, t_name, x, y, data, models, nfolds = 5, fold_column = N
 #' @param useH2Oframe ...
 #' @param subset_exprs ...
 #' @param subset_idx ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
 #' @return ...
-# @seealso \code{\link{longGriDiSL-package}} for the general overview of the package,
-# @example tests/examples/1_longGriDiSL_example.R
+# @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
+# @example tests/examples/1_GriDiSL_example.R
 #' @export
 fit_model <- function(ID, t_name, x, y, train_data, valid_data, models, nfolds, fold_column, seed,
                       useH2Oframe = FALSE, subset_exprs = NULL, subset_idx = NULL,
-                      verbose = getOption("longGriDiSL.verbose")) {
+                      verbose = getOption("GriDiSL.verbose")) {
   gvars$verbose <- verbose
 
   if (missing(train_data)) stop("train_data arg must be specified")
@@ -293,7 +293,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, models, nfolds, 
 #' @param holdout Set to \code{TRUE} for out-of-sample predictions for validation folds or holdouts.
 #' @param force_data.table Force the prediction result to be \code{data.table}.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
-#' Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
+#' Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
 #' @return A data.table of subject level predictions (subject are rows, columns are different models)
 #' or a data.table with subject level covariates added along with model-based predictions.
 #' @export
@@ -303,7 +303,7 @@ predict_generic <- function(modelfit, newdata,
                             best_only = TRUE,
                             holdout = FALSE,
                             force_data.table = TRUE,
-                            verbose = getOption("longGriDiSL.verbose")) {
+                            verbose = getOption("GriDiSL.verbose")) {
 
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
@@ -363,7 +363,7 @@ predict_generic <- function(modelfit, newdata,
 #'  1. For \code{\link{fit_holdoutSL}} the default holdout predictions will be based on validation data.
 #'  2. For \code{\link{fit_cvSL}} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
 #' @param force_data.table ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
 #' @return A data.table of subject level predictions (subject are rows, columns are different models)
 #' or a data.table with subject level covariates added along with model-based predictions.
 #' @export
@@ -372,7 +372,7 @@ predict_SL <- function(modelfit, newdata,
                        subset_idx = NULL,
                        holdout = FALSE,
                        force_data.table = TRUE,
-                       verbose = getOption("longGriDiSL.verbose")) {
+                       verbose = getOption("GriDiSL.verbose")) {
 
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
@@ -399,7 +399,7 @@ predict_nonholdouts <- function(modelfit, newdata,
                           best_only = TRUE,
                           add_subject_data = FALSE,
                           subset_idx = NULL,
-                          verbose = getOption("longGriDiSL.verbose")) {
+                          verbose = getOption("GriDiSL.verbose")) {
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
   if (!missing(newdata))
@@ -434,7 +434,7 @@ predict_holdout <- function(modelfit, newdata,
                             best_only = TRUE,
                             add_subject_data = FALSE,
                             subset_idx = NULL,
-                            verbose = getOption("longGriDiSL.verbose")) {
+                            verbose = getOption("GriDiSL.verbose")) {
   if (missing(newdata) && !modelfit$runCV) newdata <- modelfit$OData_valid
   return(predict_generic(modelfit, newdata, add_subject_data, subset_idx, best_only = best_only,
                          holdout = TRUE, force_data.table = TRUE, verbose))
@@ -450,10 +450,10 @@ predict_holdout <- function(modelfit, newdata,
 #' @param modelfit Model fit object returned by \code{\link{fit_model}} function.
 #' @param newdata ...
 #' @param subset_idx ...
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(longGriDiSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
 #' @return ...
 #' @export
-eval_MSE <- function(modelfit, newdata, subset_idx = NULL, verbose = getOption("longGriDiSL.verbose")) {
+eval_MSE <- function(modelfit, newdata, subset_idx = NULL, verbose = getOption("GriDiSL.verbose")) {
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")
   assert_that(is.PredictionModel(modelfit) || is.PredictionStack(modelfit))
