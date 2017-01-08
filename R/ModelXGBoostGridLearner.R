@@ -1,5 +1,5 @@
 ## custom MSE error evaluation function. Averages the subject level MSE first, then averages across subjects
-evalMSEerror <- function(preds, data) {
+evalMSEerror_byID <- function(preds, data) {
   labels <- getinfo(data, "label")
   # The usual RMSE (based on rows in the dataset)
   # err = sqrt(as.numeric(sum((labels - preds)^2))/length(labels))
@@ -14,25 +14,6 @@ evalMSEerror <- function(preds, data) {
   # err <- as.numeric(sum(labels != (preds > 0)))/length(labels)
   return(list(metric = "RMSE", value = err))
 }
-
-## get all parameters (list) used by each model
-# get_all_params <- function(fit) fit[['params']]
-## record the optimal CV nrounds (ntrees) for each parameter
-# get_cv_best_iter <- function(fit) fit[['best_iteration']]
-## record the optimal ntreelimit to be used for prediction with CV model (should be equal to best_iteration)
-# get_cv_best_ntreelimit <- function(fit) fit[['best_ntreelimit']]
-## get the name of the evaluation metric used by each model (should be all the same)
-# get_metric_name <- function(fit) fit[['params']][['eval_metric']]
-## evaluate the cv metric for each parameter
-# get_cv_metrics <- function(fit) fit$evaluation_log[fit[['best_iteration']],]
-
-# cb.cv.predict(save_models = FALSE)
-## This callback function saves predictions for all of the test folds, and also allows to save the folds' models.
-## It is a "finalizer" callback and it uses early stopping information whenever it is available,
-## thus it must be run after the early stopping callback if the early stopping is used.
-## Callback function expects the following values to be set in its calling frame:
-## bst_folds, basket, data, end_iteration, params, num_parallel_tree, num_class.
-
 
 ## Peforming simple hyperparameter grid search for xgboost with cross-validation
 ## Relies on tidyverse syntax and borrowed from: https://drsimonj.svbtle.com/grid-search-in-the-tidyverse
@@ -91,13 +72,13 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
 
     } else {
 
-      ## Test models based on cross-validation
+      ## Test models via V-fold cross-validation
       model_fit <- xgboost::xgb.cv(params, data, nrounds, nfold, label, missing,
                                    prediction, showsd, metrics, obj,
                                    feval, stratified, folds, verbose,
-                                   print_every_n, early_stopping_rounds,
+                                   print_every_n,
+                                   early_stopping_rounds,
                                    maximize,
-                                   # callbacks = callbacks)
                                    callbacks = c(list(xgboost::cb.evaluation.log()), callbacks)
                                    )
 

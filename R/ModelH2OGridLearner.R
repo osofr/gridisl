@@ -146,6 +146,11 @@ fit_single_h2o_grid <- function(grid.algorithm, training_frame, y, x, family = "
 
   # browser()
   # str(fit$top.model)
+  # str(fit$top.model@model)
+  # str(fit$top.model@model$model_summary)
+  # str(fit$top.model@model$scoring_history)
+  # str(fit$top.model@model$training_metrics)
+
   # h2o.performance(top.model)
   # h2o.performance(top.model, valid = TRUE)
 

@@ -108,7 +108,7 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   ## These defaults can be over-ridden in model_contrl
   # ********************************************************************************
   mainArgs <- list(data = train_data,
-                   nrounds = 50,
+                   nrounds = 100,
                    # nrounds = 1000,
                    # early_stopping_rounds = 10,
                    # metrics = list(evalMSEerror),
@@ -132,13 +132,52 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   if (is.null(grid.algorithm)) grid.algorithm <- "gbm"
 
   if (is.null(mainArgs[["booster"]])) {
-    if (!is.character(grid.algorithm) || (!grid.algorithm %in% c("glm","gbm"))) stop("'grid.algorithm' must be either 'glm' or 'gbm'")
+    if (!is.character(grid.algorithm) || (!grid.algorithm %in% c("glm","gbm","drf"))) stop("'grid.algorithm' must be either 'glm', 'gbm' or 'drf'")
     if (grid.algorithm %in% "glm") {
+
       mainArgs[["booster"]] <- "gblinear"
+      ## Call-back for early stopping based on training error, must be added before other callbacks
+      # if (!is.null(early_stopping_rounds) && (params[["booster"]] == "gblinear")) {
+      early_stop_ontrain <- xgboost::cb.early.stop(stopping_rounds = 5, maximize = FALSE, metric_name = "train-rmse", verbose = gvars$verbose)
+      # callbacks <- c(early_stop_ontrain, callbacks)
+      mainArgs[["callbacks"]] <- early_stop_ontrain
+      # early_stopping_rounds <- NULL
+      # params[["eta"]] <- 0.5
+      ## set nrounds to 100 like in
+      # h2o.glm defaults: [max_iterations = 100; score_each_iteration = FALSE; early_stopping = TRUE, obj_eps = 0.000001]
+      ## nrounds <- 1000
+      # }
+
     } else if (grid.algorithm %in% "gbm") {
+
       mainArgs[["booster"]] <- "gbtree"
     } else if (grid.algorithm %in% "drf") {
-      stop("drf w/ xgboost is not implemented")
+
+      mainArgs[["booster"]] <- "gbtree"
+      # browser()
+
+      # stop("drf w/ xgboost is not implemented")
+      # # random forest with xgboost
+      # system.time({
+      #   # n_proc <- detectCores()
+      #   md <- xgboost(data = X_train, label = ifelse(d_train$dep_delayed_15min=='Y',1,0),
+      #                  nthread = n_proc, nround = 1,
+      #                  # max_depth = 20,
+      #                  num_parallel_tree = 500, subsample = 0.632,
+      #                  colsample_bytree = 1/sqrt(length(X_train@x)/nrow(X_train)))
+
+
+      if (!is.null(model_contrl[["nrounds"]])) {
+        mainArgs[["num_parallel_tree"]] <- model_contrl[["nrounds"]]
+      } else {
+        mainArgs[["num_parallel_tree"]] <- mainArgs[["nrounds"]]
+      }
+      ## Important to set nrounds to 1
+      model_contrl[["nrounds"]] <- 1
+      # mainArgs[["nrounds"]] <- 1
+      mainArgs[["subsample"]] <- 0.632
+      mainArgs[["colsample_bytree"]] <- 1/sqrt(ncol(train_data)) #/nrow(train_data)
+
     } else {
       stop("the only algorithms allowed with xgboost are: glm, gbm and drf")
     }
@@ -150,9 +189,22 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   ## Is there a fold_column for cross-validation based model scoring?
   ## ******** fold_column is already CONVERTED TO INTERNAL xgboost representation ********
   if (!is.null(fold_column)) {
-      mainArgs[["folds"]] <- fold_column
-      ## callback that saves the CV models (and out-of-sample / holdout predictions)
-      mainArgs[["callbacks"]] = list(xgboost::cb.cv.predict(save_models = TRUE))
+    mainArgs[["folds"]] <- fold_column
+    ## callback that saves the CV models (and out-of-sample / holdout predictions)
+    ## -----------------------------------------------------------------
+    ## ********* SAVING CV PREDICTIONS / MODELS -- IMPORTANT *********
+    ## cb.cv.predict(save_models = FALSE)
+    ## -----------------------------------------------------------------
+    ## This callback function saves predictions for all of the test folds, and also allows to save the folds' models.
+    ## It is a "finalizer" callback and it uses early stopping information whenever it is available,
+    ## thus it must be run after the early stopping callback if the early stopping is used.
+    ## Callback function expects the following values to be set in its calling frame:
+    ## bst_folds, basket, data, end_iteration, params, num_parallel_tree, num_class.
+    if (is.null(mainArgs[["callbacks"]])){
+      mainArgs[["callbacks"]] <- list(xgboost::cb.cv.predict(save_models = TRUE))
+    } else {
+      mainArgs[["callbacks"]] <- c(mainArgs[["callbacks"]], list(xgboost::cb.cv.predict(save_models = TRUE)))
+    }
   }
 
   ## THE grid of hyper-parameters, can be either specified in a list with names: "glm"/"gbm"/"params"
@@ -535,14 +587,13 @@ XGBoostClass <- R6Class(classname = "XGBoost",
     get_best_model_params = function(model_names) {
       ## actual model object returned by xgboost for the best performing model
       model_obj <- self$getmodel_byname(model_names[1])[[1]]
+
       ## data.table row from the grid with the best model
       gridmodel_obj <- self$getgridDT_byname(model_names[1])
 
       ## Top model is always going to be a call for training a single final xbg model (no CV /validation data)
       top_params <- list(fit.package = self$model_contrl$fit.package, fit.algorithm = "xgb.train")
 
-      # str(model_obj)
-      # model_obj$call
       ## params arg of xgb.train:
       top_params <- c(top_params, model_obj$params)
 
@@ -551,10 +602,6 @@ XGBoostClass <- R6Class(classname = "XGBoost",
 
       top_params[["nrounds"]] <- gridmodel_obj[["nrounds"]]
       top_params <- c(top_params, gridmodel_obj[["glob_params"]][[1]])
-
-      # top_params$callbacks <- model_obj$callbacks
-      # attributes(model_obj)
-      # browser()
 
       return(top_params)
     },

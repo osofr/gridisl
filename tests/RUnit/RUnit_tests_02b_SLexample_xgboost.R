@@ -1,5 +1,5 @@
 ## ------------------------------------------------------------------------------------
-## test xgboost glm, no model scoring (no cv or holdout)
+## test xgboost GLM learner / GBM Grid, no model scoring (no cv or holdout), just fit all models
 ## ------------------------------------------------------------------------------------
 test.XGBoost.simple <- function() {
   options(GriDiSL.verbose = FALSE)
@@ -39,9 +39,48 @@ test.XGBoost.simple <- function() {
 ## ------------------------------------------------------------------------------------
 ## test xgboost glm, model scoring with CV
 ## ------------------------------------------------------------------------------------
-test.glm.XGBoost <- function() {
-  # options(GriDiSL.verbose = TRUE)
+test.XGBoost.GLM <- function() {
+  require("h2o")
+  h2o::h2o.init(nthreads = -1)
+  # options(GriDiSL.verbose = FALSE)
+  options(GriDiSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  params_glm <- defLearner(estimator = "xgboost__glm", family = "gaussian",
+                           eta = 1.7, nrounds = 1000,
+                           alpha = 0.3, lambda = 0.1,
+                           seed = 123456) +
+                defLearner(estimator = "h2o__glm", family = "gaussian",
+                           alpha = 0.3, lambda = 0.1,
+                           seed = 123456)
+
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  mfit_cv <- fit(params_glm, method = "cv", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                 data = cpp_folds, fold_column = "fold")
+  pred_alldat_cv <- predict_SL(mfit_cv, newdata = cpp_folds, add_subject_data = FALSE)
+  head(pred_alldat_cv[])
+
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  mfit_hold <- fit(params_glm, method = "holdout", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                 data = cpp_holdout, hold_column = "hold")
+  # grid_mfit_xgboost_holdout <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+  #                                             data = cpp_holdout, params = GRIDparams, hold_column = "hold")
+  pred_alldat_hold <- predict_SL(mfit_hold, newdata = cpp_holdout, add_subject_data = FALSE)
+  head(pred_alldat_hold[])
+
+  h2o::h2o.shutdown(prompt = FALSE)
+}
+
+## ------------------------------------------------------------------------------------
+## test xgboost glm, model scoring with CV
+## ------------------------------------------------------------------------------------
+test.XGBoost.regularizedGLM_grid <- function() {
+  require("h2o")
+  h2o::h2o.init(nthreads = -1)
   options(GriDiSL.verbose = FALSE)
+  # options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -49,29 +88,74 @@ test.glm.XGBoost <- function() {
   alpha_opt <- c(0,1.0,seq(0.1,0.9,0.1))
   lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5, 2)
 
-  GRIDparams2 <- defGrid(estimator = "xgboost__glm", family = "gaussian", nrounds = 100,
-                         search_criteria = list(strategy = "RandomDiscrete", max_models = 100),
-                         param_grid = list(alpha = alpha_opt,
-                                           lambda = lambda_opt),
+  params_glm <- defGrid(estimator = "xgboost__glm", family = "gaussian",
+                        eta = 1.3, nrounds = 1000,
+                        param_grid = list(alpha = alpha_opt,
+                                          lambda = lambda_opt),
+                        seed = 123456) +
+                defGrid(estimator = "h2o__glm", family = "gaussian",
+                        param_grid = list(alpha = alpha_opt,
+                                          lambda = lambda_opt),
                          seed = 123456)
 
+  # params_glm[[1]][["fit.algorithm"]] <- "glm"
+
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
-  # mfit_cv <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-  #                                   data = cpp_folds, params = GRIDparams2, fold_column = "fold")
-  mfit_cv <- fit(GRIDparams2, method = "cv", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+  mfit_cv <- fit(params_glm, method = "cv", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                  data = cpp_folds, fold_column = "fold")
   pred_alldat_cv <- predict_SL(mfit_cv, newdata = cpp_folds, add_subject_data = FALSE)
   head(pred_alldat_cv[])
 
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
-  mfit_hold <- fit(GRIDparams2, method = "holdout", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+  mfit_hold <- fit(params_glm, method = "holdout", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                  data = cpp_holdout, hold_column = "hold")
   # grid_mfit_xgboost_holdout <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
   #                                             data = cpp_holdout, params = GRIDparams, hold_column = "hold")
-  pred_alldat_hold <- predict_SL(mfit_hold, newdata = cpp_folds, add_subject_data = FALSE)
+  pred_alldat_hold <- predict_SL(mfit_hold, newdata = cpp_holdout, add_subject_data = FALSE)
   head(pred_alldat_hold[])
 
 }
+
+## ------------------------------------------------------------------------------------
+## test xgboost glm, model scoring with CV
+## ------------------------------------------------------------------------------------
+test.XGBoost.drfs <- function() {
+  require("h2o")
+  h2o::h2o.init(nthreads = -1)
+  # options(GriDiSL.verbose = FALSE)
+  options(GriDiSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  # alpha_opt <- c(0,1.0,seq(0.1,0.9,0.1))
+  # lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5, 2)
+
+  params_drf <- defLearner(estimator = "xgboost__drf", family = "gaussian",
+                           eta = 1.3, nrounds = 200,
+                           seed = 123456) +
+                defLearner(estimator = "h2o__randomForest", distribution = "gaussian",
+                           ntrees = 200,
+                           seed = 123456)
+
+  # params_drf[[1]][["fit.algorithm"]] <- "glm"
+
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  mfit_cv <- fit(params_drf, method = "cv", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                 data = cpp_folds, fold_column = "fold")
+  pred_alldat_cv <- predict_SL(mfit_cv, newdata = cpp_folds, add_subject_data = FALSE)
+  head(pred_alldat_cv[])
+
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  mfit_hold <- fit(params_drf, method = "holdout", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                 data = cpp_holdout, hold_column = "hold")
+  # grid_mfit_xgboost_holdout <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+  #                                             data = cpp_holdout, params = GRIDparams, hold_column = "hold")
+  pred_alldat_hold <- predict_SL(mfit_hold, newdata = cpp_holdout, add_subject_data = FALSE)
+  head(pred_alldat_hold[])
+
+}
+
 
 test.holdout.XGBoost <- function() {
   options(GriDiSL.verbose = FALSE)
@@ -146,6 +230,7 @@ test.holdout.XGBoost <- function() {
   ## Save the best performing h2o model fit to disk:
   # not implemented
   # save_best_model(xgboost_holdout, file.path = "/Users/olegsofrygin/GoogleDrive/HBGDki/ImputationSL/sofware")
+  h2o::h2o.shutdown(prompt = FALSE)
 }
 
 
