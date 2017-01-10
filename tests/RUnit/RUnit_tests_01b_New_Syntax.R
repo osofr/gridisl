@@ -136,6 +136,7 @@ test.GBM_xgboost_vs_H2O <- function() {
 
                            stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
                            seed = 23) +
+
                 defLearner(estimator = "xgboost__gbm", family = "gaussian",
                            nrounds = 500,
                            learning_rate = 0.01, # (alias eta), try around 5 in range (0.01-0.1)

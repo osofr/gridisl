@@ -21,7 +21,7 @@ if(FALSE) {
   devtools::build_win(args = "--compact-vignettes") # build package on CRAN servers (windows os?)
   devtools::build(args = "--compact-vignettes") # build package tarball compacting vignettes
 
-  # check reverse dependencies:
+  # check reverse dependen cies:
   devtools::revdep(dependencies = c("Depends", "Imports", "Suggests", "LinkingTo"), recursive = FALSE, ignore = NULL)
   res <- devtools::revdep_check()
   devtools::revdep_check_summary(res)

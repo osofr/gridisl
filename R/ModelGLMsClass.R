@@ -19,7 +19,7 @@ fit.glm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
     SuppressGivenWarnings({
       model.fit <- stats::glm.fit(x = Xmat,
                                   y = Yvals,
-                                  family = gaussian() ,
+                                  family = quasibinomial() ,
                                   control = ctrl)
     }, GetWarningsToSuppress())
   }
@@ -54,7 +54,7 @@ fit.speedglm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
     model.fit <- try(speedglm::speedglm.wfit(X = Xmat,
                                              y = Yvals,
                                              method = 'Cholesky',
-                                             family = gaussian(),
+                                             family = quasibinomial(),
                                              trace = FALSE),
                     silent = TRUE)
     }, GetWarningsToSuppress())
