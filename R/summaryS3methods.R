@@ -34,10 +34,11 @@ pander.H2OBinomialMetrics <- function(H2OBinomialMetricsObject, type) {
   colnames(metricsDF) <- NULL
   pander::pander(metricsDF, justify = c('left', 'center'), caption = type %+% " data metrics" %+% "; Category: " %+% categor)
 
-  cm <- try(h2o::h2o.confusionMatrix(H2OBinomialMetricsObject), silent = TRUE)
-  if( !is.null(cm) ) {
-    pander::pander(cm, caption = "Confusion Matrix for F1-optimal threshold" %+% " (Model ID: " %+% modelID %+%")" )
-  }
+  # cm <- try(h2o::h2o.confusionMatrix(H2OBinomialMetricsObject), silent = TRUE)
+  # if( !is.null(cm) ) {
+  #   pander::pander(cm, caption = "Confusion Matrix for F1-optimal threshold" %+% " (Model ID: " %+% modelID %+%")" )
+  # }
+
   max_matrics <- h2o_metrics$max_criteria_and_metric_scores
   caption <- attributes(max_matrics)$header %+% ": " %+% attributes(max_matrics)$description
   pander::pander(max_matrics, caption = caption %+% " (Model ID: " %+% modelID %+%")")
@@ -83,7 +84,6 @@ print.GLMmodel <- function(model.fit, ...) {
 #' @return The markdown-formated model summary returned by \code{pander::pander_return}.
 #' @export
 summary.GLMmodel <- function(model.fit, format_table = TRUE, ...) {
-  # browser()
   makeModelCaption <- function(model.fit) {
     return(
       "Model: " %+% model.fit$params$outvar %+% " ~ " %+% paste0(model.fit$params$predvars, collapse = " + ") %+% "; \\
