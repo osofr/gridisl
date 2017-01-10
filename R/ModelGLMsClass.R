@@ -36,7 +36,7 @@ fit.glm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
   # print(object.size(model.fit), units = "Kb")
 
   return(create_fit_object(model.fit, model_alg = "glm", fitfunname = "glm", linkfun = "logit_linkinv",
-                           params = params, coef = model.fit$coef, nobs = nobs, model_contrl = model_contrl,
+                           params = params, coef = model.fit$coef, nobs = nrow(Xmat), model_contrl = model_contrl,
                            fitclass = "GLMmodel"))
 }
 
@@ -70,7 +70,7 @@ fit.speedglm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
   }
 
   return(create_fit_object(model.fit, model_alg = "glm", fitfunname = "speedglm", linkfun = "logit_linkinv",
-                           params = params, coef = model.fit$coef, nobs = nobs, model_contrl = model_contrl,
+                           params = params, coef = model.fit$coef, nobs = nrow(Xmat), model_contrl = model_contrl,
                            fitclass = "GLMmodel"))
 
 }

@@ -83,6 +83,7 @@ print.GLMmodel <- function(model.fit, ...) {
 #' @return The markdown-formated model summary returned by \code{pander::pander_return}.
 #' @export
 summary.GLMmodel <- function(model.fit, format_table = TRUE, ...) {
+  # browser()
   makeModelCaption <- function(model.fit) {
     return(
       "Model: " %+% model.fit$params$outvar %+% " ~ " %+% paste0(model.fit$params$predvars, collapse = " + ") %+% "; \\
