@@ -434,7 +434,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     ## ------------------------------------------------------------------------------
     get_best_models = function(K = 1) {
       top_model_names <- self$get_best_model_names(K)
-      message("fetching top " %+% K %+% " models ranked by the smallest holdout / validation MSE")
+      if gvars$verbose message("fetching top " %+% K %+% " models ranked by the smallest holdout / validation MSE")
       return(self$getmodel_byname(top_model_names))
     },
 
