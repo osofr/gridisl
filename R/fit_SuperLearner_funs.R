@@ -97,6 +97,8 @@ validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Ofram
 #' @export
 fit_holdoutSL <- function(ID, t_name, x, y, data, models, hold_column = NULL, hold_random = TRUE, refit = TRUE, seed = NULL, verbose = getOption("GriDiSL.verbose"), ...) {
   gvars$verbose <- verbose
+  gvars$method <- "holdout"
+
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)
 
@@ -154,6 +156,8 @@ fit_holdoutSL <- function(ID, t_name, x, y, data, models, hold_column = NULL, ho
 #' @export
 fit_cvSL <- function(ID, t_name, x, y, data, models, nfolds = 5, fold_column = NULL, refit = TRUE, seed = NULL, verbose = getOption("GriDiSL.verbose"), ...) {
   gvars$verbose <- verbose
+  gvars$method <- "cv"
+
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)
 

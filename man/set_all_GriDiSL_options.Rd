@@ -6,14 +6,12 @@
 \usage{
 set_all_GriDiSL_options(fit.package = c("h2o", "speedglm", "glm",
   "brokenstick", "face"), fit.algorithm = c("glm", "gbm", "randomForest",
-  "deeplearning", "grid", "resid_grid"), maxncats = 20)
+  "deeplearning", "grid", "resid_grid"))
 }
 \arguments{
 \item{fit.package}{Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")}
 
 \item{fit.algorithm}{Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "SuperLearner")}
-
-\item{maxncats}{Max number of unique categories a categorical variable can have. More than these number and it is deemed continuous.}
 }
 \value{
 Invisibly returns a list with old option settings.

@@ -119,8 +119,9 @@ fit.ModelStack <- function(models, method = c("none", "cv", "holdout"), data, ID
                            hold_column = NULL, hold_random = FALSE, seed = NULL, refit = TRUE,
                            verbose = getOption("GriDiSL.verbose"), ...) {
   method <- method[1L]
-
+  gvars$method <- method
   gvars$verbose <- verbose
+
   if (!is.ModelStack(models)) stop("argument models must be of class 'ModelStack'")
   if (!(method %in% c("none", "cv", "holdout"))) stop("argument method must be one of: 'none', 'cv', 'holdout'")
   if (!data.table::is.data.table(data) && !is.DataStorageClass(data))

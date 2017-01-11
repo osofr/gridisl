@@ -82,7 +82,7 @@ if (!skip.modelfits) {
     if (!is.null(models.object[[model_idx]])) {
       print_tables(models.object[[model_idx]])
     } else {
-      cat("*No modeling objects found.*")
+      cat("*no modeling objects found*")
     }
     cat("\n\n"); cat("&nbsp;")
   }

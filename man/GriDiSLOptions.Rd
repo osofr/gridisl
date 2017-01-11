@@ -7,15 +7,13 @@
 GriDiSLOptions(o, value)
 }
 \arguments{
-\item{o}{Option name (string). See \code{\link{set_all_GriDiSL_options}}.}
+\item{o}{Option name (string).}
 
 \item{value}{Value to assign (optional)}
 }
 \description{
-To list all \code{GriDiSL} options, just run this function without any parameters provided. To query only one value, pass the first parameter. To set that, use the \code{value} parameter too.
-}
-\details{
-The arguments of \code{\link{set_all_GriDiSL_options}} list all available \code{GriDiSL} options.
+To list all \code{GriDiSL} options, just run this function without any parameters provided. To query only one value, pass the first parameter.
+To set that, use the \code{value} parameter too.
 }
 \examples{
 \dontrun{
@@ -23,8 +21,5 @@ GriDiSLOptions()
 GriDiSLOptions('fit.package')
 GriDiSLOptions('fit.package', 'h2o')
 }
-}
-\seealso{
-\code{\link{set_all_GriDiSL_options}}
 }
 

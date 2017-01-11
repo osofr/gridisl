@@ -6,6 +6,7 @@ options("datatable.print.class" = TRUE)
 #-----------------------------------------------------------------------------
 gvars <- new.env(parent = emptyenv())
 gvars$verbose <- TRUE       # verbose mode (print all messages)
+gvars$method <- "none"      # Model selection method used ("cv", "holdout", "none")
 gvars$opts <- list()        # named list of package options that is controllable by the user (set_all_GriDiSL_options())
 gvars$misval <- NA_integer_ # the default missing value for observations (# gvars$misval <- -.Machine$integer.max)
 gvars$misXreplace <- 0L     # the default replacement value for misval that appear in the design matrix
@@ -15,19 +16,17 @@ gvars$noCENScat <- 0L       # the reference category that designates continuatio
 
 allowed.fit.package <- c("speedglm", "glm", "h2o", "xgboost")
 allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "grid", "resid_grid")
-# , "SuperLearner"
 allowed.bin.method = c("equal.mass", "equal.len", "dhist")
 
 #' Querying/setting a single \code{GriDiSL} option
 #'
-#' To list all \code{GriDiSL} options, just run this function without any parameters provided. To query only one value, pass the first parameter. To set that, use the \code{value} parameter too.
+#' To list all \code{GriDiSL} options, just run this function without any parameters provided. To query only one value, pass the first parameter.
+#' To set that, use the \code{value} parameter too.
 #'
-#' The arguments of \code{\link{set_all_GriDiSL_options}} list all available \code{GriDiSL} options.
 #'
-#' @param o Option name (string). See \code{\link{set_all_GriDiSL_options}}.
+#' @param o Option name (string).
 #' @param value Value to assign (optional)
 #' @export
-#' @seealso \code{\link{set_all_GriDiSL_options}}
 #' @examples \dontrun{
 #' GriDiSLOptions()
 #' GriDiSLOptions('fit.package')
@@ -81,14 +80,11 @@ print_GriDiSL_opts <- function() {
 #' To reset all options to their defaults simply run \code{set_all_GriDiSL_options()} without any parameters/arguments.
 #' @param fit.package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")
 #' @param fit.algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "SuperLearner")
-#' @param maxncats Max number of unique categories a categorical variable can have. More than these number and it is deemed continuous.
 #' @return Invisibly returns a list with old option settings.
 #' @seealso \code{\link{GriDiSLOptions}}, \code{\link{print_GriDiSL_opts}}
 #' @export
-set_all_GriDiSL_options <- function( fit.package = c("h2o", "speedglm", "glm", "brokenstick", "face"),
-                                           fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "grid", "resid_grid"),
-                                           maxncats = 20) {
-  # , "SuperLearner"
+set_all_GriDiSL_options <- function(fit.package = c("h2o", "speedglm", "glm", "brokenstick", "face"),
+                                    fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "grid", "resid_grid")) {
 
   old.opts <- gvars$opts
   fit.package <- fit.package[1L]
@@ -98,13 +94,14 @@ set_all_GriDiSL_options <- function( fit.package = c("h2o", "speedglm", "glm", "
 
   opts <- list(
     fit.package = fit.package,
-    fit.algorithm = fit.algorithm,
-    maxncats = maxncats
+    fit.algorithm = fit.algorithm
   )
+
   gvars$opts <- opts
   options(GriDiSL = opts)
   invisible(old.opts)
 }
+
 
 # returns a function (alternatively a call) that tests for missing values in (sA, sW)
 testmisfun <- function() {

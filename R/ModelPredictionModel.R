@@ -132,24 +132,31 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     BestModelFitObject = NULL,
     fit.package = character(),
     fit.algorithm = character(),
+    grid.algorithm = character(),
+
+    method = NA,             # model selection method used
+    n_obs_fit = NA_integer_, # total number of observations used for fitting the model
     model_contrl = list(),
     useH2Oframe = FALSE,
 
     # subset_vars = NULL,     # THE VAR NAMES WHICH WILL BE TESTED FOR MISSINGNESS AND WILL DEFINE SUBSETTING
-    subset_exprs = NULL,    # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
+    subset_exprs = NULL,      # THE LOGICAL EXPRESSION (ONE) TO self$subset WHICH WILL BE EVALUTED IN THE ENVIRONMENT OF THE data
     # subset_idx = NULL,      # Logical vector of length n (TRUE = include the obs)
     # subset_train = NULL,
     ReplMisVal0 = logical(),
 
     initialize = function(reg, useH2Oframe = FALSE, ...) {
+      self$method <- gvars$method # record the model selection method used ("none", "cv", "holdout")
 
       self$model_contrl <- reg$model_contrl
       self$useH2Oframe <- useH2Oframe
       self$reg <- reg
       self$runCV <- reg$runCV
       self$model_idx <- reg$model_idx
+
       self$fit.package <- reg$model_contrl$fit.package[1L]
       self$fit.algorithm <- reg$model_contrl$fit.algorithm[1L]
+      self$grid.algorithm <- reg$model_contrl$grid.algorithm[1L]
 
       assert_that(is.string(reg$outvar))
       assert_that(is.character(reg$predvars))
@@ -207,7 +214,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       subset_idx <- data$evalsubst(subset_exprs = subset_exprs)
 
-      # self$subset_train <- self$subset_idx
+      self$n_obs_fit <- length(subset_idx)
       model.fit <- self$ModelFitObject$fit(data, subset_idx = subset_idx, validation_data = validation_data, ...)
 
       # **********************************************************************
@@ -245,6 +252,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       best_reg <- RegressionClass$new(outvar = self$outvar, predvars = self$predvars, model_contrl = top_model_params)
       self$BestModelFitObject <- self$define_model_fit_object(top_model_params$fit.package, top_model_params$fit.algorithm, best_reg, useH2Oframe = self$useH2Oframe)
 
+      self$n_obs_fit <- length(subset_idx)
       model.fit <- self$BestModelFitObject$fit(data, subset_idx = subset_idx, destination_frame = "alldata_H2Oframe")
 
       if (inherits(model.fit, "try-error")) stop("refitting of the best model failed")
@@ -476,10 +484,12 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE, model_stats = FALSE, all_fits = FALSE) {
       if (print_format) {
-        cat("Model: E[" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% "]" %+% ";\\ Stratify: " %+% self$subset_exprs %+% "\n")
+        cat("model: E[" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% "]" %+% ";\\ Stratify: " %+% self$subset_exprs %+% "\n")
         cat("fit.package: " %+% self$fit.package %+% "\n")
         cat("fit.algorithm: " %+% self$fit.algorithm %+%"\n")
-        # cat("grid.algorithm: " %+% self$grid.algorithm %+%"\n")
+        cat("grid.algorithm: " %+% self$grid.algorithm %+%"\n")
+        cat("N: " %+% self$n_obs_fit %+%"\n")
+        cat("method: " %+% self$method %+%"\n")
 
         if (self$is.fitted && model_stats) self$ModelFitObject$show(all_fits = all_fits)
 
