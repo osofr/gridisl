@@ -2,9 +2,24 @@
 % Please edit documentation in R/summaryS3methods.R
 \name{print_tables}
 \alias{print_tables}
+\alias{print_tables.GLMmodel}
+\alias{print_tables.H2OBinomialModel}
+\alias{print_tables.H2ORegressionModel}
+\alias{print_tables.brokenstick}
+\alias{print_tables.face.sparse}
 \title{S3 methods for printing model fit summaries as pander tables}
 \usage{
 print_tables(model, only.coefs = FALSE, ...)
+
+\method{print_tables}{face.sparse}(model, only.coefs = FALSE, ...)
+
+\method{print_tables}{brokenstick}(model, only.coefs = FALSE, ...)
+
+\method{print_tables}{H2OBinomialModel}(model, only.coefs = FALSE, ...)
+
+\method{print_tables}{H2ORegressionModel}(model, only.coefs = FALSE, ...)
+
+\method{print_tables}{GLMmodel}(model, only.coefs = FALSE, ...)
 }
 \arguments{
 \item{model}{The model fit object produced by \code{get_fit} function.}

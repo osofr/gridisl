@@ -202,12 +202,14 @@ summary.H2ORegressionModel <- function(h2o.model, only.coefs = FALSE, ...) {
 #' @export
 print_tables <- function(model, only.coefs = FALSE, ...) { UseMethod("print_tables") }
 
-
+#' @rdname print_tables
+#' @export
 print_tables.face.sparse <- function(model, only.coefs = FALSE, ...) {
-  cat("face OBJECTS DO NOT PROVIDE ANY MODEL SUMMARY OUTPUT")
+  cat("...face objects do not provide any model summary output...")
 }
 
-#' S3 methods for printing model fit summaries for brokenstick class
+#' @rdname print_tables
+#' @export
 print_tables.brokenstick <- function(model, only.coefs = FALSE, ...) {
   old.opt <- pander::panderOptions('knitr.auto.asis')
   pander::panderOptions('knitr.auto.asis', TRUE)
@@ -216,33 +218,23 @@ print_tables.brokenstick <- function(model, only.coefs = FALSE, ...) {
   return(invisible(NULL))
 }
 
-#' S3 methods for printing model fit summaries for H2OBinomialModel class
-#'
-#' Used internally to prints the modeling summary stats for reporting (see \code{\link{make_report_rmd}}).
-#' @param model The model fit object produced by \code{get_fit} function.
-#' @param only.coefs Set to \code{TRUE} to only print the table of coefficients (when using \code{fit.algorithm = "glm"}) and
-#' omit all other model-related output statistics.
-#' @param ... Additional options passed on to \code{summary(...)}.
-#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary(...)}.
+#' @rdname print_tables
 #' @export
 print_tables.H2OBinomialModel <- function(model, only.coefs = FALSE, ...) {
   cat(paste(summary(model, only.coefs, ...), collapse = '\n'))
 }
 
-#' S3 methods for printing model fit summaries for H2ORegressionModel class
-#'
-#' Used internally to prints the modeling summary stats for reporting (see \code{\link{make_report_rmd}}).
-#' @param model The model fit object produced by \code{get_fit} function.
-#' @param only.coefs Set to \code{TRUE} to only print the table of coefficients (when using \code{fit.algorithm = "glm"}) and
-#' omit all other model-related output statistics.
-#' @param ... Additional options passed on to \code{summary(...)}.
-#' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary(...)}.
+#' @rdname print_tables
 #' @export
 print_tables.H2ORegressionModel <- function(model, only.coefs = FALSE, ...) {
   cat(paste(summary(model, only.coefs, ...), collapse = '\n'))
 }
 
-
+#' @rdname print_tables
+#' @export
+print_tables.GLMmodel <- function(model, only.coefs = FALSE, ...) {
+  cat(paste(summary(model, only.coefs, ...), collapse = '\n'))
+}
 
 CVmetrics_H2Obasemodel <- function(basemodelfit) {
   # out <- NULL
