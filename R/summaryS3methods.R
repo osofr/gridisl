@@ -191,6 +191,11 @@ summary.H2ORegressionModel <- function(h2o.model, only.coefs = FALSE, ...) {
   return(out)
 }
 
+#' @rdname summary.H2ORegressionModel
+#' @export
+summary.H2OBinomialModel <- function(h2o.model, only.coefs = FALSE, ...) summary.H2ORegressionModel(h2o.model, only.coefs, ...)
+
+
 #' S3 methods for printing model fit summaries as pander tables
 #'
 #' Used internally to prints the modeling summary stats for reporting (see \code{\link{make_report_rmd}}).

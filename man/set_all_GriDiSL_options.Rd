@@ -4,9 +4,9 @@
 \alias{set_all_GriDiSL_options}
 \title{Setting \code{GriDiSL} Options}
 \usage{
-set_all_GriDiSL_options(fit.package = c("h2o", "speedglm", "glm",
+set_all_GriDiSL_options(fit.package = c("speedglm", "glm", "h2o", "xgboost",
   "brokenstick", "face"), fit.algorithm = c("glm", "gbm", "randomForest",
-  "deeplearning", "grid", "resid_grid"))
+  "drf", "deeplearning", "grid", "resid_grid"))
 }
 \arguments{
 \item{fit.package}{Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")}

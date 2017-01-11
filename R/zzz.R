@@ -14,8 +14,8 @@ gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$toler
 gvars$sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 gvars$noCENScat <- 0L       # the reference category that designates continuation of follow-up
 
-allowed.fit.package <- c("speedglm", "glm", "h2o", "xgboost")
-allowed.fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "grid", "resid_grid")
+allowed.fit.package <- c("speedglm", "glm", "h2o", "xgboost", "brokenstick", "face")
+allowed.fit.algorithm = c("glm", "gbm", "randomForest", "drf", "deeplearning", "grid", "resid_grid")
 allowed.bin.method = c("equal.mass", "equal.len", "dhist")
 
 #' Querying/setting a single \code{GriDiSL} option
@@ -83,8 +83,8 @@ print_GriDiSL_opts <- function() {
 #' @return Invisibly returns a list with old option settings.
 #' @seealso \code{\link{GriDiSLOptions}}, \code{\link{print_GriDiSL_opts}}
 #' @export
-set_all_GriDiSL_options <- function(fit.package = c("h2o", "speedglm", "glm", "brokenstick", "face"),
-                                    fit.algorithm = c("glm", "gbm", "randomForest", "deeplearning", "grid", "resid_grid")) {
+set_all_GriDiSL_options <- function(fit.package = c("speedglm", "glm", "h2o", "xgboost", "brokenstick", "face"),
+                                    fit.algorithm = c("glm", "gbm", "randomForest", "drf", "deeplearning", "grid", "resid_grid")) {
 
   old.opts <- gvars$opts
   fit.package <- fit.package[1L]

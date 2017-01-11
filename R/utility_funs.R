@@ -17,6 +17,9 @@ is.PredictionModel <- function(PredictionModel) "PredictionModel"%in%class(Predi
 is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(PredictionStack)
 is.ModelStack <- function(obj) "ModelStack" %in% class(obj)
 
+#-----------------------------------------------------------------------------
+# Capture the arguments passed on as ... in a list
+#-----------------------------------------------------------------------------
 capture.exprs <- function(...) {
   # sVar.exprs <- eval(substitute(alist(...)))
   sVar.exprs <- list(...)
@@ -26,6 +29,7 @@ capture.exprs <- function(...) {
   }
   return(sVar.exprs)
 }
+
 # ---------------------------------------------------------------------------------------
 #' Define and fit growth models evaluated on holdout observations.
 #'
