@@ -67,8 +67,9 @@ RegressionClass <- R6Class("RegressionClass",
         if (!is.ModelStack(model_contrl) && (any(is.null(names(model_contrl))) || any(names(model_contrl) %in% ""))) stop("all items in list 'model_contrl' must be named")
       }
 
-      if (!"fit.package" %in% names(self$model_contrl)) self$model_contrl[['fit.package']] <- getopt("fit.package")
-      if (!"fit.algorithm" %in% names(self$model_contrl)) self$model_contrl[['fit.algorithm']] <- getopt("fit.algorithm")
+      # if (!"fit.package" %in% names(self$model_contrl)) self$model_contrl[['fit.package']] <- getopt("fit.package")
+      # if (!"fit.algorithm" %in% names(self$model_contrl)) self$model_contrl[['fit.algorithm']] <- getopt("fit.algorithm")
+
       self$model_contrl <- model_contrl
 
       return(self)

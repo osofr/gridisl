@@ -56,12 +56,12 @@ GriDiSLOptions <- function (o, value)  {
   }
 }
 
-getopt <- function(optname) {
-  return(GriDiSLOptions(o = optname))
-  # opt <- gvars$opts
-  # if (!(optname %in% (names(opt)))) stop(optname %+% ": this options does not exist")
-  # return(opt[[optname]])
-}
+# getopt <- function(optname) {
+#   return(GriDiSLOptions(o = optname))
+#   # opt <- gvars$opts
+#   # if (!(optname %in% (names(opt)))) stop(optname %+% ": this options does not exist")
+#   # return(opt[[optname]])
+# }
 
 #' Print Current Option Settings for \code{GriDiSL}
 #' @return Invisibly returns a list of \code{GriDiSL} options.

@@ -42,30 +42,30 @@ fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DT
 ## ---------------------------------------------------------------------
 # Detecting vector types: sVartypes <- list(bin = "binary", cat = "categor", cont = "contin")
 ## ---------------------------------------------------------------------
-detect.col.types <- function(sVar_mat){
-  detect_vec_type <- function(vec) {
-    vec_nomiss <- vec[!gvars$misfun(vec)]
-    nvals <- length(unique(vec_nomiss))
-    if (nvals <= 2L) {
-      sVartypes$bin
-    } else if ((nvals <= maxncats) && (is.integerish(vec_nomiss))) {
-      sVartypes$cat
-    } else {
-      sVartypes$cont
-    }
-  }
-  assert_that(is.integerish(getopt("maxncats")) && getopt("maxncats") > 1)
-  maxncats <- getopt("maxncats")
-  sVartypes <- gvars$sVartypes
+# detect.col.types <- function(sVar_mat){
+#   detect_vec_type <- function(vec) {
+#     vec_nomiss <- vec[!gvars$misfun(vec)]
+#     nvals <- length(unique(vec_nomiss))
+#     if (nvals <= 2L) {
+#       sVartypes$bin
+#     } else if ((nvals <= maxncats) && (is.integerish(vec_nomiss))) {
+#       sVartypes$cat
+#     } else {
+#       sVartypes$cont
+#     }
+#   }
+#   assert_that(is.integerish(getopt("maxncats")) && getopt("maxncats") > 1)
+#   maxncats <- getopt("maxncats")
+#   sVartypes <- gvars$sVartypes
 
-  if (is.matrix(sVar_mat)) { # for matrix:
-    return(as.list(apply(sVar_mat, 2, detect_vec_type)))
-  } else if (is.data.table(sVar_mat)) { # for data.table:
-    return(as.list(sVar_mat[, lapply(.SD, detect_vec_type)]))
-  } else {
-    stop("unrecognized sVar_mat class: " %+% class(sVar_mat))
-  }
-}
+#   if (is.matrix(sVar_mat)) { # for matrix:
+#     return(as.list(apply(sVar_mat, 2, detect_vec_type)))
+#   } else if (is.data.table(sVar_mat)) { # for data.table:
+#     return(as.list(sVar_mat[, lapply(.SD, detect_vec_type)]))
+#   } else {
+#     stop("unrecognized sVar_mat class: " %+% class(sVar_mat))
+#   }
+# }
 
 #-----------------------------------------------------------------------------
 # DataStorageClass CLASS:
@@ -101,7 +101,7 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
 
       if (!missing(YnodeVals)) self$addYnode(YnodeVals = YnodeVals, det.Y = det.Y)
 
-      self$def.types.sVar() # Define the type of each sVar[i]: bin, cat or cont
+      # self$def.types.sVar() # Define the type of each sVar[i]: bin, cat or cont
 
       invisible(self)
     },
@@ -236,25 +236,25 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
     # Methods for sVar types. Define the type (class) of each variable (sVar) in input data: gvars$sVartypes$bin,  gvars$sVartypes$cat or gvars$sVartypes$cont
     # --------------------------------------------------
     # type.sVar acts as a flag: only detect types when !is.null(type.sVar), otherwise can pass type.sVar = list(sVar = NA, ...) or a value type.sVar = NA/gvars$sVartypes$bin/etc
-    def.types.sVar = function(type.sVar = NULL) {
-      if (is.null(type.sVar)) {
-        private$.type.sVar <- detect.col.types(self$dat.sVar)
-      } else {
-        n.sVar <- length(self$names.sVar)
-        len <- length(type.sVar)
-        assert_that((len == n.sVar) || (len == 1L))
-        if (len == n.sVar) { # set types for each variable
-          assert_that(is.list(type.sVar))
-          assert_that(all(names(type.sVar) %in% self$names.sVar))
-        } else { # set one type for all vars
-          assert_that(is.string(type.sVar))
-          type.sVar <- as.list(rep(type.sVar, n.sVar))
-          names(type.sVar) <- self$names.sVar
-        }
-        private$.type.sVar <- type.sVar
-      }
-      invisible(self)
-    },
+    # def.types.sVar = function(type.sVar = NULL) {
+    #   if (is.null(type.sVar)) {
+    #     private$.type.sVar <- detect.col.types(self$dat.sVar)
+    #   } else {
+    #     n.sVar <- length(self$names.sVar)
+    #     len <- length(type.sVar)
+    #     assert_that((len == n.sVar) || (len == 1L))
+    #     if (len == n.sVar) { # set types for each variable
+    #       assert_that(is.list(type.sVar))
+    #       assert_that(all(names(type.sVar) %in% self$names.sVar))
+    #     } else { # set one type for all vars
+    #       assert_that(is.string(type.sVar))
+    #       type.sVar <- as.list(rep(type.sVar, n.sVar))
+    #       names(type.sVar) <- self$names.sVar
+    #     }
+    #     private$.type.sVar <- type.sVar
+    #   }
+    #   invisible(self)
+    # },
 
     set.sVar.type = function(name.sVar, new.type) { private$.type.sVar[[name.sVar]] <- new.type },
     get.sVar.type = function(name.sVar) { if (missing(name.sVar)) { private$.type.sVar } else { private$.type.sVar[[name.sVar]] } },
