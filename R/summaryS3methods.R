@@ -12,11 +12,13 @@ NULL
 #' If you would want to catch the result instead, then call \code{pander_return} instead.
 #' @export
 pander.H2OBinomialMetrics <- function(H2OBinomialMetricsObject, type) {
+
   h2o_metrics <- H2OBinomialMetricsObject@metrics
-  # modelID <- h2o_metrics$model$name
+  modelID <- h2o_metrics$model$name
   categor <- h2o_metrics$model_category
   # metricsDF <- t(data.frame(h2o_metrics[names(h2o_metrics) %in% c("nobs", "MSE", "RMSE", "mean_residual_deviance", "mae", "rmsle", "logloss", "AUC", "Gini")]))
-  metricsDF <- t(data.frame(h2o_metrics[names(h2o_metrics) %in% c("nobs", "MSE", "RMSE", "r2", "mean_residual_deviance", "mae", "rmsle", "logloss", "AUC", "Gini")]))
+  metricsDF <- t(data.frame(h2o_metrics[names(h2o_metrics) %in% c("nobs", "MSE", "RMSE", "r2", "logloss", "AUC", "mean_residual_deviance", "mae", "rmsle", "Gini")]))
+
   metricsDF <- data.frame(metric = rownames(metricsDF), value = as.numeric(metricsDF[,1]), stringsAsFactors = FALSE)
 
   if (H2OBinomialMetricsObject@algorithm == "glm") {
@@ -127,7 +129,7 @@ summary.H2ORegressionModel <- function(h2o.model, only.coefs = FALSE, ...) {
   # -----------------------------------------------------------------
   # coef_summary_out <- summary.GLMmodel(model.fit, format_table)
   if (!is.null(h2o.model@model$coefficients_table)) {
-    coef_summary_out <- pander_return(h2o.model@model$coefficients_table, caption = attributes(h2o.model@model$coefficients_table)$description)
+    coef_summary_out <- pander::pander_return(h2o.model@model$coefficients_table, caption = attributes(h2o.model@model$coefficients_table)$description)
     out <- c(out, coef_summary_out)
   }
 
@@ -227,12 +229,14 @@ print_tables.brokenstick <- function(model, only.coefs = FALSE, ...) {
 #' @export
 print_tables.H2OBinomialModel <- function(model, only.coefs = FALSE, ...) {
   cat(paste(summary(model, only.coefs, ...), collapse = '\n'))
+  # paste(summary(model, only.coefs, ...), collapse = '\n')
 }
 
 #' @rdname print_tables
 #' @export
 print_tables.H2ORegressionModel <- function(model, only.coefs = FALSE, ...) {
   cat(paste(summary(model, only.coefs, ...), collapse = '\n'))
+  # paste(summary(model, only.coefs, ...), collapse = '\n')
 }
 
 #' @rdname print_tables
