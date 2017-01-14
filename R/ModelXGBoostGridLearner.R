@@ -61,8 +61,10 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
       ## Test models based on holdout validation data
       if (!is.null(validation_data)) {
         watchlist <- list(train = data, test = validation_data)
+        order_metric_type <- "test"
       } else {
-        watchlist <- list(test = data)
+        watchlist <- list(train = data)
+        order_metric_type <- "train"
       }
 
       model_fit <- xgboost::xgb.train(params, data, as.integer(nrounds), watchlist,
@@ -72,6 +74,7 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
 
     } else {
 
+      order_metric_type <- "test"
       ## Test models via V-fold cross-validation
       model_fit <- xgboost::xgb.cv(params, data, nrounds, nfold, label, missing,
                                    prediction, showsd, metrics, obj,
@@ -123,8 +126,8 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   gs <- data.table::as.data.table(gs)
 
 
-  ## Sort the data.table with grid model fits by user-supplied test metric value (lowest to highest)
-  if (!is.null(order_metric_name)) data.table::setkeyv(gs, cols = "test_"%+%order_metric_name%+%ifelse(runCV, "_mean", ""))
+  ## Sort the data.table with grid model fits by user-supplied test/train metric value (lowest to highest)
+  if (!is.null(order_metric_name)) data.table::setkeyv(gs, cols = order_metric_type %+% "_" %+% order_metric_name %+% ifelse(runCV, "_mean", ""))
 
   print("grid fits ordered by test metric (lowest to highest):"); print(gs)
   # print(gs, topn = 5, nrows = 10, class = TRUE)
