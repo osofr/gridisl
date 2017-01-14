@@ -30,11 +30,12 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   if (!missing(nfold)) stop("For model evaluation via cross-validation please specify the argument 'folds'; use of 'nfold' argument is not allowed here.")
   if (!is.null(validation_data) && !is.null(folds)) stop("Cannot use validation_data and folds at the same time.")
 
-  runCV <- FALSE # by default runs xgb.train, if validation data is provided it will be used as a test metric
+  runCV <- FALSE ## by default runs xgb.train, if validation data is provided it will be used as a test metric
   if (is.null(validation_data) && !is.null(folds)) runCV <- TRUE
 
   if ( missing(search_criteria) || is.null(search_criteria) ) search_criteria <- list(strategy = 'Cartesian')
   strategy <- search_criteria[["strategy"]]
+
   if ( is.null(strategy) || strategy %in% "Cartesian" ) {
     random <- FALSE
   } else if ( strategy %in% "RandomDiscrete" ) {
@@ -43,10 +44,22 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
     stop("Strategy must be either 'Cartesian' or 'RandomDiscrete'.")
   }
 
+  if ( !runCV ) {
+    ## Test models based on holdout validation data
+    if (!is.null(validation_data)) {
+      watchlist <- list(train = data, test = validation_data)
+      order_metric_type <- "test"
+    } else {
+      watchlist <- list(train = data)
+      order_metric_type <- "train"
+    }
+  } else {
+    order_metric_type <- "test"
+  }
+
   run_singe_model <- function(...) {
     params <- list(...)
     if (length(add_args) > 0) params <- c(params, add_args)
-    # browser()
 
     ## 1. Explicit use of the cb.evaluation.log callback allows to run xgb.train / xgb.cv silently but still storing the evaluation results
     ## 2. Early stopping: Can directly specify which validation metric should be used for early stopping.
@@ -57,24 +70,11 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
     #                                                  verbose = verbose)
 
     if (!runCV) {
-
-      ## Test models based on holdout validation data
-      if (!is.null(validation_data)) {
-        watchlist <- list(train = data, test = validation_data)
-        order_metric_type <- "test"
-      } else {
-        watchlist <- list(train = data)
-        order_metric_type <- "train"
-      }
-
       model_fit <- xgboost::xgb.train(params, data, as.integer(nrounds), watchlist,
                                       obj, feval, verbose, print_every_n, early_stopping_rounds, maximize,
                                       callbacks = c(list(xgboost::cb.evaluation.log()), callbacks),
                                       eval_metric = metrics, maximize = maximize)
-
     } else {
-
-      order_metric_type <- "test"
       ## Test models via V-fold cross-validation
       model_fit <- xgboost::xgb.cv(params, data, nrounds, nfold, label, missing,
                                    prediction, showsd, metrics, obj,
@@ -84,7 +84,6 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
                                    maximize,
                                    callbacks = c(list(xgboost::cb.evaluation.log()), callbacks)
                                    )
-
     }
     return(model_fit)
   }
@@ -93,13 +92,13 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   gs <- hyper_params %>% purrr::cross_d()
   if (nrow(gs) == 0L) gs <- data.frame(placeholder = TRUE)
 
-  ## shuffle the rows to obtain random ordering of hyper-parameters
+  ## Shuffle the rows to obtain random ordering of hyper-parameters
   if (random) {
     set.seed(seed)
     gs <- gs[sample.int(nrow(gs)), ]
   }
 
-  ## select the max number of models for the grid
+  ## Select the max number of models for the grid
   max_models <- search_criteria[["max_models"]]
   if (!is.null(max_models) && nrow(gs) > max_models) gs <- gs[1:max_models, ]
 
@@ -124,7 +123,6 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   # gs <- gs %>% arrange_("test_"%+%metric_used%+%"_mean") %>% data.table::as.data.table()
 
   gs <- data.table::as.data.table(gs)
-
 
   ## Sort the data.table with grid model fits by user-supplied test/train metric value (lowest to highest)
   if (!is.null(order_metric_name)) data.table::setkeyv(gs, cols = order_metric_type %+% "_" %+% order_metric_name %+% ifelse(runCV, "_mean", ""))
