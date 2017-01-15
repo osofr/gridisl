@@ -2,7 +2,7 @@
 % Please edit documentation in R/summaryS3methods.R
 \name{summary.GLMmodel}
 \alias{summary.GLMmodel}
-\title{S3 methods for getting model fit summary for glmfit class object}
+\title{S3 methods for fit summary for glmfit class}
 \usage{
 \method{summary}{GLMmodel}(model.fit, format_table = TRUE, ...)
 }

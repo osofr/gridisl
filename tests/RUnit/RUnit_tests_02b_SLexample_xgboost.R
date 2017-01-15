@@ -2,11 +2,22 @@
 ## test xgboost GLM learner / GBM Grid, no model scoring (no cv or holdout), just fit all models
 ## ------------------------------------------------------------------------------------
 test.XGBoost.simple <- function() {
-  options(GriDiSL.verbose = FALSE)
+  options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   cpp <- data.table::data.table(cpp)
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  params <- defLearner(estimator = "xgboost__glm", family = "gaussian", nrounds = 5000, early_stopping_rounds = 2)
+  mfit_xgb1 <- fit(params, method = "none", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                  data = cpp)
+
+  # model_obj <- mfit_xgb1$get_best_models()[[1]]
+  # print_tables(model_obj)
+  # str(mfit_xgb1$get_best_models()[[1]])
+  # model_obj$call
+  # model_obj$params
+  # model_obj$evaluation_log
 
   hyper_params = list(eta = c(0.3, 0.1,0.01),
                       max_depth = c(4,6,8,10),
@@ -47,6 +58,22 @@ test.XGBoost.GLM <- function() {
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  params_glm <- defLearner(estimator = "xgboost__glm", family = "gaussian",
+                           eta = 1.7, nrounds = 1000,
+                           alpha = 0.3, lambda = 0.1,
+                           seed = 123456)
+  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  mfit_cv <- fit(params_glm, method = "cv", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                 data = cpp_folds, fold_column = "fold")
+
+  # model_obj <- mfit_cv$get_best_models()[[1]]
+  # class(model_obj)
+  # print_tables(model_obj)
+  # str(model_obj)
+  # model_obj$call
+  # model_obj$params
+  # model_obj$evaluation_log
 
   params_glm <- defLearner(estimator = "xgboost__glm", family = "gaussian",
                            eta = 1.7, nrounds = 1000,

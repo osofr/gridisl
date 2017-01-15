@@ -77,7 +77,7 @@ print.GLMmodel <- function(model.fit, ...) {
   cat(paste(model.summary, collapse = '\n'))
 }
 
-#' S3 methods for getting model fit summary for glmfit class object
+#' S3 methods for fit summary for glmfit class
 #'
 #' Prints the modeling summary for the GLM fit (\code{stats::glm.fit} or \code{speedglm::speedglm.wfit})
 #' @param model.fit The model fit object produced by functions stremr:::glmfit.glm or stremr:::glmfit.speedglm
@@ -109,7 +109,106 @@ summary.GLMmodel <- function(model.fit, format_table = TRUE, ...) {
   out
 }
 
-#' S3 methods for getting model fit summary for H2ORegressionModel class object
+#' S3 methods for fit summary from xgboost
+#'
+#' Prints the modeling summary for the xgboost model fit (see \code{xgboost} R package).
+#' @param xgb.model The model fit object produced by xgboost (and extracted with \code{getmodel_byname}).
+#' @param ... Additional options (not used)
+#' @return The markdown-formated model summary returned by \code{pander::pander_return}.
+#' @export
+summary.xgb.Booster <- function(xgb.model, ...) {
+  out <- NULL
+
+  out <- c(out,
+          pander::pander_return(data.frame(function_call = as.character(xgb.model$call)[1], row.names = NULL))
+          )
+
+  # -----------------------------------------------------------------
+  # some basic model info:
+  # -----------------------------------------------------------------
+  # coef_summary_out <- summary.GLMmodel(model.fit, format_table)
+  # if (!is.null(xgb.model@model$coefficients_table)) {
+  #   coef_summary_out <- pander::pander_return(xgb.model@model$coefficients_table, caption = attributes(xgb.model@model$coefficients_table)$description)
+  #   out <- c(out, coef_summary_out)
+  # }
+
+  # if (!only.coefs) {
+    # -----------------------------------------------------------------
+    # model summary:
+    # -----------------------------------------------------------------
+    # model_summary <- xgb.model@model$model_summary
+    # caption_summary <- attributes(model_summary)$header %+% " (Model ID: " %+% modelID %+%")"
+    # model_summary_out <- pander::pander_return(model_summary, caption = caption_summary)
+    # out <- c(out, model_summary_out)
+
+    # out <- c(out, pander::pander_return(model_obj$call))
+
+    # -----------------------------------------------------------------
+    # model parameters:
+    # -----------------------------------------------------------------
+    # covars <- paste0(xgb.model@parameters$x, collapse = ",")
+    # predictors <- pander::pander_return(data.frame(predictors = covars))
+    # out <- c(out, predictors)
+
+    params <- xgb.model$params
+    params <- lapply(params, function(arg) if (length(arg) > 1) {paste0(arg, collapse = ",")} else {arg})
+    all_params <- t(data.frame(params))
+    all_params <- data.frame(parameter = rownames(all_params), value = all_params[,1], stringsAsFactors = FALSE, row.names = NULL)
+    all_params_pander <- pander::pander_return(all_params, caption  = "Model Parameters", justify = c('left', 'center'))
+    out <- c(out, all_params_pander)
+
+    training_stats = data.frame(name = c("best_iteration", "best_ntreelimit", "niter"),
+                                value = c(xgb.model$best_iteration, xgb.model$best_ntreelimit, xgb.model$niter))
+    training_stats_out <- pander::pander_return(training_stats, caption  = "Model Training Stats")
+    out <- c(out, training_stats_out)
+
+    # -----------------------------------------------------------------
+    # model metrics (training and validation):
+    # -----------------------------------------------------------------
+    if (!is.null(xgb.model$best_score)) {
+      metric_name <- attr(xgb.model$best_score, "names")
+      performance <- data.frame(metric_name = metric_name, best_score = xgb.model$best_score)
+      performance_out <- pander::pander_return(performance, caption  = "Model Performance")
+      out <- c(out, performance_out)
+    }
+
+    metrics <- xgb.model$evaluation_log
+    if (nrow(metrics) > 10) metrics <- metrics[c(1:5, (nrow(metrics)-4):nrow(metrics)), ]
+    model_metrics_out <- pander::pander_return(metrics, caption  = "Model Performance By Iteration")
+    out <- c(out, model_metrics_out)
+
+    # -----------------------------------------------------------------
+    # validation data metrics:
+    # -----------------------------------------------------------------
+    # H2OBinomialMetrics_val <- xgb.model@model$validation_metrics
+    #   if (!is.null(H2OBinomialMetrics_val@metrics)) {
+    #   valid_model_metrics_out <- pander::pander_return(H2OBinomialMetrics_val, type = "Validation")
+    #   out <- c(out, valid_model_metrics_out)
+    # }
+
+    # -----------------------------------------------------------------
+    # cross validation data metrics:
+    # -----------------------------------------------------------------
+    # H2OBinomialMetrics_xval <- xgb.model@model$cross_validation_metrics
+    # if (!is.null(H2OBinomialMetrics_xval@metrics)) {
+    #   xval_model_metrics_out <- pander::pander_return(H2OBinomialMetrics_xval, type = "Cross-validation")
+    #   out <- c(out, xval_model_metrics_out)
+    # }
+
+    # -----------------------------------------------------------------
+    # variable importance:
+    # -----------------------------------------------------------------
+
+  # }
+
+  return(out)
+}
+
+#' @rdname summary.xgb.Booster
+#' @export
+summary.xgb.cv.synchronous <- function(xgb.model, ...) summary.xgb.Booster(xgb.model, ...)
+
+#' S3 methods for fit summary for h2o
 #'
 #' Prints the modeling summary for the h2o model fit (see \code{h2o} R package).
 #' @param h2o.model The model fit object produced by h2o (and extracted with \code{getmodel_byname}).
@@ -224,6 +323,18 @@ print_tables.brokenstick <- function(model, only.coefs = FALSE, ...) {
   pander::panderOptions('knitr.auto.asis', old.opt)
   return(invisible(NULL))
 }
+
+
+#' @rdname print_tables
+#' @export
+print_tables.xgb.Booster <- function(model, only.coefs = FALSE, ...) {
+  cat(paste(summary(model, only.coefs, ...), collapse = '\n'))
+  # paste(summary(model, only.coefs, ...), collapse = '\n')
+}
+#' @rdname print_tables
+#' @export
+print_tables.xgb.cv.synchronous <- function(model, only.coefs = FALSE, ...) print_tables.xgb.Booster(model, only.coefs, ..)
+
 
 #' @rdname print_tables
 #' @export

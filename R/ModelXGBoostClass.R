@@ -108,8 +108,7 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   ## These defaults can be over-ridden in model_contrl
   # ********************************************************************************
   mainArgs <- list(data = train_data,
-                   nrounds = 100,
-                   # nrounds = 1000,
+                   nrounds = 100, # nrounds = 1000,
                    # early_stopping_rounds = 10,
                    # metrics = list(evalMSEerror),
                    # order_metric_name = "RMSE",
@@ -136,45 +135,27 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
     if (grid.algorithm %in% "glm") {
 
       mainArgs[["booster"]] <- "gblinear"
+
+      ## *** Enabling this callback implies that its no longer possible to use CV to find best params for regularized regression ***
       ## Call-back for early stopping based on training error, must be added before other callbacks
-      # if (!is.null(early_stopping_rounds) && (params[["booster"]] == "gblinear")) {
-      early_stop_ontrain <- xgboost::cb.early.stop(stopping_rounds = 5, maximize = FALSE, metric_name = "train-rmse", verbose = gvars$verbose)
-      # callbacks <- c(early_stop_ontrain, callbacks)
-      mainArgs[["callbacks"]] <- early_stop_ontrain
-      # early_stopping_rounds <- NULL
-      # params[["eta"]] <- 0.5
-      ## set nrounds to 100 like in
-      # h2o.glm defaults: [max_iterations = 100; score_each_iteration = FALSE; early_stopping = TRUE, obj_eps = 0.000001]
-      ## nrounds <- 1000
-      # }
+      ## h2o.glm defaults: [max_iterations = 100; score_each_iteration = FALSE; early_stopping = TRUE, obj_eps = 0.000001]
+
+      # early_stop_ontrain <- xgboost::cb.early.stop(stopping_rounds = 5, maximize = FALSE, metric_name = "train-rmse", verbose = gvars$verbose)
+      # mainArgs[["callbacks"]] <- early_stop_ontrain
 
     } else if (grid.algorithm %in% "gbm") {
 
       mainArgs[["booster"]] <- "gbtree"
-    } else if (grid.algorithm %in% "drf") {
+    } else if (any(grid.algorithm %in% c("drf", "randomForest"))) {
 
       mainArgs[["booster"]] <- "gbtree"
-      # browser()
-
-      # stop("drf w/ xgboost is not implemented")
-      # # random forest with xgboost
-      # system.time({
-      #   # n_proc <- detectCores()
-      #   md <- xgboost(data = X_train, label = ifelse(d_train$dep_delayed_15min=='Y',1,0),
-      #                  nthread = n_proc, nround = 1,
-      #                  # max_depth = 20,
-      #                  num_parallel_tree = 500, subsample = 0.632,
-      #                  colsample_bytree = 1/sqrt(length(X_train@x)/nrow(X_train)))
-
-
       if (!is.null(model_contrl[["nrounds"]])) {
         mainArgs[["num_parallel_tree"]] <- model_contrl[["nrounds"]]
       } else {
         mainArgs[["num_parallel_tree"]] <- mainArgs[["nrounds"]]
       }
-      ## Important to set nrounds to 1
+      ## Important to set nrounds to 1 for RandomForest
       model_contrl[["nrounds"]] <- 1
-      # mainArgs[["nrounds"]] <- 1
       mainArgs[["subsample"]] <- 0.632
       mainArgs[["colsample_bytree"]] <- 1/sqrt(ncol(train_data)) #/nrow(train_data)
 
@@ -190,6 +171,7 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   ## ******** fold_column is already CONVERTED TO INTERNAL xgboost representation ********
   if (!is.null(fold_column)) {
     mainArgs[["folds"]] <- fold_column
+
     ## callback that saves the CV models (and out-of-sample / holdout predictions)
     ## -----------------------------------------------------------------
     ## ********* SAVING CV PREDICTIONS / MODELS -- IMPORTANT *********
@@ -200,6 +182,7 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
     ## thus it must be run after the early stopping callback if the early stopping is used.
     ## Callback function expects the following values to be set in its calling frame:
     ## bst_folds, basket, data, end_iteration, params, num_parallel_tree, num_class.
+
     if (is.null(mainArgs[["callbacks"]])){
       mainArgs[["callbacks"]] <- list(xgboost::cb.cv.predict(save_models = TRUE))
     } else {
@@ -219,13 +202,7 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
     #   algo_fun_name %+%
     #   "' by defining a SuperLearner params list item named '" %+% grid.algorithm %+% "'")
 
-  # if (!is.null(grid_params[["search_criteria"]])) {
-  #   search_criteria <- grid_params[["search_criteria"]]
-  #   grid_params[["search_criteria"]] <- NULL
-  # } else {
   search_criteria <- model_contrl[["search_criteria"]]
-  # }
-
   mainArgs[["hyper_params"]] <- grid_params
   mainArgs[["search_criteria"]] <- search_criteria
 
@@ -246,9 +223,6 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   ## Remove any args from mainArgs that also appear in hyper_params:
   common_hyper_args <- intersect(names(mainArgs), names(mainArgs[["hyper_params"]]))
   if(length(common_hyper_args) > 0) mainArgs <- mainArgs[!(names(mainArgs) %in% common_hyper_args)]
-
-  ## TO DO: What if 'params' is specified as part of model_contrl?
-  ##        replace existing items in params with those in grid_params Intersect?
 
   ## Will put all fitted models in a single list for stacking:
   fitted_models_all <- NULL
@@ -278,6 +252,7 @@ fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_colum
   ngridmodels <- length(fitted_models_all)
   model_algorithms <- model_ids <- vector(mode = "list", length = length(fitted_models_all))
   model_algorithms[] <- "xgb"
+
   # model_ids <- lapply(fitted_models_all, function(model) model@model_id)
   # Assign names to each grid model, keep individual learner names intact (unless a $name arg was passed by the user):
   GRIDmodel_names <- "grid." %+% unlist(model_algorithms) %+% "." %+% (1:ngridmodels)
@@ -286,8 +261,6 @@ fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_colum
     GRIDmodel_names <- "m." %+% params$model_idx %+% "." %+% GRIDmodel_names
 
   model_names <- c(GRIDmodel_names)
-  # learner_names <- names(fitted_models_all)[-(1:ngridmodels)]
-  # model_names <- c(GRIDmodel_names, learner_names)
 
   if (!is.null(model_contrl$name))  model_names <- model_names %+% "." %+% model_contrl$name
   names(fitted_models_all) <- names(model_algorithms) <- names(model_ids) <- model_names
@@ -303,26 +276,6 @@ fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_colum
     model_ids = model_ids
     # top_grid_models = top_grid_models,
     )
-
-  # ...
-  # fit <- list(params = params,
-  #             fitted_gridDT = fitted_gridDT,
-  #             grid_ids = lapply(fitted_gridDT, function(grids_object) grids_object@grid_id),
-  #             ngridmodels = ngridmodels,
-  #             model_algorithms = model_algorithms,
-  #             model_ids = model_ids,
-  #             top_grid_models = top_grid_models,
-  #             fitted_models_all = fitted_models_all)
-  #   fit <- list(
-  #   params = params,
-  #   fitted_gridDT = fitted_gridDT,
-  #   grid_ids = lapply(fitted_gridDT, function(grids_object) grids_object@grid_id),
-  #   ngridmodels = ngridmodels,
-  #   model_algorithms = model_algorithms,
-  #   model_ids = model_ids,
-  #   top_grid_models = top_grid_models,
-  #   fitted_models_all = fitted_models_all
-  #   )
 
   class(fit) <- c(class(fit)[1], c("XGBoostgrid"))
   return(fit)

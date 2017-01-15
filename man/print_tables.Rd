@@ -7,6 +7,8 @@
 \alias{print_tables.H2ORegressionModel}
 \alias{print_tables.brokenstick}
 \alias{print_tables.face.sparse}
+\alias{print_tables.xgb.Booster}
+\alias{print_tables.xgb.cv.synchronous}
 \title{S3 methods for printing model fit summaries as pander tables}
 \usage{
 print_tables(model, only.coefs = FALSE, ...)
@@ -14,6 +16,10 @@ print_tables(model, only.coefs = FALSE, ...)
 \method{print_tables}{face.sparse}(model, only.coefs = FALSE, ...)
 
 \method{print_tables}{brokenstick}(model, only.coefs = FALSE, ...)
+
+\method{print_tables}{xgb.Booster}(model, only.coefs = FALSE, ...)
+
+\method{print_tables}{xgb.cv.synchronous}(model, only.coefs = FALSE, ...)
 
 \method{print_tables}{H2OBinomialModel}(model, only.coefs = FALSE, ...)
 

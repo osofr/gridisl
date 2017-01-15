@@ -3,7 +3,7 @@
 \name{summary.H2ORegressionModel}
 \alias{summary.H2OBinomialModel}
 \alias{summary.H2ORegressionModel}
-\title{S3 methods for getting model fit summary for H2ORegressionModel class object}
+\title{S3 methods for fit summary for h2o}
 \usage{
 \method{summary}{H2ORegressionModel}(h2o.model, only.coefs = FALSE, ...)
 
