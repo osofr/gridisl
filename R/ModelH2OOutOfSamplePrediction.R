@@ -49,7 +49,14 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
 
     message("Obtaining the out-of-sample CV predictions for h2o-stored training data")
     # pAoutDT <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
-    pAoutDT <- lapply(models_list, function(h2omodel) h2o::h2o.cross_validation_holdout_predictions(h2omodel))
+
+    pAoutDT <- lapply(models_list, function(h2omodel) {
+                                      preds <- h2o::h2o.cross_validation_holdout_predictions(h2omodel)
+                                      if (ncol(preds) > 1) preds <- preds[["p1"]]
+                                      preds
+                                  }
+                      )
+
     pAoutDT <- h2o::h2o.cbind(pAoutDT)
     names(pAoutDT) <- names(models_list)
     # setnames(pAoutDT, names(models_list))
@@ -103,6 +110,7 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
       newpreds_prev_CV_i <- NULL
       for (idx in seq_along(dest_key_LIST)) {
         newpreds <- h2o::h2o.getFrame(dest_key_LIST[[idx]])
+        if (ncol(newpreds) > 1) newpreds <- newpreds[["p1"]]
         newpreds_prev_CV_i <- h2o::h2o.cbind(newpreds_prev_CV_i, newpreds)
       }
       newpreds_prev_CV_i <- h2o::h2o.cbind(h2o.which(fold_CV_i_logical), newpreds_prev_CV_i)

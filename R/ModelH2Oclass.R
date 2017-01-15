@@ -12,6 +12,7 @@ predict_h2o_new <- function(model_id, frame_id, convertResToDT = TRUE) {
 
   h2o:::.h2o.__waitOnJob(job_key, pollInterval = 0.01)
   newpreds <- h2o::h2o.getFrame(dest_key)
+  if (ncol(newpreds) > 1) newpreds <- newpreds[["p1"]]
 
   if (convertResToDT) {
     if ("p1" %in% colnames(newpreds)) {
@@ -85,8 +86,9 @@ predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subse
     for (idx in seq_along(models_list)) {
       # res <- lapply(models_list, function(model) predict_h2o_new(model@model_id, frame_id = h2o::h2o.getId(H2Oframe), convertResToDT = FALSE)[["predict"]])
       # pAout_h2o <- h2o::h2o.cbind(res)
+
       pAout_h2o <- h2o::h2o.cbind(pAout_h2o,
-                        predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o::h2o.getId(H2Oframe), convertResToDT = FALSE)[["predict"]])
+                        predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o::h2o.getId(H2Oframe), convertResToDT = FALSE)) # [["predict"]]
     }
 
     options("expressions" = old.exprs)
