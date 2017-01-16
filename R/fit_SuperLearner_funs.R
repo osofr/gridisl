@@ -58,6 +58,7 @@ save_best_model <- function(modelfit, file.path = getOption('GriDiSL.file.path')
 }
 
 validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Oframe = FALSE, dest_frame = "all_train_H2Oframe") {
+  # browser()
   if (is.DataStorageClass(input_data)) {
     OData_input <- input_data
     # if (useH2Oframe && is.null(OData_input$H2Oframe)) stop("fatal error: useH2Oframe was set to TRUE, but the H2Oframe could not be located in the input data.")
@@ -265,6 +266,8 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, models, nfolds, 
   modelfit_stack <- do.call(make_PredictionStack, modelfits)
   modelfit_stack$runCV <- runCV
   modelfit_stack$useH2Oframe <- useH2Oframe
+  modelfit_stack$OData_train <- train_data
+  modelfit_stack$OData_valid <- valid_data
 
   if (!is.null(valid_data)) {
     ## If validation data supplied then score the models based on validation set

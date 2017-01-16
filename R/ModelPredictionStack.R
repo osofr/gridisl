@@ -39,6 +39,9 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     runCV = NULL,
     useH2Oframe = NULL,
     nodes = NULL,
+    OData_train = NULL, # object of class DataStorageClass used for training
+    OData_valid = NULL, # object of class DataStorageClass used for scoring models (contains validation data)
+
     initialize = function(PredictionModels) {
       if (!all(unlist(lapply(PredictionModels, is.PredictionModel))) && !all(unlist(lapply(PredictionModels, is.PredictionStack)))) {
        stop("All arguments must be of class 'PredictionModel' or 'PredictionStack'")
@@ -48,20 +51,25 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       self$nodes <- PredictionModels[[1]]$nodes
       return(self)
     },
+
     fit = function(overwrite = FALSE, data, predict = FALSE, validation_data = NULL, ...) {
       stop("...not implemented...")
       return(invisible(self))
     },
 
     refit_best_model = function(...) {
+
       ## 1. Out of all model objects in self$PredictionModels, first find the object idx that contains the best model
       # min_by_predmodel <- lapply(lapply(self$getMSE, unlist), min)
       # best_Model_idx <- which.min(unlist(min_by_predmodel))
       best_Model_idx <- self$best_Model_idx
+
       ## 2. Refit the best model for that PredictionModel object only
       model.fit <- self$PredictionModels[[best_Model_idx]]$refit_best_model(...) # data, subset_exprs,
-      ## 3. Clean up all PredictionModel obj in this ensemble:
-      self$wipe.alldat
+
+      ## 3. Clean up all data in PredictionModel, OData pointers and remove all modeling obj stored in daughter classes (we don't need them anymore)
+      self$wipe.alldat$wipe.allOData$wipe.allmodels
+
       return(invisible(model.fit))
     },
 
@@ -217,8 +225,20 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
   ),
 
   active = list(
+    ## wipe out all data stored by daughter model classes
     wipe.alldat = function() {
       lapply(self$PredictionModels, function(PredictionModel) PredictionModel$wipe.alldat)
+      return(self)
+    },
+
+    wipe.allOData = function() {
+      lapply(self$PredictionModels, function(PredictionModel) PredictionModel$wipe.allOData)
+      return(self)
+    },
+
+    ## wipe out all the model objects stored by daughter model classes
+    wipe.allmodels = function() {
+      lapply(self$PredictionModels, function(PredictionModel) PredictionModel$wipe.allmodels)
       return(self)
     },
 
@@ -243,8 +263,8 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       return(MSE_tab)
     },
 
-    OData_train = function() { return(self$PredictionModels[[1]]$OData_train) },
-    OData_valid = function() { return(self$PredictionModels[[1]]$OData_valid) },
+    # OData_train = function() { return(self$PredictionModels[[1]]$OData_train) },
+    # OData_valid = function() { return(self$PredictionModels[[1]]$OData_valid) },
 
     get_out_of_sample_preds = function() {
       best_Model_idx <- self$best_Model_idx

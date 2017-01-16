@@ -523,6 +523,16 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       }
       return(self)
     },
+
+    wipe.allmodels = function() {
+      self$ModelFitObject$wipe.allmodels
+    },
+
+    wipe.allOData = function() {
+      self$OData_train <- NULL # object of class DataStorageClass used for training
+      self$OData_valid <- NULL # object of class DataStorageClass used for scoring models (contains validation data)
+    },
+
     emptymodelfit = function() { self$ModelFitObject$emptymodelfit },
     getprobA1 = function() { private$probA1 },
     get_out_of_sample_preds = function() { private$out_of_sample_preds },

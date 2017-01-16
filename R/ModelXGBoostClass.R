@@ -242,8 +242,6 @@ fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_colum
   names(modelfits_all) <- names(model_algorithms) <- names(model_ids) <- model_names
   modelfits_grid[, ("model_names") := model_names]
 
-  # browser()
-
   fit <- list(
     params = params,
     modelfits_grid = modelfits_grid,
@@ -613,9 +611,9 @@ XGBoostClass <- R6Class(classname = "XGBoost",
           fit_dmat <- xgboost::xgb.DMatrix(Xmat, label = Yvals)
           # attr(fit_dmat, 'ID') <- IDs
         })
-        # if (gvars$verbose) {
+        if (gvars$verbose) {
           print("time to create xgb.DMatrix: "); print(load_subset_t)
-        # }
+        }
       }
 
       return(fit_dmat)
@@ -623,8 +621,8 @@ XGBoostClass <- R6Class(classname = "XGBoost",
 
     show = function(all_fits = FALSE, ...) {
       model.fit <- self$model.fit
-      top_grid_models <- self$model.fit$top_grid_models
-      modelfits_grid <- self$model.fit$modelfits_grid
+      topmodel_grid <- self$model.fit[["topmodel_grid"]]
+      modelfits_grid <- self$model.fit[["modelfits_grid"]]
 
       # if (!is.null(modelfits_grid)) {
       #   cat(" TOTAL NO. OF GRIDS: " %+% length(modelfits_grid) %+% "\n")
@@ -656,6 +654,13 @@ XGBoostClass <- R6Class(classname = "XGBoost",
 
   active = list( # 2 types of active bindings (w and wout args)
     emptydata = function() { },
+
+    wipe.allmodels = function() {
+      self$model.fit[["modelfits_grid"]][, ("xgb_fit") := NULL]
+      self$model.fit[["modelfits_all"]] <- NULL
+      self$model.fit[["topmodel_grid"]] <- NULL
+    },
+
     getmodel_ids = function() {
       if (is.null(self$model.fit$model_ids)) {
         return(assign_model_name_id(self$model.fit$modelfits_all[[1]], self$model.fit$model_algorithms[[1]], self$model_contrl$name))

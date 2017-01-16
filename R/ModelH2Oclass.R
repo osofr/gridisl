@@ -319,6 +319,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
   active = list( # 2 types of active bindings (w and wout args)
     emptydata = function() { },
+    wipe.allmodels = function() { },
 
     get_train_H2Oframe = function() {private$train_H2Oframe},
     get_train_H2Oframe_ID = function() {private$train_H2Oframe_ID},
