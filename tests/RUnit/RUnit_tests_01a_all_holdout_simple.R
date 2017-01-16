@@ -71,7 +71,7 @@ test.holdoutfit_all <- function() {
   print(mfits_stack$get_best_MSEs(K = 1))
   print(mfits_stack$get_best_MSE_table(K = 1))
   checkException(print(mfits_stack$getMSEtab(K = 1)))
-  make_report_rmd(mfits_stack, data = cpp_holdout, K = 2,
+  make_model_report(mfits_stack, data = cpp_holdout, K = 2,
                   file.name = paste0("BS_ALL_", getOption("GriDiSL.file.name")),
                   format = "html", openFile = FALSE)
 

@@ -35,6 +35,43 @@ if(FALSE) {
 psi_RDs_DAG2a <- NULL
 psi_RDs_DAG2b <- NULL
 
+
+test.learners <- function() {
+  checkException(
+    params <- GriDiSL::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
+                               nrounds = 500, early_stopping_rounds = 10,
+                               learning_rate = 0.1, # learning_rate = 0.01,
+                               param_grid = c(
+                                colsample_bytree = c(0.3, 0.5, 0.7, 0.9, 1)
+                                )
+                            )
+    )
+
+  checkException(
+    params <- GriDiSL::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
+                               nrounds = 500, early_stopping_rounds = 10,
+                               learning_rate = 0.1, # learning_rate = 0.01,
+                               param_grid = list(
+                                colsample_bytree = c(0.3, 0.5, 0.7, 0.9, 1),
+                                c(0:10)
+                                )
+                            )
+  )
+
+  checkException(
+    params <- GriDiSL::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
+                               nrounds = 500, early_stopping_rounds = 10,
+                               learning_rate = 0.1, # learning_rate = 0.01,
+                               param_grid = list(
+                                c(0.3, 0.5, 0.7, 0.9, 1),
+                                c(0:10)
+                                )
+                            )
+  )
+
+}
+
+
 sample_checks <- function() {   # doesnt run, this is just to show what test functions can be used
   print("Starting tests...")
   checkTrue(1 < 2, "check1")     ## passes fine

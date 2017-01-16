@@ -41,14 +41,14 @@ check_out_of_sample_consistency <- function(models_list, valid_H2Oframe, predvar
 ## ----------------------------------------------------------------------------------------------------------------------------------
 predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subset_idx, predict_model_names, ...) {
   # h2o::h2o.no_progress()
-  models_list <- m.fit$fitted_models_all
+  models_list <- m.fit$modelfits_all
   if (!missing(predict_model_names) && !is.null(predict_model_names)) models_list <- models_list[predict_model_names]
 
   ## Grab the internallly stored h2o out of sample predictions for each CV model (cross-validation predictions are combined into a single vector of length n)
   if (missing(validation_data)) {
 
-    message("Obtaining the out-of-sample CV predictions for h2o-stored training data")
-    # pAoutDT <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
+    message("Obtaining out-of-sample/holdout CV predictions for h2o")
+    # pAoutDT <- sapply(m.fit$modelfits_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
 
     pAoutDT <- lapply(models_list, function(h2omodel) {
                                       preds <- h2o::h2o.cross_validation_holdout_predictions(h2omodel)
@@ -72,7 +72,7 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
     ## **** Allows re-using existing h2oFrame is it was already pre-loaded in validation_data object ****
     valid_H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, validation_data, subset_idx)
 
-    message("Obtaining the out-of-sample CV predictions for new data")
+    message("Obtaining out-of-sample/holdout CV predictions for h2o with new data")
     res <- check_out_of_sample_consistency(models_list, valid_H2Oframe, predvars, fold_column)
 
     ## Get the fold assignments for the 1st model in ensemble:

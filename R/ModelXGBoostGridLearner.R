@@ -18,7 +18,7 @@ evalMSEerror_byID <- function(preds, data) {
 ## Peforming simple hyperparameter grid search for xgboost with cross-validation
 ## Relies on tidyverse syntax and borrowed from: https://drsimonj.svbtle.com/grid-search-in-the-tidyverse
 #' @export
-xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing = NA,
+xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = NA,
                     prediction = FALSE, showsd = TRUE, metrics = list(), obj = NULL,
                     feval = NULL, stratified = TRUE, folds = NULL, verbose = TRUE,
                     print_every_n = 1L, early_stopping_rounds = NULL, maximize = NULL,
@@ -89,7 +89,7 @@ xgb.grid <- function(hyper_params, data, nrounds, nfold, label = NULL, missing =
   }
 
   ## Convert to data frame grid
-  gs <- hyper_params %>% purrr::cross_d()
+  gs <- param_grid %>% purrr::cross_d()
   if (nrow(gs) == 0L) gs <- data.frame(placeholder = TRUE)
 
   ## Shuffle the rows to obtain random ordering of hyper-parameters

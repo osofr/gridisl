@@ -50,7 +50,7 @@ save_best_model <- function(modelfit, file.path = getOption('GriDiSL.file.path')
   best_model_traindat <- modelfit$get_best_models(K = 1)[[1]]
   h2o.saveModel(best_model_traindat, file.path, force = TRUE)
   ## This model is always trained on all data (if exists)
-  best_model_alldat <- modelfit$BestModelFitObject$model.fit$fitted_models_all
+  best_model_alldat <- modelfit$BestModelFitObject$model.fit$modelfits_all
   if (!is.null(best_model_alldat))
     h2o.saveModel(best_model_alldat[[1]], file.path, force = TRUE)
 
@@ -253,7 +253,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, models, nfolds, 
   modelfits <- vector(mode = "list", length = length(models))
   for (learner_idx in seq_along(models)) {
     ## Define R6 regression class (specify subset_exprs to select only specific obs during fitting, e.g., only non-holdouts)
-    regobj <- RegressionClass$new(model_idx = learner_idx, outvar = y, predvars = x, runCV = runCV,
+    regobj <- RegressionClass$new(Model_idx = learner_idx, outvar = y, predvars = x, runCV = runCV,
                                   subset_exprs = subset_exprs,
                                   fold_column = fold_column, model_contrl = models[[learner_idx]])
     ## Define a modeling object, perform fitting (real data is being passed for the first time here):
@@ -275,7 +275,7 @@ fit_model <- function(ID, t_name, x, y, train_data, valid_data, models, nfolds, 
   }
 
   if (!is.null(valid_data) || runCV) {
-    print("Internally evaluated holdout or CV MSE / RMSE, first averaged at subject level: "); print(modelfit_stack$getMSEtab)
+    print("Internally evaluated holdout / CV metrics: "); print(modelfit_stack$getMSEtab)
   }
 
   return(modelfit_stack)

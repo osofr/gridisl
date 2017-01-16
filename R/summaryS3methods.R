@@ -299,7 +299,7 @@ summary.H2OBinomialModel <- function(h2o.model, only.coefs = FALSE, ...) summary
 
 #' S3 methods for printing model fit summaries as pander tables
 #'
-#' Used internally to prints the modeling summary stats for reporting (see \code{\link{make_report_rmd}}).
+#' Used internally to prints the modeling summary stats for reporting (see \code{\link{make_model_report}}).
 #' @param model The model fit object produced by \code{get_fit} function.
 #' @param only.coefs Set to \code{TRUE} to only print the table of coefficients (when using \code{fit.algorithm = "glm"}) and
 #' omit all other model-related output statistics.
@@ -323,7 +323,6 @@ print_tables.brokenstick <- function(model, only.coefs = FALSE, ...) {
   pander::panderOptions('knitr.auto.asis', old.opt)
   return(invisible(NULL))
 }
-
 
 #' @rdname print_tables
 #' @export

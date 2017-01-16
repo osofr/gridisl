@@ -6,7 +6,7 @@ RegressionClass <- R6Class("RegressionClass",
   class = TRUE,
   portable = TRUE,
   public = list(
-    model_idx = 1,
+    Model_idx = 1,
     ReplMisVal0 = TRUE,            # if TRUE all gvars$misval among predicators are replaced with with gvars$misXreplace (0)
     # fit.package = character(),
     # fit.algorithm = character(),
@@ -20,7 +20,7 @@ RegressionClass <- R6Class("RegressionClass",
                                    # Each item is a vector of different subsetting expressions (form stratified models)
                                    # These expressions are evaluated in the envir of the data, must evaluate to a logical vector
     model_contrl = list(),
-    initialize = function(model_idx = 1,
+    initialize = function(Model_idx = 1,
                           ReplMisVal0 = TRUE,
                           outvar,
                           predvars,
@@ -35,7 +35,7 @@ RegressionClass <- R6Class("RegressionClass",
 # browser()
 ## Confirm the args are of the same type as the initials
       self$ReplMisVal0 <- ReplMisVal0
-      self$model_idx <- model_idx
+      self$Model_idx <- Model_idx
       # self$fit.package <- fit.package
       # self$fit.algorithm <- fit.algorithm
 

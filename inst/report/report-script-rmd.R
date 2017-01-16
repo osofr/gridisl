@@ -103,8 +103,8 @@ if (!skip.modelfits) {
   print(modelfit, model_stats = TRUE, all_fits = print_all_fits)
   # print(modelfit, model_stats = TRUE)
   # models <- modelfit$getfit
-  # single_models <- models$fitted_models_all[[1]]
-  # for (single_model in models$fitted_models_all) {
+  # single_models <- models$modelfits_all[[1]]
+  # for (single_model in models$modelfits_all) {
   #   # print(models, only.coefs = only.coefs)
   #   print(single_model)
   #   # res <- capture.output(single_models)

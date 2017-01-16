@@ -14,7 +14,7 @@ assign_model_name_id <- function(params, H2O.model.object, model_algorithm, name
   new_names <- model_algorithm
 
   if (!is.null(name)) new_names <- new_names %+% "." %+% name
-  if (!is.null(params$model_idx)) new_names <- "m." %+% params$model_idx %+% "." %+% new_names
+  if (!is.null(params[["Model_idx"]])) new_names <- "m." %+% params[["Model_idx"]] %+% "." %+% new_names
 
   names(model_ids) <- new_names
   return(model_ids)
@@ -33,11 +33,11 @@ assign_model_name_id <- function(params, H2O.model.object, model_algorithm, name
 #' @param ... Additional objects that will be included in the final fit list
 #' @export
 create_fit_object <- function(model.fit, model_alg, fitfunname, params, coef, nobs, model_contrl, fitclass = "H2Omodel", ...) {
-  fitted_models_all <- vector(mode = "list", length = 1)
-  fitted_models_all[[1]] <- model.fit
+  modelfits_all <- vector(mode = "list", length = 1)
+  modelfits_all[[1]] <- model.fit
 
   model_ids <- assign_model_name_id(params, model.fit, model_alg, model_contrl$name)
-  names(fitted_models_all) <- names(model_ids)
+  names(modelfits_all) <- names(model_ids)
 
   extra_params <- list(...)
 
@@ -48,7 +48,7 @@ create_fit_object <- function(model.fit, model_alg, fitfunname, params, coef, no
     model_algorithms = list(model_alg),
     nobs =  nobs,
     model_ids = model_ids,
-    fitted_models_all = fitted_models_all)
+    modelfits_all = modelfits_all)
 
   if (length(extra_params) > 0) fit <- c(fit, extra_params)
 
@@ -61,7 +61,7 @@ create_fit_object <- function(model.fit, model_alg, fitfunname, params, coef, no
 #' @param reg RegressionClass Object
 #' @export
 create_fit_params <- function(reg) {
-  return(list(outvar = reg$outvar, predvars = reg$predvars, stratify = reg$subset_exprs[[1]], model_idx = reg$model_idx))
+  return(list(outvar = reg$outvar, predvars = reg$predvars, stratify = reg$subset_exprs[[1]], Model_idx = reg$Model_idx))
 }
 
 #----------------------------------------------------------------------------------
@@ -119,7 +119,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
   public = list(
     # classify = FALSE,
     reg = NULL,
-    model_idx = integer(),
+    Model_idx = integer(),
     outvar = character(),   # outcome name(s)
     predvars = character(), # names of predictor vars
     runCV = logical(),
@@ -152,7 +152,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       self$useH2Oframe <- useH2Oframe
       self$reg <- reg
       self$runCV <- reg$runCV
-      self$model_idx <- reg$model_idx
+      self$Model_idx <- reg$Model_idx
 
       self$fit.package <- reg$model_contrl$fit.package[1L]
       self$fit.algorithm <- reg$model_contrl$fit.algorithm[1L]
@@ -358,12 +358,12 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
 
       ## 2. Evaluate the average loss for each person (average loss by rows within each subject)
-      # str(self$ModelFitObject$model.fit$fitted_models_all[[1]])
+      # str(self$ModelFitObject$model.fit$modelfits_all[[1]])
       # self$ModelFitObject$model.fit$grid_objects
-      # fold_idx <- self$ModelFitObject$model.fit$fitted_models_all[[1]]$folds
-      # fold_idx2 <- self$ModelFitObject$model.fit$fitted_models_all[[2]]$folds
-      # fold_idx3 <- self$ModelFitObject$model.fit$fitted_models_all[[3]]$folds
-      # fold_idx4 <- self$ModelFitObject$model.fit$fitted_models_all[[4]]$folds
+      # fold_idx <- self$ModelFitObject$model.fit$modelfits_all[[1]]$folds
+      # fold_idx2 <- self$ModelFitObject$model.fit$modelfits_all[[2]]$folds
+      # fold_idx3 <- self$ModelFitObject$model.fit$modelfits_all[[3]]$folds
+      # fold_idx4 <- self$ModelFitObject$model.fit$modelfits_all[[4]]$folds
       # for (fold_i in seq_along(fold_idx)) resid_predsDT[fold_idx[[fold_i]], ("fold") := fold_i]
 
 
@@ -442,7 +442,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     ## ------------------------------------------------------------------------------
     get_best_models = function(K = 1) {
       top_model_names <- self$get_best_model_names(K)
-      if (gvars$verbose) message("fetching top " %+% K %+% " models ranked by the smallest holdout / validation MSE")
+      # if (gvars$verbose) message("fetching top " %+% K %+% " models ranked by the smallest holdout / validation MSE")
       return(self$getmodel_byname(top_model_names))
     },
 
@@ -455,7 +455,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     # ------------------------------------------------------------------------------
-    # return a data.frame with best mean MSEs, including SDs & corresponding model names
+    # return a data.table with best mean MSEs, including SDs & corresponding model names
     # ------------------------------------------------------------------------------
     get_best_MSE_table = function(K = 1) {
       top_MSE_CV <- self$get_best_MSEs(K)
@@ -479,6 +479,13 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       datMSE[["model"]] <- factor(datMSE[["model"]], levels = datMSE[["model"]][order(datMSE[["MSE"]])])
       # rownames(datMSE) <- NULL
       return(datMSE)
+    },
+
+    # ------------------------------------------------------------------------------
+    # return a data.table of grid model fits with parameters, sorted by internal test MSE
+    # ------------------------------------------------------------------------------
+    get_modelfits_grid = function() {
+      return(self$ModelFitObject$get_modelfits_grid())
     },
 
     # Output info on the general type of regression being fitted:
@@ -528,18 +535,21 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       RMSE_list <- self$getRMSE
       MSE.sd_list <- self$getMSEsd
 
-      if (length(MSE_list) == 0L)
-        stop("It looks like the CV/holdout MSEs have not been evaluated for the model calling order: " %+% self$model_idx %+%
+      if (length(MSE_list) == 0L) {
+        warning("It looks like the CV/holdout MSEs have not been evaluated for the model calling order: " %+% self$Model_idx %+%
              ". Cannot make prediction or select the best model unless some model selection criteria is specified during fit() call.
              Please make sure the argument 'method' is set to either 'cv' or 'holdout'.")
+        MSE_list <- MSE.sd_list <- RMSE_list <- rep.int(list(NA), length(self$getmodel_ids))
+        names(MSE_list) <- names(MSE.sd_list) <- names(RMSE_list) <- names(self$getmodel_ids)
+      }
 
       data.table::data.table(
         MSE = unlist(MSE_list),
-        RMSE = unlist(RMSE_list),
         MSE.sd = unlist(MSE.sd_list),
+        RMSE = unlist(RMSE_list),
         model = names(MSE_list),
-        order = seq_along(MSE_list),
-        model_idx = self$model_idx
+        Model_idx = self$Model_idx,
+        order = seq_along(MSE_list)
       )
     },
 

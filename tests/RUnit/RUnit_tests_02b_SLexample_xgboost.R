@@ -8,7 +8,7 @@ test.XGBoost.simple <- function() {
   cpp <- data.table::data.table(cpp)
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
-  params <- defLearner(estimator = "xgboost__glm", family = "gaussian", nrounds = 5000, early_stopping_rounds = 2)
+  params <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 5000, early_stopping_rounds = 2)
   mfit_xgb1 <- fit(params, method = "none", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                   data = cpp)
 
@@ -25,10 +25,12 @@ test.XGBoost.simple <- function() {
                       subsample = 1,
                       scale_pos_weight = 1)
 
-  GRIDparams2 <- defLearner(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
-                 defGrid(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
-                         search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
-                         param_grid = hyper_params, seed = 123456)
+  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
+                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
+                          search_criteria = list(
+                            strategy = "RandomDiscrete",
+                            max_models = 4),
+                          param_grid = hyper_params, seed = 123456)
 
   # cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
   mfit_xgb <- fit(GRIDparams2, method = "none", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
@@ -53,13 +55,13 @@ test.XGBoost.simple <- function() {
 test.XGBoost.GLM <- function() {
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  # options(GriDiSL.verbose = FALSE)
-  options(GriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = FALSE)
+  # options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
-  params_glm <- defLearner(estimator = "xgboost__glm", family = "gaussian",
+  params_glm <- defModel(estimator = "xgboost__glm", family = "gaussian",
                            eta = 1.7, nrounds = 1000,
                            alpha = 0.3, lambda = 0.1,
                            seed = 123456)
@@ -75,19 +77,28 @@ test.XGBoost.GLM <- function() {
   # model_obj$params
   # model_obj$evaluation_log
 
-  params_glm <- defLearner(estimator = "xgboost__glm", family = "gaussian",
+  params_glm <- defModel(estimator = "xgboost__glm", family = "gaussian",
                            eta = 1.7, nrounds = 1000,
                            alpha = 0.3, lambda = 0.1,
                            seed = 123456) +
-                defLearner(estimator = "h2o__glm", family = "gaussian",
+                defModel(estimator = "h2o__glm", family = "gaussian",
                            alpha = 0.3, lambda = 0.1,
+                           seed = 123456) +
+                defModel(estimator = "h2o__glm", family = "gaussian",
+                           alpha = 0.3, lambda_search = TRUE,
                            seed = 123456)
 
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
   mfit_cv <- fit(params_glm, method = "cv", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                  data = cpp_folds, fold_column = "fold")
+
   pred_alldat_cv <- predict_SL(mfit_cv, newdata = cpp_folds, add_subject_data = FALSE)
   head(pred_alldat_cv[])
+
+
+  mfit_cv$get_best_MSE_table()
+  mfit_cv$getMSEtab
+  mfit_cv$get_modelfits_grid()
 
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   mfit_hold <- fit(params_glm, method = "holdout", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
@@ -115,12 +126,12 @@ test.XGBoost.regularizedGLM_grid <- function() {
   alpha_opt <- c(0,1.0,seq(0.1,0.9,0.1))
   lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5, 2)
 
-  params_glm <- defGrid(estimator = "xgboost__glm", family = "gaussian",
+  params_glm <- defModel(estimator = "xgboost__glm", family = "gaussian",
                         eta = 1.3, nrounds = 1000,
                         param_grid = list(alpha = alpha_opt,
                                           lambda = lambda_opt),
                         seed = 123456) +
-                defGrid(estimator = "h2o__glm", family = "gaussian",
+                defModel(estimator = "h2o__glm", family = "gaussian",
                         param_grid = list(alpha = alpha_opt,
                                           lambda = lambda_opt),
                          seed = 123456)
@@ -158,10 +169,10 @@ test.XGBoost.drfs <- function() {
   # alpha_opt <- c(0,1.0,seq(0.1,0.9,0.1))
   # lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5, 2)
 
-  params_drf <- defLearner(estimator = "xgboost__drf", family = "gaussian",
+  params_drf <- defModel(estimator = "xgboost__drf", family = "gaussian",
                            eta = 1.3, nrounds = 200,
                            seed = 123456) +
-                defLearner(estimator = "h2o__randomForest", distribution = "gaussian",
+                defModel(estimator = "h2o__randomForest", distribution = "gaussian",
                            ntrees = 200,
                            seed = 123456)
 
@@ -209,9 +220,9 @@ test.holdout.XGBoost <- function() {
                       subsample = 1,
                       scale_pos_weight = 1)
 
-  GRIDparams2 <- defLearner(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
+  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
 
-                 defGrid(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
+                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
                          param_grid = hyper_params, seed = 123456)
 
@@ -252,7 +263,7 @@ test.holdout.XGBoost <- function() {
   print("Top 5 models: "); print(models)
   res_tab <- xgboost_holdout$get_best_MSE_table(K = 5)
   print("5 best models among all learners: "); print(res_tab)
-  make_report_rmd(xgboost_holdout, data = cpp_holdout, K = 10, format = "html", openFile = FALSE)
+  make_model_report(xgboost_holdout, data = cpp_holdout, K = 10, format = "html", openFile = FALSE)
 
   ## Save the best performing h2o model fit to disk:
   # not implemented
@@ -279,9 +290,9 @@ test.CV.SL.XGBoost <- function() {
                       subsample = 1,
                       scale_pos_weight = 1)
 
-  GRIDparams2 <- defLearner(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
+  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
 
-                 defGrid(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
+                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
                          param_grid = hyper_params, seed = 123456)
 
@@ -344,7 +355,7 @@ test.CV.SL.XGBoost <- function() {
 
   ## Make report, save grid predictions and out of sample predictions
   # fname <- paste0(data.name, "_", "CV_gridSL_")
-  make_report_rmd(mfit_cv, K = 10, data = cpp_folds,
+  make_model_report(mfit_cv, K = 10, data = cpp_folds,
                   # file.name = paste0(fname, getOption("GriDiSL.file.name")),
                   title = paste0("Growth Curve Imputation with cpp Data"),
                   format = "html", keep_md = TRUE, openFile = FALSE)

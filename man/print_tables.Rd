@@ -39,6 +39,6 @@ omit all other model-related output statistics.}
 The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary(...)}.
 }
 \description{
-Used internally to prints the modeling summary stats for reporting (see \code{\link{make_report_rmd}}).
+Used internally to prints the modeling summary stats for reporting (see \code{\link{make_model_report}}).
 }
 

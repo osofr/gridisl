@@ -9,15 +9,15 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
   ## ------------------------------------------------------------------------------------
   ## SL with random holdout:
   ## ------------------------------------------------------------------------------------
-  GRIDparams <- defLearner(estimator = "speedglm__glm", family = "gaussian") +
+  GRIDparams <- defModel(estimator = "speedglm__glm", family = "gaussian") +
 
-               defLearner(estimator = "speedglm__glm", family = "gaussian",
+               defModel(estimator = "speedglm__glm", family = "gaussian",
                           x = c("agedays", "apgar1", "apgar5", "parity")) +
 
-               defLearner(estimator = "h2o__glm", family = "gaussian",
+               defModel(estimator = "h2o__glm", family = "gaussian",
                           x = c("agedays", "apgar1", "apgar5", "parity")) +
 
-                defGrid(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
+                defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
                          search_criteria = list(strategy = "Cartesian"),
                          stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
                          param_grid = list(learn_rate = c(0.01),
@@ -34,9 +34,9 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
   ## ------------------------------------------------------------------------------------
   ## SL with CV (CANNOT USE speedglm or glm with V-fold CV yet):
   ## ------------------------------------------------------------------------------------
-  GRIDparams <- defLearner(estimator = "h2o__glm", family = "gaussian",
+  GRIDparams <- defModel(estimator = "h2o__glm", family = "gaussian",
                            x = c("agedays", "apgar1", "apgar5", "parity")) +
-                defGrid(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
+                defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
                          search_criteria = list(strategy = "Cartesian"),
                          stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
                          param_grid = list(learn_rate = c(0.01),
@@ -65,7 +65,7 @@ test.GBM_xgboost_onelearner <- function() {
   ## ------------------------------------------------------------------------------------------------------
   ## Single GBM w/ h2o vs. xgboost
   ## ------------------------------------------------------------------------------------------------------
-  GRIDparams <- defLearner(estimator = "xgboost__gbm", family = "gaussian",
+  GRIDparams <- defModel(estimator = "xgboost__gbm", family = "gaussian",
                            nrounds = 500,
                            eta = 0.01, # (learning_rate alias)
                            # min_split_loss = , # default 0 (gamma alias)
@@ -116,7 +116,7 @@ test.GBM_xgboost_vs_H2O <- function() {
   ## ------------------------------------------------------------------------------------------------------
   ## Single GBM w/ h2o vs. xgboost with (roughly) equivalent parameter settings as evaluated by holdout MSE & CV-MSE
   ## ------------------------------------------------------------------------------------------------------
-  GRIDparams <- defLearner(estimator = "h2o__gbm", family = "gaussian",
+  GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian",
                            ntrees = 500,
                            learn_rate = 0.01,
                            # learn_rate_annealing = , # [default=1]
@@ -137,7 +137,7 @@ test.GBM_xgboost_vs_H2O <- function() {
                            stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
                            seed = 23) +
 
-                defLearner(estimator = "xgboost__gbm", family = "gaussian",
+                defModel(estimator = "xgboost__gbm", family = "gaussian",
                            nrounds = 500,
                            learning_rate = 0.01, # (alias eta), try around 5 in range (0.01-0.1)
                            # min_split_loss = 1, # [default=0, range: [1,∞]] (alias gamma)
@@ -177,7 +177,7 @@ test.GBM_xgboost_vs_H2O <- function() {
   ## ------------------------------------------------------------------------------------------------------
   ## Grid GBM h2o vs xgboost
   ## ------------------------------------------------------------------------------------------------------
-  GRIDparams <- defGrid(estimator = "h2o__gbm", family = "gaussian",
+  GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian",
                           ntrees = 500,
                           param_grid = list(
                             learn_rate = c(0.01, 0.02, 0.5, 0.3),
@@ -188,7 +188,7 @@ test.GBM_xgboost_vs_H2O <- function() {
                           stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
                           seed = 23) +
 
-                defGrid(estimator = "xgboost__gbm", family = "gaussian",
+                defModel(estimator = "xgboost__gbm", family = "gaussian",
                           nrounds = 500,
                           param_grid = list(
                             eta = c(0.01, 0.02, 0.5, 0.3),
@@ -234,20 +234,20 @@ test.H2O_GRID_GBM_GLM <- function() {
                            col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
                            balance_classes = c(TRUE, FALSE))
 
-  GRIDparams <- defGrid(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
+  GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
                          stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
                          param_grid = gbm_hyper_params, seed = 23) +
 
-                defLearner(estimator = "h2o__glm", family = "gaussian",
+                defModel(estimator = "h2o__glm", family = "gaussian",
                           alpha = 0.3, nlambdas = 50, lambda_search = TRUE) +
 
-                defGrid(estimator = "h2o__glm", family = "gaussian",
+                defModel(estimator = "h2o__glm", family = "gaussian",
                          search_criteria = list(strategy = "Cartesian"),
                          param_grid = list(alpha = seq(0,1,0.1)),
                          nlambdas = 50, lambda_search = TRUE) +
 
-                defGrid(estimator = "h2o__glm", family = "gaussian",
+                defModel(estimator = "h2o__glm", family = "gaussian",
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
                          param_grid = list(alpha = alpha_opt, lambda = lambda_opt), seed = 23)
   # old early stop params for gbm:

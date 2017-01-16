@@ -56,10 +56,10 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     refit_best_model = function(...) {
       ## 1. Out of all model objects in self$PredictionModels, first find the object idx that contains the best model
       # min_by_predmodel <- lapply(lapply(self$getMSE, unlist), min)
-      # best_model_idx <- which.min(unlist(min_by_predmodel))
-      best_model_idx <- self$best_model_idx
+      # best_Model_idx <- which.min(unlist(min_by_predmodel))
+      best_Model_idx <- self$best_Model_idx
       ## 2. Refit the best model for that PredictionModel object only
-      model.fit <- self$PredictionModels[[best_model_idx]]$refit_best_model(...) # data, subset_exprs,
+      model.fit <- self$PredictionModels[[best_Model_idx]]$refit_best_model(...) # data, subset_exprs,
       ## 3. Clean up all PredictionModel obj in this ensemble:
       self$wipe.alldat
       return(invisible(model.fit))
@@ -72,8 +72,8 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       ## obtain prediction from the best refitted model only
       if (best_only) {
 
-        best_model_idx <- self$best_model_idx
-        best_pred_model <- self$PredictionModels[[best_model_idx]]
+        best_Model_idx <- self$best_Model_idx
+        best_pred_model <- self$PredictionModels[[best_Model_idx]]
         # newdata, subset_exprs, predict_model_names = NULL, , convertResToDT,
         preds <- best_pred_model$predict(..., best_refit_only = TRUE)
         return(preds)
@@ -96,9 +96,9 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       ## obtain out-of-sample prediction from the best non-refitted model
       if (best_only) {
 
-        best_model_idx <- self$best_model_idx
+        best_Model_idx <- self$best_Model_idx
         ## NEED TO KNOW WHAT WAS THE NAME OF THE BEST MODEL WITHIN THE SAME GRID / ENSEMBLE:
-        best_pred_model <- self$PredictionModels[[best_model_idx]]
+        best_pred_model <- self$PredictionModels[[best_Model_idx]]
         predict_model_names <- best_pred_model$get_best_model_names(K = 1)
         preds <- best_pred_model$predict_out_of_sample(..., predict_model_names = predict_model_names)
         return(preds)
@@ -125,8 +125,8 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       ## obtain prediction from the best non-refitted model only
       if (best_only) {
 
-        best_model_idx <- self$best_model_idx
-        best_pred_model <- self$PredictionModels[[best_model_idx]]
+        best_Model_idx <- self$best_Model_idx
+        best_pred_model <- self$PredictionModels[[best_Model_idx]]
         predict_model_names <- best_pred_model$get_best_model_names(K = 1)
         preds <- best_pred_model$predict(..., predict_model_names = predict_model_names, best_refit_only = FALSE)
 
@@ -148,9 +148,7 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     # Score models (so far only MSE) based on either out of sample CV model preds or validation data preds;
     score_models = function(...) {
     # score_models = function(validation_data, subset_exprs, ...) {
-      scored_m <- lapply(self$PredictionModels, function(PredictionModel) {
-                          PredictionModel$score_models(...)
-                        })
+      scored_m <- lapply(self$PredictionModels, function(PredictionModel) PredictionModel$score_models(...))
       return(invisible(self))
     },
 
@@ -197,10 +195,16 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       return(res_tab)
     },
 
+    get_modelfits_grid = function() {
+      res_DT_list <- lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_modelfits_grid())
+      return(res_DT_list)
+    },
+
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE, model_stats = FALSE, all_fits = FALSE) {
       return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$show(print_format = TRUE, model_stats = FALSE, all_fits = FALSE)))
     },
+
     summary = function(all_fits = FALSE) {
       return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$summary(all_fits = FALSE)))
     },
@@ -221,16 +225,16 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     getMSE = function() { return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$getMSE)) },
     getRMSE = function() { return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$getRMSE)) },
 
-    best_model_idx = function() {
+    best_Model_idx = function() {
       if (length(self$PredictionModels) == 1L) return(1L)
 
       MSE_tab <- self$getMSEtab
       metric_name <- "MSE"
 
       top_model_info <- MSE_tab[which.min(MSE_tab[[metric_name]]), ]
-      best_model_idx <- top_model_info[["model_idx"]]
+      best_Model_idx <- top_model_info[["Model_idx"]]
 
-      return(best_model_idx)
+      return(best_Model_idx)
     },
 
     getMSEtab = function() {
@@ -243,8 +247,8 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     OData_valid = function() { return(self$PredictionModels[[1]]$OData_valid) },
 
     get_out_of_sample_preds = function() {
-      best_model_idx <- self$best_model_idx
-      return(self$PredictionModels[[best_model_idx]]$get_out_of_sample_preds)
+      best_Model_idx <- self$best_Model_idx
+      return(self$PredictionModels[[best_Model_idx]]$get_out_of_sample_preds)
     }
   )
 )

@@ -64,13 +64,13 @@ getPredictH2OFRAME <- function(m.fit, ParentObject, DataStorageObject, subset_id
 ## Prediction for h2ofit objects, predicts P(A = 1 | newXmat)
 ## ----------------------------------------------------------------
 predictP1.H2Omodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
-  return(predictP1.H2Ogridmodel(m.fit, ParentObject, DataStorageObject, subset_idx, ...))
+  return(predictP1.H2Ogrid(m.fit, ParentObject, DataStorageObject, subset_idx, ...))
 }
 
-predictP1.H2Ogridmodel <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict_model_names, ...) {
+predictP1.H2Ogrid <- function(m.fit, ParentObject, DataStorageObject, subset_idx, predict_model_names, ...) {
   H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, DataStorageObject, subset_idx)
 
-  models_list <- m.fit$fitted_models_all
+  models_list <- m.fit$modelfits_all
   if (!missing(predict_model_names) && !is.null(predict_model_names)) models_list <- models_list[predict_model_names]
 
   pAoutDT <- rep.int(list(numeric()), length(models_list))
@@ -198,11 +198,22 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
     getmodel_byname = function(model_names, model_IDs) {
       if (!missing(model_names)) {
-        return(self$model.fit$fitted_models_all[model_names])
+        return(self$model.fit$modelfits_all[model_names])
       } else {
         if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
         return(lapply(model_IDs, h2o::h2o.getModel))
       }
+    },
+
+    get_modelfits_grid = function(model_names, ...) {
+      # if (!missing(model_names)) {
+      #   Model_idx <- (self$model.fit$modelfits_grid[["model_names"]] %in% model_names)
+      #   return(self$model.fit$modelfits_grid[Model_idx, ])
+      # } else {
+        return(self$model.fit$modelfits_grid)
+        # if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
+        # return(lapply(model_IDs, h2o::h2o.getModel))
+      # }
     },
 
     get_best_model_params = function(model_names) {
@@ -292,9 +303,9 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       if (all_fits) {
         cat("\n...Printing the summary fits of all models contained in this ensemble...\n")
         cat("==========================================================================\n")
-        for (idx in seq_along(model.fit$fitted_models_all)) {
+        for (idx in seq_along(model.fit$modelfits_all)) {
           cat("Model No. " %+% idx %+% "; ")
-          print(model.fit$fitted_models_all[[idx]])
+          print(model.fit$modelfits_all[[idx]])
         }
       }
       return(invisible(NULL))
@@ -317,7 +328,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
     getmodel_ids = function() {
       if (is.null(self$model.fit$model_ids)) {
-        return(assign_model_name_id(params = self$params, self$model.fit$fitted_models_all[[1]], self$model.fit$model_algorithms[[1]], self$model_contrl$name))
+        return(assign_model_name_id(params = self$params, self$model.fit$modelfits_all[[1]], self$model.fit$model_algorithms[[1]], self$model_contrl$name))
         # model_ids <- list(self$model.fit$H2O.model.object@model_id)
         # new_names <- self$model.fit$model_algorithms[[1]]
         # if (!is.null(self$model_contrl$name)) new_names <- new_names %+% "." %+% self$model_contrl$name
@@ -388,7 +399,7 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
                                   model_contrl = firstGLM_params, ...),
                               silent = FALSE)
 
-      GLMmodelID <- self$firstGLMfit$fitted_models_all[[1]]@model_id
+      GLMmodelID <- self$firstGLMfit$modelfits_all[[1]]@model_id
       firstGLM_preds_train <- predict_h2o_new(GLMmodelID, frame_id = h2o::h2o.getId(train_H2Oframe), convertResToDT = FALSE)
       firstGLM_preds_valid <- predict_h2o_new(GLMmodelID, frame_id = h2o::h2o.getId(valid_H2Oframe), convertResToDT = FALSE)
 

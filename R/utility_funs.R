@@ -108,17 +108,18 @@ add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed =
 }
 
 # ---------------------------------------------------------------------------------------
-#' Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
-#'
-#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
-#' @param ID A character string name of the column that contains the unique subject identifiers.
-#' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
-#' @param covars Names of predictors (covariates) in the data.
-#' @param OUTCOME Character name of the column containing outcomes.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
-#' @return An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
+# Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
+#
+# @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+# @param ID A character string name of the column that contains the unique subject identifiers.
+# @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
+# @param covars Names of predictors (covariates) in the data.
+# @param OUTCOME Character name of the column containing outcomes.
+# @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+# @return An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
 # @example tests/examples/1_GriDiSL_example.R
-#' @export
+# @export
+
 importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("GriDiSL.verbose")) {
   gvars$verbose <- verbose
   # if (verbose) {

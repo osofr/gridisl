@@ -31,7 +31,7 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
   # }
 
   # model.object <- m.fit$model.object
-  model.object <- m.fit$fitted_models_all[[1]]
+  model.object <- m.fit$modelfits_all[[1]]
 
   fitted.argvals <- m.fit$fitted.argvals
   fitted.subj <- m.fit$fitted.subj

@@ -13,13 +13,13 @@ print.ModelStack <- function(modelstack, ...) {
 # Define modeling algorithm(s), package and parameters
 # @param estimator A character string name of package and estimator (algorithm) name, separated by "__".
 # @param ... Additional modeling parameters to be passed to modeling function.
-#' @rdname defGrid
-#' @export
+# @rdname defModel
+# @export
 defLearner <- function(estimator, x, ...) {
   pkg_est <- strsplit(estimator, "__", fixed = TRUE)[[1]]
   pkg <- pkg_est[1]
   if (length(pkg_est) > 1) est <- pkg_est[2] else est <- NULL
-  learner <- defGrid(estimator, x, ...)
+  learner <- defModel(estimator, x, ...)
 
   if (!(pkg %in% c("h2o", "xgboost"))) {
     learner[[1]][["fit.algorithm"]] <- learner[[1]][["grid.algorithm"]]
@@ -31,17 +31,20 @@ defLearner <- function(estimator, x, ...) {
 # ---------------------------------------------------------------------------------------
 #' Interface for defining models
 #'
-#' Use \code{defLearner} to define a single model and \code{defGrid} to define a grid of multple models.
+#' Specify either a single model or a grid of multple models by invoking the optional argument \code{param_grid}.
 #' @param estimator A character string name of package and estimator (algorithm) name, separated by "__".
 #' @param x A vector containing the subset of the names of the predictor variables to use in building this
 #' particular learner or grid. This argument can be used to over-ride the values of \code{x} provided to \code{fit} function.
 #' As such, the names supplied here must always be a subset of the names specified to \code{fit}.
 #' When this argument is missing (default) the column names provided to \code{fit} are used as predictors in building this model / grid.
 #' @param search_criteria Search criteria
-#' @param param_grid Grid of modeling parameters
+#' @param param_grid Named list of model hyper parameters (optional).
+#' Each named item defines either a fixed model parameter value or a vector of possible values.
+#' In the latter case this function call would define a grid (ensemble) of models.
+#' Each model in the ensemble corresponds by a particular fixed parameter value.
 #' @param ... Additional modeling parameters to be passed on directly to the modeling function.
 #' @export
-defGrid <- function(estimator, x, search_criteria, param_grid, ...) {
+defModel <- function(estimator, x, search_criteria, param_grid, ...) {
   pkg_est <- strsplit(estimator, "__", fixed = TRUE)[[1]]
   pkg <- pkg_est[1]
   if (length(pkg_est) > 1) est <- pkg_est[2] else est <- NULL
@@ -52,13 +55,11 @@ defGrid <- function(estimator, x, search_criteria, param_grid, ...) {
   GRIDparams = list(fit.package = pkg, fit.algorithm = "grid", grid.algorithm = est)
   if (!missing(x)) GRIDparams[["x"]] <- x
   if (!missing(search_criteria)) GRIDparams[["search_criteria"]] <- search_criteria
-  if (!missing(param_grid)) GRIDparams[["params"]] <- param_grid
-
-  # grid.algorithm = c("glm", "gbm")
-  # glm = glm_hyper_params, gbm = gbm_hyper_params,
-  # family = "gaussian",
-  # learner = "h2o.glm.reg03",
-  # stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
+  if (!missing(param_grid)) {
+    if (!is.list(param_grid)) stop("'param_grid' must be a named list of model hyper parameters")
+    if (is.null(names(param_grid)) || "" %in% names(param_grid)) stop("all items in 'param_grid' must be named")
+    GRIDparams[["param_grid"]] <- param_grid
+  }
 
   if (length(sVar.exprs) > 0) GRIDparams <- c(GRIDparams, sVar.exprs)
   GRIDparams <- list(GRIDparams)
@@ -67,15 +68,15 @@ defGrid <- function(estimator, x, search_criteria, param_grid, ...) {
 }
 
 # S3 method '+' for adding two ModelStack objects
-# Summary measure lists in both get added as c(,) into the summary measures in sVar1 object
-#' @rdname defGrid
-#' @param learner1 An object returned by a call to \code{defLearner} or \code{defGrid} functions.
-#' @param learner2 An object returned by a call to \code{defLearner} or \code{defGrid} functions.
+# Summary measure lists in both get added as c(,) into the summary measures in model1 / model2 objects
+#' @rdname defModel
+#' @param model1 An object returned by a call to \code{defModel} function.
+#' @param model2 An object returned by a call to \code{defModel} function.
 #' @export
-`+.ModelStack` <- function(learner1, learner2) {
-  assert_that(is.ModelStack(learner1))
-  assert_that(is.ModelStack(learner2))
-  newStack <- append(learner1, learner2)
+`+.ModelStack` <- function(model1, model2) {
+  assert_that(is.ModelStack(model1))
+  assert_that(is.ModelStack(model2))
+  newStack <- append(model1, model2)
   class(newStack) <- c(class(newStack), "ModelStack")
   return(newStack)
 }

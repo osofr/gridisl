@@ -40,14 +40,14 @@
 ## where k is the total number of models trained by this ensemble (with h2o.grid, etc) and is equal to length(models_list)
 ## ----------------------------------------------------------------------------------------------------------------------------------
 xgb_predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subset_idx, predict_model_names, ...) {
-  models_list <- m.fit$fitted_models_all
+  models_list <- m.fit$modelfits_all
   if (!missing(predict_model_names) && !is.null(predict_model_names)) models_list <- models_list[predict_model_names]
 
   ## Grab the internallly stored h2o out of sample predictions for each CV model (cross-validation predictions are combined into a single vector of length n)
   if (missing(validation_data)) {
 
     message("Obtaining out-of-sample/holdout CV predictions for xgboost")
-    # pAoutDT <- sapply(m.fit$fitted_models_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
+    # pAoutDT <- sapply(m.fit$modelfits_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
     pAoutDT <- lapply(models_list, function(cv_xgb_model) cv_xgb_model[["pred"]])
     pAoutDT <- as.data.table(pAoutDT)
     # pAoutDT <- h2o::h2o.cbind(pAoutDT)

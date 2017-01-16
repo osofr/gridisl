@@ -313,7 +313,7 @@ test.generic.h2oSL <- function() {
   grid_mfit_val$show(model_stats = TRUE, all_fits = TRUE)
 
   ## fetch the model fits directly:
-  model_1 <- grid_mfit_val$getfit$fitted_models_all[[1]]
+  model_1 <- grid_mfit_val$getfit$modelfits_all[[1]]
 
   ## ----------------------------------------------------------------
   ## Perform fitting on a grid of algorithms w/ Vfold CV (can still specify validation data, model scoring will be based on CV though)
@@ -331,7 +331,7 @@ test.generic.h2oSL <- function() {
   head(fit_preds_best[]); nrow(fit_preds_best)
 
   grid_mfit_cv$show(model_stats = TRUE, all_fits = TRUE)
-  model_cv <- grid_mfit_cv$getfit$fitted_models_all[[1]]
+  model_cv <- grid_mfit_cv$getfit$modelfits_all[[1]]
 
   eval_MSE_cv(grid_mfit_cv)
 
@@ -353,6 +353,6 @@ test.generic.h2oSL <- function() {
   grid_mfit_cv$getmodel_ids
 
   grid_mfit_cv$show(model_stats = TRUE, all_fits = TRUE)
-  # model_cv <- grid_mfit_cv$getfit$fitted_models_all$h2o.glm.reg03
-  model_cv <- grid_mfit_cv$getfit$fitted_models_all[[1]]
+  # model_cv <- grid_mfit_cv$getfit$modelfits_all$h2o.glm.reg03
+  model_cv <- grid_mfit_cv$getfit$modelfits_all[[1]]
 }

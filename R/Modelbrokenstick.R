@@ -83,7 +83,7 @@ predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, s
   # }
 
   # model.object <- m.fit$model.object
-  model.object <- m.fit$fitted_models_all[[1]]
+  model.object <- m.fit$modelfits_all[[1]]
 
   fitted.subject <- m.fit$fitted.subject
   fitted.x <- m.fit$fitted.x

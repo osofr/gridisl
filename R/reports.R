@@ -54,7 +54,7 @@ openFileInOS <- function(f) {
 # \code{t_int_sel}, \code{y_lab}, \code{x_lab}, \code{miny}, \code{x_legend}, \code{y_legend}.
 #' @return String specifying the path to the main report file.
 #' @export
-make_report_rmd <- function(modelfit, data, K = 5, format = c("html", "pdf", "word"),
+make_model_report <- function(modelfit, data, K = 5, format = c("html", "pdf", "word"),
                             file.name = getOption('GriDiSL.file.name'), file.path = getOption('GriDiSL.file.path'),
                             openFile = TRUE, keep_md = FALSE, keep_tex = FALSE, ...) {
   optArgReport <- list(...)

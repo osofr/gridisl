@@ -28,7 +28,7 @@ test.H2O_holdoutSL_GLM_old_syntax <- function() {
                                 data = cpp_holdout, models = list(GLM.GRIDparams),
                                 hold_column = "hold") # , use_new_features = TRUE
 
-    make_report_rmd(mfit_holdGLM, data = cpp_holdout,
+    make_model_report(mfit_holdGLM, data = cpp_holdout,
                     K = 10,
                     file.name = paste0("GLMs_", getOption("GriDiSL.file.name")),
                     title = paste0("Growth Curve Imputation with GLM"),
@@ -162,7 +162,7 @@ test.H2O_holdoutSL_GRID_GBM_old_syntax <- function() {
   print("Top 5 models: "); print(models)
   res_tab <- mfit_hold2$get_best_MSE_table(K = 5)
   print("5 best models among all learners: "); print(res_tab)
-  make_report_rmd(mfit_hold2, data = cpp_holdout, K = 10, format = "html", openFile = FALSE)
+  make_model_report(mfit_hold2, data = cpp_holdout, K = 10, format = "html", openFile = FALSE)
 
   ## Save the best performing h2o model fit to disk:
   # save_best_h2o_model(mfit_hold2, file.path = "/Users/olegsofrygin/GoogleDrive/HBGDki/ImputationSL/sofware")
@@ -281,7 +281,7 @@ test.H2O_cvSL_GRID_GBM_old_syntax <- function() {
 
   ## Make report, save grid predictions and out of sample predictions
   # fname <- paste0(data.name, "_", "CV_gridSL_")
-  make_report_rmd(mfit_cv1, K = 10, data = cpp_folds,
+  make_model_report(mfit_cv1, K = 10, data = cpp_folds,
                   # file.name = paste0(fname, getOption("GriDiSL.file.name")),
                   title = paste0("Growth Curve Imputation with cpp Data"),
                   format = "html", keep_md = TRUE, openFile = FALSE)
