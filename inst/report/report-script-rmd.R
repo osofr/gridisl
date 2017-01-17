@@ -5,11 +5,11 @@
 #' ---
 
 #+ setup, include=FALSE
-require("knitr")
-require("pander")
-opts_chunk$set(fig.path = figure.dir, comment = NA)
-
-panderOptions("table.split.table", Inf)
+  require("knitr")
+  require("pander")
+  opts_chunk$set(fig.path = figure.dir, comment = NA)
+  # options(width = 200)
+  panderOptions("table.split.table", Inf)
 
 #'
 #' Total number of unique independent units in the input data:
@@ -25,18 +25,18 @@ panderOptions("table.split.table", Inf)
 #' ## Model Performance Based on MSE for Holdout / Validation Data
 #'
 
-#+ echo=FALSE, warning=FALSE, message=FALSE
-plotMSEs(modelfit, K = K, interactive = TRUE)
+#+ warning=FALSE, message=FALSE
+  plotMSEs(modelfit, K = K, interactive = TRUE)
 
 #' &nbsp;
 #'
 #' &nbsp;
 #'
 
-#+ echo=FALSE, warning=FALSE, message=FALSE, results='asis'
-pander::set.caption("Top MSEs (for Holdout / Validation Data).")
-tabMSEonly <- modelfit$get_best_MSEs(K = K)
-pander::pander(data.frame(model = names(tabMSEonly), MSEs = tabMSEonly, row.names = NULL))
+#+ warning=FALSE, message=FALSE, results='asis'
+  pander::set.caption("Top MSEs (for Holdout / Validation Data).")
+  tabMSEonly <- modelfit$get_best_MSEs(K = K)
+  pander::pander(data.frame(model = names(tabMSEonly), MSEs = tabMSEonly, row.names = NULL))
 
 
 #' &nbsp;
@@ -44,11 +44,35 @@ pander::pander(data.frame(model = names(tabMSEonly), MSEs = tabMSEonly, row.name
 #' &nbsp;
 #'
 
-#+ echo=FALSE, warning=FALSE, message=FALSE, results='asis'
-tab <- modelfit$get_best_MSE_table(K = K)
-tabMSE <- tab[, names(tab)[!names(tab) %in% "model.id"]]
-pander::set.caption("Best Performing Models (Based on MSE for Holdout / Validation Data).")
-pander::pander(tabMSE)
+#+ warning=FALSE, message=FALSE, results='asis'
+  tab <- modelfit$get_best_MSE_table(K = K)
+  tabMSE <- tab[, names(tab)[!names(tab) %in% "model.id"]]
+  pander::set.caption("Best Performing Models (Based on MSE for Holdout / Validation Data).")
+  pander::pander(tabMSE)
+
+#' &nbsp;
+#'
+#' &nbsp;
+#'
+
+#'
+#' ## Summary of Model Grids
+#'
+
+#+ warning=FALSE, message=FALSE
+  grids <- modelfit$get_modelfits_grid()
+  for (grid in grids) {
+    print(grid)
+    cat("\n\n\n");
+  }
+
+#+ results='asis'
+  grids <- modelfit$get_modelfits_grid()
+  for (grid in grids) {
+    if (is.data.frame(grid) || is.data.table(grid))
+      grid <- grid[ , names(grid)[!(names(grid) %in% c("glob_params", "xgb_fit", "fit", "params"))], with = FALSE]
+    pander::pander(grid, caption = "Grid Details")
+  }
 
 #' &nbsp;
 #'
@@ -59,11 +83,11 @@ pander::pander(tabMSE)
 #' ## Top Performing Models
 #'
 
-#+ echo=FALSE, warning=FALSE, message=FALSE, results='asis'
-tab <- modelfit$get_best_MSE_table(K = K)
-tabIDs <- tab[, names(tab)[names(tab) %in% c("model.id", "model")]]
-pander::set.caption("Model ID and name for top performing models.")
-pander::pander(tabIDs)
+#+ warning=FALSE, message=FALSE, results='asis'
+  tab <- modelfit$get_best_MSE_table(K = K)
+  tabIDs <- tab[, names(tab)[names(tab) %in% c("model.id", "model")]]
+  pander::set.caption("Model ID and name for top performing models.")
+  pander::pander(tabIDs)
 
 #' &nbsp;
 #'
@@ -71,23 +95,23 @@ pander::pander(tabIDs)
 #'
 
 #+ echo=FALSE, warning=FALSE, message=FALSE, results='asis'
-panderOptions('knitr.auto.asis', FALSE)
-if (!skip.modelfits) {
-  models.object <- modelfit$get_best_models(K = K)
-  for (model_idx in seq_along(models.object)) {
-    cat("\n\n");
-    cat("###")
-    cat('<a name=',paste0("jump",model_idx),'>', "Summaries for Model " %+% names(models.object)[model_idx], '</a> ')
-    cat("\n\n");
-    if (!is.null(models.object[[model_idx]])) {
-      print_tables(models.object[[model_idx]])
-    } else {
-      cat("*no modeling objects found*")
+  panderOptions('knitr.auto.asis', FALSE)
+  if (!skip.modelfits) {
+    models.object <- modelfit$get_best_models(K = K)
+    for (model_idx in seq_along(models.object)) {
+      cat("\n\n");
+      cat("###")
+      cat('<a name=',paste0("jump",model_idx),'>', "Summaries for Model " %+% names(models.object)[model_idx], '</a> ')
+      cat("\n\n");
+      if (!is.null(models.object[[model_idx]])) {
+        print_tables(models.object[[model_idx]])
+      } else {
+        cat("*no modeling objects found*")
+      }
+      cat("\n\n"); cat("&nbsp;")
     }
-    cat("\n\n"); cat("&nbsp;")
   }
-}
-panderOptions('knitr.auto.asis', TRUE)
+  panderOptions('knitr.auto.asis', TRUE)
 
 #' &nbsp;
 #'
@@ -95,20 +119,20 @@ panderOptions('knitr.auto.asis', TRUE)
 #'
 
 #'
-#' ## Detailed Modeling Parameters
+#' ## Model Stack Summaries
 #'
 
 #+ echo=FALSE
-if (!skip.modelfits) {
-  print(modelfit, model_stats = TRUE, all_fits = print_all_fits)
-  # print(modelfit, model_stats = TRUE)
-  # models <- modelfit$getfit
-  # single_models <- models$modelfits_all[[1]]
-  # for (single_model in models$modelfits_all) {
-  #   # print(models, only.coefs = only.coefs)
-  #   print(single_model)
-  #   # res <- capture.output(single_models)
-  #   # pander(print(paste(res, collapse = '\n')))
-  # }
-}
+  if (!skip.modelfits) {
+    print(modelfit, model_stats = TRUE, all_fits = print_all_fits)
+    # print(modelfit, model_stats = TRUE)
+    # models <- modelfit$getfit
+    # single_models <- models$modelfits_all[[1]]
+    # for (single_model in models$modelfits_all) {
+    #   # print(models, only.coefs = only.coefs)
+    #   print(single_model)
+    #   # res <- capture.output(single_models)
+    #   # pander(print(paste(res, collapse = '\n')))
+    # }
+  }
 # panderOptions('knitr.auto.asis', TRUE)

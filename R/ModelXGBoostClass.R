@@ -279,50 +279,16 @@ getPredictXGBDMat <- function(m.fit, ParentObject, DataStorageObject, subset_idx
 
     } else {
       # fold_column <- ParentObject$fold_column
-      # browser()
 
       newXmat <- as.matrix(DataStorageObject$dat.sVar[subset_idx, m.fit$params$predvars, with = FALSE])
-
-      # DataStorageObject$dat.sVar[subset_idx, ]
-      # DataStorageObject$dat.sVar[subset_idx, m.fit$params$predvars, with = FALSE][1:5, ]
-
-# head(newXmat[,], 10)
-#       CVD highA1c N lastNat1 TI TI.tminus1
-#  [1,]   0       0 1        0  1          0
-#  [2,]   0       0 0        3  1          0
-#  [3,]   0       0 1        0  1          0
-#  [4,]   1       0 1        3  1          0
-#  [5,]   0       0 0        0  1          1
-#  [6,]   0       0 0        1  1          0
-#  [7,]   0       0 0        0  1          0
-#  [8,]   0       0 0        1  1          1
-#  [9,]   0       1 0        1  1          0
-# [10,]   0       0 0        3  1          0
-
-# head(newXmat[,c("TI")], 5)
-# [1] 0 0 0 0 1
-#      CVD highA1c     N lastNat1    TI TI.tminus1
-#    <int>   <int> <int>    <int> <int>      <int>
-# 1:     0       0     1        0     0          0
-# 2:     0       0     0        3     0          0
-# 3:     0       0     1        0     0          0
-# 4:     1       0     1        3     0          0
-# 5:     0       0     0        0     1          1
-
-      # DataStorageObject$dat.sVar[subset_idx, m.fit$params$predvars, with = FALSE]
-      # DataStorageObject$dat.sVar[1:6, ]
-      # DataStorageObject$dat.sVar[1:6, ]
-      # head(newXmat)
 
       if (is.integer(newXmat)) newXmat[,1] <- as.numeric(newXmat[,1])
       pred_dmat <- xgboost::xgb.DMatrix(newXmat)
 
       ## fails if is.integer(mat)
       # pred_dmat <- xgboost::xgb.DMatrix(as.matrix(newXmat))
-
       # Yvals <- DataStorageObject$get.outvar(subset_idx, self$outvar) # Always a vector (or m.fit$params$outvar)
       # pred_dmat <- xgb.DMatrix(as.matrix(newXmat), label = Yvals)
-
     }
     return(pred_dmat)
   }
@@ -342,32 +308,16 @@ predictP1.XGBoostmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   names(pAoutDT) <- names(models_list)
 
   if (nrow(pred_dmat) > 0) {
-    # pAoutDT <- NULL
-    # idx <- 1
-    # str(models_list[[1]])
-
     for (idx in seq_along(models_list)) {
-
-      ## Use ntreelimit for prediction, if it was actually used during model training
-      if (!is.null(models_list[[idx]]$best_ntreelimit)) ntreelimit <- models_list[[idx]]$best_ntreelimit else ntreelimit <- NULL
-
-      ## temp fix to avoid the bug "GBLinear::Predict ntrees is only valid for gbtree predictor"
-      ## for gblinear need to replace with this (set ntreelimit to 0)
-      if ((models_list[[idx]]$params$booster %in% "gblinear") && (!is.null(ntreelimit))) {
-        models_list[[idx]]$best_ntreelimit <- NULL
-        ntreelimit <- 0
+      ## Use ntreelimit for prediction, if it was actually used during model training.
+      ## Use it only for gbtree (not for gblinear, i.e., glm, as it is not implemented)
+      ntreelimit <- 0
+      if (!is.null(models_list[[idx]][["best_ntreelimit"]]) && !(models_list[[idx]][["params"]][["booster"]] %in% "gblinear")) {
+        ntreelimit <- models_list[[idx]][["best_ntreelimit"]]
       }
-
-      # browser()
-      # preds <- predict(models_list[[idx]], newdata = pred_dmat, ntree_limit = ntreelimit)
-      # head(preds, 10)
-      # [1] 0.02875428 0.02875428 0.02875428 0.04605023 0.02875428 0.02875428 0.02875428 0.02875428 0.02875428 0.02875428
-      # [1] 0.02875428 0.02875428 0.02875428 0.04605023 0.02875428 0.02875428 0.02875428 0.02875428 0.02875428 0.02875428
-
       ## will generally return a vector, needs to be put into a corresponding column of a data.table
-      pAoutDT[[names(models_list)[idx]]] <- predict(models_list[[idx]], newdata = pred_dmat, ntree_limit = ntreelimit)
+      pAoutDT[[names(models_list)[idx]]] <- predict(models_list[[idx]], newdata = pred_dmat, ntreelimit = ntreelimit)
     }
-
     setDT(pAoutDT)
     # pAoutDT <- as.data.table(pAoutDT)
     # names(pAoutDT) <- names(models_list)

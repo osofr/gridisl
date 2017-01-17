@@ -312,7 +312,9 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     # Score models (so far only MSE) based on either out of sample CV model preds or validation data preds;
-    score_models = function(validation_data, subset_exprs = NULL, ...) {
+    score_models = function(validation_data, subset_exprs = NULL, OData_train = NULL, OData_valid = NULL, ...) {
+      browser()
+
       if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
       if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
 
@@ -323,14 +325,14 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         test_values <- validation_data$get.outvar(subset_idx, var = self$outvar)
         IDs <- validation_data$get.outvar(subset_idx, var = validation_data$nodes$IDnode)
       } else if (self$runCV) {
-        subset_idx <- self$OData_train$evalsubst(subset_exprs = subset_exprs)
-        test_values <- self$OData_train$get.outvar(subset_idx, var = self$outvar)
-        IDs <- self$OData_train$get.outvar(subset_idx, var = self$OData_train$nodes$IDnode)
+        subset_idx <- OData_train$evalsubst(subset_exprs = subset_exprs)
+        test_values <- OData_train$get.outvar(subset_idx, var = self$outvar)
+        IDs <- OData_train$get.outvar(subset_idx, var = OData_train$nodes$IDnode)
       } else if (!self$runCV) {
-        if (is.null(self$OData_valid)) stop("Must either use CV or provide validation data for model scoring")
-        subset_idx <- self$OData_valid$evalsubst(subset_exprs = subset_exprs)
-        test_values <- self$OData_valid$get.outvar(subset_idx, var = self$outvar)
-        IDs <- self$OData_valid$get.outvar(subset_idx, var = self$OData_valid$nodes$IDnode)
+        if (is.null(OData_valid)) stop("Must either use CV or provide validation data for model scoring")
+        subset_idx <- OData_valid$evalsubst(subset_exprs = subset_exprs)
+        test_values <- OData_valid$get.outvar(subset_idx, var = self$outvar)
+        IDs <- OData_valid$get.outvar(subset_idx, var = OData_valid$nodes$IDnode)
       }
 
       private$MSE <- self$evalMSE_byID(out_of_sample_preds_DT, test_values, IDs)

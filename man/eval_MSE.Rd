@@ -2,7 +2,7 @@
 % Please edit documentation in R/fit_SuperLearner_funs.R
 \name{eval_MSE}
 \alias{eval_MSE}
-\title{Evaluate MSE for model fits, possibly using new data}
+\title{Evaluate MSE based on holdout/validation predictions}
 \usage{
 eval_MSE(modelfit, newdata, subset_idx = NULL,
   verbose = getOption("GriDiSL.verbose"))
@@ -10,19 +10,22 @@ eval_MSE(modelfit, newdata, subset_idx = NULL,
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit_model}} function.}
 
-\item{newdata}{...}
+\item{newdata}{Optional new validation data for evaluating MSE, either a \code{data.table} or \code{DataStorageClass} object.}
 
-\item{subset_idx}{...}
+\item{subset_idx}{Optional row indices if MSE needs to be evaluating for a subset of the input data.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
 }
 \value{
-...
+A list of MSEs by model.
 }
 \description{
-By default this function will extract out-of-sample predictions from original training data (automatically done by h2o) to evaluate the cross-validated MSE.
-However, when \code{newdata} is supplied, the predictions for each CV model will be based on this external validation dataset.
-These predictions and the outcome stored in \code{newdata} are then used to re-evalute the CV MSE. Note that \code{newdata} must be of the same
+By default this function will extract out-of-sample/validation/holdout predictions
+from original training data (automatically done by h2o) to evaluate the cross-validated MSE.
+However, when \code{newdata} is supplied, the predictions for each CV model will
+be based on this external validation dataset.
+These predictions and the outcome stored in \code{newdata} are then used to re-evalute the CV MSE.
+Note that \code{newdata} must be of the same
 dimensionality as the original training data used for fitting the h2o models.
 }
 

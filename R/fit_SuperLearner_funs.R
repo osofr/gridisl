@@ -448,17 +448,20 @@ predict_holdout <- function(modelfit, newdata,
 }
 
 # ---------------------------------------------------------------------------------------
-#' Evaluate MSE for model fits, possibly using new data
+#' Evaluate MSE based on holdout/validation predictions
 #'
-#' By default this function will extract out-of-sample predictions from original training data (automatically done by h2o) to evaluate the cross-validated MSE.
-#' However, when \code{newdata} is supplied, the predictions for each CV model will be based on this external validation dataset.
-#' These predictions and the outcome stored in \code{newdata} are then used to re-evalute the CV MSE. Note that \code{newdata} must be of the same
+#' By default this function will extract out-of-sample/validation/holdout predictions
+#' from original training data (automatically done by h2o) to evaluate the cross-validated MSE.
+#' However, when \code{newdata} is supplied, the predictions for each CV model will
+#' be based on this external validation dataset.
+#' These predictions and the outcome stored in \code{newdata} are then used to re-evalute the CV MSE.
+#' Note that \code{newdata} must be of the same
 #' dimensionality as the original training data used for fitting the h2o models.
 #' @param modelfit Model fit object returned by \code{\link{fit_model}} function.
-#' @param newdata ...
-#' @param subset_idx ...
+#' @param newdata Optional new validation data for evaluating MSE, either a \code{data.table} or \code{DataStorageClass} object.
+#' @param subset_idx Optional row indices if MSE needs to be evaluating for a subset of the input data.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
-#' @return ...
+#' @return A list of MSEs by model.
 #' @export
 eval_MSE <- function(modelfit, newdata, subset_idx = NULL, verbose = getOption("GriDiSL.verbose")) {
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit

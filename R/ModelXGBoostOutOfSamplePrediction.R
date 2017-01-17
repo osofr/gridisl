@@ -45,79 +45,79 @@ xgb_predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, s
 
   ## Grab the internallly stored h2o out of sample predictions for each CV model (cross-validation predictions are combined into a single vector of length n)
   if (missing(validation_data)) {
-
-    message("Obtaining out-of-sample/holdout CV predictions for xgboost")
-    # pAoutDT <- sapply(m.fit$modelfits_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
+    message("Obtaining pre-saved out-of-sample/holdout CV predictions for xgboost")
     pAoutDT <- lapply(models_list, function(cv_xgb_model) cv_xgb_model[["pred"]])
     pAoutDT <- as.data.table(pAoutDT)
-    # pAoutDT <- h2o::h2o.cbind(pAoutDT)
     names(pAoutDT) <- names(models_list)
-    # setnames(pAoutDT, names(models_list))
-    # if (convertResToDT) pAoutDT <- as.data.table(pAoutDT)
     return(pAoutDT)
 
   } else {
+    message("Obtaining out-of-sample/holdout CV predictions for xgboost with newdata")
+    # ## pre-saved out-of-sample preds for validation folds
+    # models_list[[1]][["pred"]]
+    # ## list of validation fold indices (rows in input data)
+    # models_list[[1]][["folds"]]
+    # nfold <- length(models_list[[1]][["folds"]])
+    # ## validation fold indices for fold 1:
+    # models_list[[1]][["folds"]][[1]]
+    # ## pre-saved list of cv training-fold model objects
+    # models_list[[1]][["models"]]
+    # fold_model <- models_list[[1]][["models"]][[1]]
 
-    stop("not implemented")
+    # ## **** Allows re-using existing h2oFrame is it was already pre-loaded in validation_data object ****
+    # valid_H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, validation_data, subset_idx)
+    valid_dmat <- getPredictXGBDMat (m.fit, ParentObject, validation_data, subset_idx)
 
     # outvar <- m.fit$params$outvar
     # predvars <- m.fit$params$predvars
     # fold_column <- ParentObject$fold_column
-
-    # ## **** Allows re-using existing h2oFrame is it was already pre-loaded in validation_data object ****
-    # valid_H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, validation_data, subset_idx)
-
-    # message("Obtaining the out-of-sample CV predictions for new data")
-    # res <- check_out_of_sample_consistency(models_list, valid_H2Oframe, predvars, fold_column)
+    # res <- check_out_of_sample_consistency(models_list, valid_dmat, predvars, fold_column)
 
     # ## Get the fold assignments for the 1st model in ensemble:
-    # h2o_model_1 <- models_list[[1]]
-    # fold_h2o <- h2o::h2o.cross_validation_fold_assignment(h2o_model_1)
-    # vfolds_cat_h2o <- sort(h2o::h2o.levels(fold_h2o)) # # vfolds_ncat_h2o <- h2o.nlevels(fold_h2o)
+    xgb_model_1 <- models_list[[1]]
 
-    # pAoutMat_h2o <- NULL
-    # CV_loop_t <- system.time({
-    # for (vfold_idx in seq_along(vfolds_cat_h2o)) {
+    fold_xgb <- xgb_model_1[["folds"]]
+    vfolds_cat_xgb <- names(fold_xgb)
 
-    #   message("Obtaining out-of-sample CV predictions for all models and validation fold: " %+% vfolds_cat_h2o[vfold_idx])
-    #   fold_CV_i_logical <- fold_h2o == vfolds_cat_h2o[vfold_idx]
+    pAoutDT <- matrix(data = NA_real_, nrow = nrow(valid_dmat), ncol = length(models_list))
+    colnames(pAoutDT) <- names(models_list)
+    pAoutDT <- data.table::data.table(pAoutDT)
 
-    #   ## Define validation frame for this fold:
-    #   valid_H2Oframe_CV.i <- valid_H2Oframe[fold_CV_i_logical, ]
-    #   cv.i_foldframeID <- h2o::h2o.getId(valid_H2Oframe_CV.i)
+    CV_loop_t <- system.time({
+      for (vfold_idx in seq_along(vfolds_cat_xgb)) {
 
-    #   dest_key_LIST <- vector(mode = "list", length = length(models_list))
+        message("Obtaining out-of-sample CV predictions for all models and validation fold: " %+% vfolds_cat_xgb[vfold_idx])
 
-    #   for (idx in seq_along(models_list)) {
-    #     # h2o.predict(h2o.getModel(cv_models_IDs[[vfold_idx]]), newdata = h2o.getFrame(cv.i_foldframeID))
-    #     # print("idx: "); print(idx); print("model: "); print(names(models_list)[idx])
-    #     h2o_model <- models_list[[idx]]
-    #     cv_models_IDs <- lapply(h2o_model@model$cross_validation_models, "[[", "name")
-    #     ## Submit a job for prediction on a fold using internal REST API.
-    #     ## Don't pull the prediction results until all of these jobs were submitted.
-    #     url <- paste0('Predictions/models/', cv_models_IDs[[vfold_idx]], '/frames/',  cv.i_foldframeID)
-    #     res <- h2o:::.h2o.__remoteSend(url, method = "POST", h2oRestApiVersion = 4)
-    #     job_key <- res$key$name
-    #     dest_key <- res$dest$name
-    #     dest_key_LIST[[idx]] <- dest_key
-    #   }
+        ## validation row indices for the current fold:
+        fold_CV_i_idx <- fold_xgb[[vfolds_cat_xgb[vfold_idx]]]
 
-    #   newpreds_prev_CV_i <- NULL
-    #   for (idx in seq_along(dest_key_LIST)) {
-    #     newpreds <- h2o::h2o.getFrame(dest_key_LIST[[idx]])
-    #     newpreds_prev_CV_i <- h2o::h2o.cbind(newpreds_prev_CV_i, newpreds)
-    #   }
-    #   newpreds_prev_CV_i <- h2o::h2o.cbind(h2o.which(fold_CV_i_logical), newpreds_prev_CV_i)
-    #   pAoutMat_h2o <- h2o::h2o.rbind(pAoutMat_h2o, newpreds_prev_CV_i)
-    # }
+        ## subset the validation data by the current validation fold indices (will do predict for this data)
+        valid_dmat_CV.i <- valid_dmat[fold_CV_i_idx, ]
+        attributes(valid_dmat)
+        attr(valid_dmat_CV.i, ".Dimnames") <- attr(valid_dmat, ".Dimnames")
 
-    # pAoutMat_h2o <- h2o::h2o.arrange(pAoutMat_h2o, "C1")
-    # pAoutDT <- pAoutMat_h2o[, 2:ncol(pAoutMat_h2o)]
-    # })
-    # print("CV_loop_t"); print(CV_loop_t)
-    # names(pAoutDT) <- names(models_list)
-    # # if (convertResToDT) pAoutDT <- as.data.table(pAoutDT)
-    # # setnames(pAoutDT, names(models_list))
-    # return(pAoutDT)
+        for (idx in seq_along(models_list)) {
+          ## grab the model among the list of all fits, by its index
+          xgb_model <- models_list[[idx]]
+
+          ## Use ntreelimit for prediction, if it was actually used during model training.
+          ## Use it only for gbtree (not for gblinear, i.e., glm, as it is not implemented)
+          ntreelimit <- 0
+          if (!is.null(xgb_model[["best_ntreelimit"]]) && !(xgb_model[["params"]][["booster"]] %in% "gblinear"))
+            ntreelimit <- xgb_model[["best_ntreelimit"]]
+
+          ## grab all the V-fold trained models and grab the relevant one for current fold index
+          xgb_model_fold <- xgb_model[["models"]][[vfold_idx]]
+
+          ## 1. obtain predictions for new validation data (fold-specific)
+          ## 2. save in the appropriate fold ID rows and appropriate model name column in final data.table:
+          pAoutDT[fold_CV_i_idx, names(models_list)[idx] := predict(xgb_model_fold, newdata = valid_dmat_CV.i, ntreelimit = ntreelimit)]
+        }
+      }
+    })
+
+    print("CV_loop_t_xgb"); print(CV_loop_t)
+
+    return(pAoutDT)
   }
 }

@@ -256,19 +256,19 @@ plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
   assert_that(is.integerish(K))
 
   datMSE <- PredictionModel$get_best_MSE_table(K = K)
-  # datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV)]) # order when not flipping coords
-  datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV, decreasing = TRUE)]) # order when flipping coords
+  # datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE)]) # order when not flipping coords
+  datMSE[["model"]] <- factor(datMSE[["model"]], levels = datMSE[["model"]][order(datMSE[["MSE"]], decreasing = TRUE)]) # order when flipping coords
 
   # datMSE$tooltip <- "MSE.CV = " %+% round(datMSE$MSE.CV, 2) %+% "; 95% CI: [" %+% round(datMSE$CIlow,2) %+% "-" %+% round(datMSE$CIhi,2)  %+%"]"
   # datMSE$tooltip <- "MSE.CV = " %+% format(datMSE$MSE.CV, digits = 3, nsmall=2) %+% "; 95% CI: [" %+% format(datMSE$CIlow, digits = 3, nsmall=2) %+% "-" %+% format(datMSE$CIhi, digits = 3, nsmall=2)  %+% "]"
-  datMSE$tooltip <- "MSE.CV = " %+% format(datMSE$MSE.CV, digits = 3, nsmall=2) %+% " [" %+% format(datMSE$CIlow, digits = 3, nsmall=2) %+% "-" %+% format(datMSE$CIhi, digits = 3, nsmall=2)  %+% "]"
+  datMSE$tooltip <- "MSE = " %+% format(datMSE[["MSE"]], digits = 3, nsmall=2) %+% " [" %+% format(datMSE$CIlow, digits = 3, nsmall=2) %+% "-" %+% format(datMSE$CIhi, digits = 3, nsmall=2)  %+% "]"
 
   datMSE$onclick <- "window.location.hash = \"#jump" %+% 1:nrow(datMSE) %+% "\""
   # open a new browser window:
   # datMSE$onclick <- sprintf("window.open(\"%s%s\")", "http://en.wikipedia.org/wiki/", "Florida")  # pop-up box:
   # datMSE$onclick = paste0("alert(\"",datMSE$model.id, "\")")
 
-  p <- ggplot(datMSE, aes(x = model, y = MSE.CV, ymin=CIlow, ymax=CIhi)) # will use model name (algorithm)
+  p <- ggplot(datMSE, aes(x = model, y = MSE, ymin=CIlow, ymax=CIhi)) # will use model name (algorithm)
   if (interactive) {
     p <- p + geom_point_interactive(aes(color = algorithm, tooltip = tooltip, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
     # p <- p + geom_point_interactive(aes(color = algorithm, tooltip = model.id, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8

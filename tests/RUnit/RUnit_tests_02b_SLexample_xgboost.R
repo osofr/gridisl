@@ -12,25 +12,20 @@ test.XGBoost.simple <- function() {
   mfit_xgb1 <- fit(params, method = "none", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                   data = cpp)
 
-  # model_obj <- mfit_xgb1$get_best_models()[[1]]
-  # print_tables(model_obj)
-  # str(mfit_xgb1$get_best_models()[[1]])
-  # model_obj$call
-  # model_obj$params
-  # model_obj$evaluation_log
-
-  hyper_params = list(eta = c(0.3, 0.1,0.01),
-                      max_depth = c(4,6,8,10),
-                      max_delta_step = c(0,1),
-                      subsample = 1,
-                      scale_pos_weight = 1)
-
   GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
                  defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
+                          seed = 123456
                           search_criteria = list(
                             strategy = "RandomDiscrete",
                             max_models = 4),
-                          param_grid = hyper_params, seed = 123456)
+                          param_grid = list(
+                            eta = c(0.3, 0.1,0.01),
+                            max_depth = c(4,6,8,10),
+                            max_delta_step = c(0,1),
+                            subsample = 1,
+                            scale_pos_weight = 1
+                            )
+                          )
 
   # cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
   mfit_xgb <- fit(GRIDparams2, method = "none", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
@@ -62,20 +57,14 @@ test.XGBoost.GLM <- function() {
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
   params_glm <- defModel(estimator = "xgboost__glm", family = "gaussian",
-                           eta = 1.7, nrounds = 1000,
-                           alpha = 0.3, lambda = 0.1,
-                           seed = 123456)
+                         eta = 1.7,
+                         nrounds = 1000,
+                         alpha = 0.3,
+                         lambda = 0.1)
+
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
   mfit_cv <- fit(params_glm, method = "cv", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                  data = cpp_folds, fold_column = "fold")
-
-  # model_obj <- mfit_cv$get_best_models()[[1]]
-  # class(model_obj)
-  # print_tables(model_obj)
-  # str(model_obj)
-  # model_obj$call
-  # model_obj$params
-  # model_obj$evaluation_log
 
   params_glm <- defModel(estimator = "xgboost__glm", family = "gaussian",
                            eta = 1.7, nrounds = 1000,
@@ -95,7 +84,6 @@ test.XGBoost.GLM <- function() {
   pred_alldat_cv <- predict_SL(mfit_cv, newdata = cpp_folds, add_subject_data = FALSE)
   head(pred_alldat_cv[])
 
-
   mfit_cv$get_best_MSE_table()
   mfit_cv$getMSEtab
   mfit_cv$get_modelfits_grid()
@@ -103,8 +91,7 @@ test.XGBoost.GLM <- function() {
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   mfit_hold <- fit(params_glm, method = "holdout", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                  data = cpp_holdout, hold_column = "hold")
-  # grid_mfit_xgboost_holdout <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-  #                                             data = cpp_holdout, params = GRIDparams, hold_column = "hold")
+
   pred_alldat_hold <- predict_SL(mfit_hold, newdata = cpp_holdout, add_subject_data = FALSE)
   head(pred_alldat_hold[])
 
@@ -155,7 +142,7 @@ test.XGBoost.regularizedGLM_grid <- function() {
 }
 
 ## ------------------------------------------------------------------------------------
-## test xgboost glm, model scoring with CV
+## test xgboost random forest, model scoring with CV
 ## ------------------------------------------------------------------------------------
 test.XGBoost.drfs <- function() {
   require("h2o")
@@ -186,7 +173,8 @@ test.XGBoost.drfs <- function() {
 
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   mfit_hold <- fit(params_drf, method = "holdout", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                 data = cpp_holdout, hold_column = "hold")
+                   data = cpp_holdout, hold_column = "hold")
+
   # grid_mfit_xgboost_holdout <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
   #                                             data = cpp_holdout, params = GRIDparams, hold_column = "hold")
   pred_alldat_hold <- predict_SL(mfit_hold, newdata = cpp_holdout, add_subject_data = FALSE)
@@ -194,25 +182,12 @@ test.XGBoost.drfs <- function() {
 
 }
 
-
 test.holdout.XGBoost <- function() {
   options(GriDiSL.verbose = FALSE)
   # options(GriDiSL.verbose = TRUE)
-
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
-
-  # GRIDparams = list(fit.package = "xgboost",
-  #                  fit.algorithm = "grid",
-  #                  grid.algorithm = c("gbm"),
-  #                  family = "gaussian",
-  #                  search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
-  #                  params = hyper_params,
-  #                  seed = 123456
-  #                  # glm = glm_hyper_params, gbm = gbm_hyper_params, learner = "h2o.glm.reg03",
-  #                  # stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10
-  #                  )
 
   hyper_params = list(eta = c(0.3, 0.1,0.01),
                       max_depth = c(4,6,8,10),
@@ -249,14 +224,12 @@ test.holdout.XGBoost <- function() {
   preds_alldat <- predict_SL(xgboost_holdout, newdata = cpp_holdout, add_subject_data = TRUE)
   preds_alldat[]
 
-
   ## ***** NOT IMPLEMENTED ****
   ## Predict for best model trained on non-holdouts only
   ## NOTE: The class for this already exists: xgboost_holdout$predict_within_sample()
   ##       The only difficulty is figuring out the interface, i.e., what argument / function should be used
   checkException(preds_train_top2 <- predict_SL(xgboost_holdout, add_subject_data = TRUE, best_refit_only = FALSE))
   # preds_train_top2[]
-
 
   print("10 best MSEs among all learners: "); print(xgboost_holdout$get_best_MSEs(K = 5))
   models <- xgboost_holdout$get_best_models(K = 5)
@@ -272,14 +245,13 @@ test.holdout.XGBoost <- function() {
 }
 
 
-
 ## ------------------------------------------------------------------------------------
-## Growth Curve SL with model scoring based on full V-FOLD CROSS-VALIDATION
+## xgboost with model scoring based on full V-FOLD CROSS-VALIDATION
 ## ------------------------------------------------------------------------------------
 test.CV.SL.XGBoost <- function() {
   # library("GriDiSL");
-  options(GriDiSL.verbose = FALSE)
-  # options(GriDiSL.verbose = TRUE)
+  # options(GriDiSL.verbose = FALSE)
+  options(GriDiSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -290,9 +262,11 @@ test.CV.SL.XGBoost <- function() {
                       subsample = 1,
                       scale_pos_weight = 1)
 
-  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
+  GRIDparams <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100,
+                         early_stopping_rounds = 10) +
 
-                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
+                defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
+                         early_stopping_rounds = 10,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
                          param_grid = hyper_params, seed = 123456)
 
@@ -301,7 +275,7 @@ test.CV.SL.XGBoost <- function() {
   ## --------------------------------------------------------------------------------------------
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
   mfit_cv <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                      data = cpp_folds, models = GRIDparams2, fold_column = "fold")
+                      data = cpp_folds, models = GRIDparams, fold_column = "fold")
 
   ## Predictions for new data based on best SL model trained on all data:
   preds_alldat <- predict_SL(mfit_cv, newdata = cpp_folds, add_subject_data = TRUE)
@@ -312,8 +286,9 @@ test.CV.SL.XGBoost <- function() {
   ## out-of-sample / holdout predictions:
   preds_hold_best <- predict_generic(mfit_cv, add_subject_data = TRUE, best_only = TRUE, holdout = TRUE)
   preds_hold_best[]
+
   ## out-of-sample / holdout predictions for all models:
-  preds_hold_all <- predict_generic(mfit_cv, add_subject_data = TRUE, best_only = FALSE, holdout = TRUE)
+  preds_hold_all <- predict_generic(mfit_cv, best_only = FALSE, holdout = TRUE) # add_subject_data = TRUE,
   preds_hold_all[]
 
   holdout_preds <- get_out_of_sample_predictions(mfit_cv)
@@ -322,27 +297,56 @@ test.CV.SL.XGBoost <- function() {
   checkTrue(all.equal(holdout_preds[[1]], preds_hold_best[[1]]))
 
   ## --------------------------------------------------------------------------------------------
+  ## PERFORM OUT-OF-SAMPLE PREDICTIONS FOR CV MODELS using newdata
+  ## --------------------------------------------------------------------------------------------
+  cv_valid_preds_newdata <- predict_SL(mfit_cv, newdata = cpp_folds, holdout = TRUE) # add_subject_data = TRUE,
+  cv_valid_preds_newdata[]
+
+  print(holdout_preds - cv_valid_preds_newdata)
+  checkTrue(max(abs(holdout_preds - cv_valid_preds_newdata)) < 10^-5)
+
+  ## SAME BUT FOR ALL MODELS (not just the best scoring)
+  cv_valid_preds_newdata_all <- predict_generic(mfit_cv, newdata = cpp_folds, best_only = FALSE, holdout = TRUE) # add_subject_data = TRUE,
+  cv_valid_preds_newdata_all[]
+  print(preds_hold_all - cv_valid_preds_newdata_all)
+  checkTrue(all(unlist(lapply(abs(preds_hold_all - cv_valid_preds_newdata_all), max)) < 10^-5))
+
+  ## Make report, save grid predictions and out-of-sample predictions
+  # fname <- paste0(data.name, "_", "CV_gridSL_")
+  make_model_report(mfit_cv, K = 10, data = cpp_folds,
+                    # file.name = paste0(fname, getOption("GriDiSL.file.name")),
+                    title = paste0("Growth Curve Imputation with cpp Data"),
+                    format = "html", keep_md = TRUE,
+                    # openFile = FALSE)
+                    openFile = TRUE)
+
+  mfit_cv$get_modelfits_grid()[[1]]
+
+  ## Must all match:
+  (MSE_1 <- unlist(eval_MSE(mfit_cv))) ## Use internally h2o-evaluated CV MSE
+   # M.1.xgb.glm M.2.xgb.gbm.grid.1 M.2.xgb.gbm.grid.2 M.2.xgb.gbm.grid.3 M.2.xgb.gbm.grid.4
+   #    1.558494           1.502805           1.519974           1.535077           1.541958
+
+  (MSE_2 <- unlist(eval_MSE(mfit_cv, get_train_data(mfit_cv)))) # rescore on training data
+   # M.1.xgb.glm M.2.xgb.gbm.grid.1 M.2.xgb.gbm.grid.2 M.2.xgb.gbm.grid.3 M.2.xgb.gbm.grid.4
+   #    1.558494           1.502805           1.519974           1.535077           1.541958
+
+  checkTrue(abs(sum(MSE_1 - MSE_2)) <= 10^-5)
+
+  ## --------------------------------------------------------------------------------------------
   ## ********** NEED MORE INFORMATIVE ERROR: "prediction for all models is not possible when doing cv with xgboost:" *****************
   ## --------------------------------------------------------------------------------------------
+  ## Predict for all models trained on non-holdouts only with newdata (should give error for xgboost, but should work for h2o):
   ## no applicable method for 'predict' applied to an object of class "xgb.cv.synchronous"
-  ## Predict for all models trained on non-holdouts only (should give error for xgboost, but work for h2o):
-  checkException(preds_train_all <- predict_generic(mfit_cv, add_subject_data = TRUE, best_only = FALSE, holdout = FALSE))
-  ## Predict for all models trained on non-holdouts only with newdata (should give error for xgboost, but work for h2o):
   checkException(preds_train_all2 <- predict_generic(mfit_cv, newdata = cpp_folds, add_subject_data = TRUE, best_only = FALSE, holdout = FALSE))
+  ## Predict for all models trained on non-holdouts only (should give error for xgboost, but should work for h2o):
+  checkException(preds_train_all <- predict_generic(mfit_cv, add_subject_data = TRUE, best_only = FALSE, holdout = FALSE))
+
+  p <- plotMSEs(mfit_cv, K = 10, interactive = FALSE)
+  p <- plotMSEs(mfit_cv, K = 10, interactive = TRUE)
 
   ## --------------------------------------------------------------------------------------------
-  ## ****** (NOT IMPLEMENTED YET) *******
-  ## --------------------------------------------------------------------------------------------
-  ## USE predict_SL TO PERFORM OUT-OF-SAMPLE RESCORING OF CV MODELS for newdata
-  checkException(cv_valid_preds_newdata <- predict_SL(mfit_cv, newdata = cpp_folds, add_subject_data = TRUE, holdout = TRUE))
-  # cv_valid_preds_newdata[]
-  ## SAME BUT FOR ALL MODELS (not just the best scoring)
-  checkException(cv_valid_preds_newdata <- predict_generic(mfit_cv, newdata = cpp_folds, add_subject_data = TRUE, best_only = FALSE, holdout = TRUE))
-  # cv_valid_preds_newdata[]
-  # checkTrue(all.equal(cv_valid_preds_rescore, cv_valid_preds_newdata))
-
-  ## --------------------------------------------------------------------------------------------
-  ## ****** (NOT IMPLEMENTED YET) *******
+  ## ****** (NOT IMPLEMENTED) *******
   ## --------------------------------------------------------------------------------------------
   ## Predictions for best CV model (not re-trained, trained only on non-holdouts), must match:
   # preds_best_CV <- GriDiSL:::predict_model(mfit_cv, add_subject_data = FALSE)
@@ -352,55 +356,10 @@ test.CV.SL.XGBoost <- function() {
   # preds_best_CV <- GriDiSL:::predict_model(mfit_cv, bestK_only = 1, add_subject_data = FALSE)
   # preds_best_CV[]
   # checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
-
-  ## Make report, save grid predictions and out of sample predictions
-  # fname <- paste0(data.name, "_", "CV_gridSL_")
-  make_model_report(mfit_cv, K = 10, data = cpp_folds,
-                  # file.name = paste0(fname, getOption("GriDiSL.file.name")),
-                  title = paste0("Growth Curve Imputation with cpp Data"),
-                  format = "html", keep_md = TRUE, openFile = FALSE)
-
-  ## Must all match:
-  (MSE_1 <- unlist(eval_MSE(mfit_cv))) ## Use internally h2o-evaluated CV MSE
-  # (MSE_2 <- unlist(eval_MSE(mfit_cv, get_validation_data(mfit_cv)))) ## Rescore on validation data, but use old saved y values
-  (MSE_4 <- unlist(eval_MSE(mfit_cv, get_train_data(mfit_cv)))) # rescore on training data
-  # checkTrue(abs(sum(MSE_1 - MSE_2)) <= 10^-5)
-  checkTrue(abs(sum(MSE_1 - MSE_4)) <= 10^-5)
-
-  ## --------------------------------------------------------------------------------------------
-  ## ****** (NOT IMPLEMENTED YET) *******
-  ## CHECKING CV IMPLEMENTATION VS. INTERNAL xgboost CV
-  ## --------------------------------------------------------------------------------------------
-  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 10, seed = 23)
-  mfit_cv <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                      data = cpp_folds, params = GRIDparams, fold_column = "fold")
-
-  train_dat <- get_train_data(mfit_cv)
-  valid_data <- get_validation_data(mfit_cv)
-  # Re-score on training data (should be equivalent to h2o-based CV metrics):
-  preds_cv_check <- eval_MSE(mfit_cv, get_train_data(mfit_cv))
-  # Internal CV MSE and CV evaluated on train_data should be the same:
-  mfit_cv$getmodel_ids
-
-  for (model_name in names(mfit_cv$getmodel_ids)) {
-    check_model <- mfit_cv$getmodel_byname(model_name)
-    # Internal H2O holdout CV predictions by fold:
-    # cv_preds_fold <- h2o.cross_validation_predictions(check_model[[1]])
-    # List of individual holdout predictions:
-    # Holdout (out-of-sample) predictions for all of training data:
-    cv_preds_all <- as.vector(h2o.cross_validation_holdout_predictions(check_model[[1]])) - preds_cv_check[[model_name]]
-
-    # MUST BE TRUE FOR ALL MODELS
-    print(paste0("CV validity for model: ", model_name))
-    test1 <- mfit_cv$getMSE[[model_name]] - check_model[[1]]@model$cross_validation_metrics@metrics$MSE < (10^-6)
-    print(test1); checkTrue(test1)
-    test2 <- sum(cv_preds_all, na.rm = TRUE) < 10^-8
-    print(test2); checkTrue(test1)
-  }
 }
 
 ## --------------------------------------------------------------------------------------------
-## ****** (NOT IMPLEMENTED YET) *******
+## ****** (NOT IMPLEMENTED) *******
 ## --------------------------------------------------------------------------------------------
 ## Holdout Growth Curve SL based on residuals from initial glm regression (model scoring based on random holdouts)
 test.residual.holdoutSL.xgboost <- function() {

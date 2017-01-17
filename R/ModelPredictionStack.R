@@ -67,8 +67,11 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       ## 2. Refit the best model for that PredictionModel object only
       model.fit <- self$PredictionModels[[best_Model_idx]]$refit_best_model(...) # data, subset_exprs,
 
-      ## 3. Clean up all data in PredictionModel, OData pointers and remove all modeling obj stored in daughter classes (we don't need them anymore)
-      self$wipe.alldat$wipe.allOData$wipe.allmodels
+      ## 3. Clean up all data in PredictionModel, OData pointers
+      self$wipe.alldat$wipe.allOData
+
+      ## Remove all modeling obj stored in daughter classes (don't need these if only going to do the best re-trained model predictions)
+      ## self$wipe.allmodels
 
       return(invisible(model.fit))
     },
@@ -155,8 +158,10 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
 
     # Score models (so far only MSE) based on either out of sample CV model preds or validation data preds;
     score_models = function(...) {
-    # score_models = function(validation_data, subset_exprs, ...) {
-      scored_m <- lapply(self$PredictionModels, function(PredictionModel) PredictionModel$score_models(...))
+      scored_m <- lapply(self$PredictionModels, function(PredictionModel)
+                          PredictionModel$score_models(...,
+                                                       OData_train = self$OData_train,
+                                                       OData_valid = self$OData_valid))
       return(invisible(self))
     },
 
