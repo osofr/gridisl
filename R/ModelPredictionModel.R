@@ -313,8 +313,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
     # Score models (so far only MSE) based on either out of sample CV model preds or validation data preds;
     score_models = function(validation_data, subset_exprs = NULL, OData_train = NULL, OData_valid = NULL, ...) {
-      browser()
-
       if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
       if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
 
