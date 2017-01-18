@@ -173,7 +173,12 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     },
 
     # ------------------------------------------------------------------------------
-    # return top K model fits from **FOR EVERY MODEL** in self$PredictionModels
+    # return top overall model across *ALL* models in self$PredictionModels
+    # ------------------------------------------------------------------------------
+    get_overall_best_model = function() { return(self$PredictionModels[[self$best_Model_idx]]$get_best_models(K = 1)) },
+
+    # ------------------------------------------------------------------------------
+    # return top K model fits from **FOR EVERY MODEL** in list self$PredictionModels
     # ------------------------------------------------------------------------------
     get_best_models = function(K = 1) {
       best_models <- NULL
@@ -185,7 +190,7 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     },
 
     # ------------------------------------------------------------------------------
-    # return the parameters of the top K models **FOR EVERY MODEL** in self$PredictionModels
+    # return the parameters of the top K models **FOR EVERY MODEL** in a list self$PredictionModels
     # ------------------------------------------------------------------------------
     get_best_model_params = function(K = 1) {
       best_model_params <- NULL
