@@ -2,7 +2,7 @@
 % Please edit documentation in R/summaryS3methods.R
 \name{pander.H2OBinomialMetrics}
 \alias{pander.H2OBinomialMetrics}
-\title{Pander method for H2OBinomialMetrics class}
+\title{Pander method for H2OBinomialMetrics S4 class}
 \usage{
 \method{pander}{H2OBinomialMetrics}(H2OBinomialMetricsObject, type)
 }

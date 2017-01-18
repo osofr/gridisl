@@ -2,7 +2,7 @@
 % Please edit documentation in R/summaryS3methods.R
 \name{pander.H2ORegressionMetrics}
 \alias{pander.H2ORegressionMetrics}
-\title{Pander method for H2ORegressionMetrics class}
+\title{Pander method for H2ORegressionMetrics S4 class}
 \usage{
 \method{pander}{H2ORegressionMetrics}(H2ORegressionMetricsObject, type)
 }

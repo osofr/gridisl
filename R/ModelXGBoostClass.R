@@ -134,7 +134,7 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
       # mainArgs[["callbacks"]] <- early_stop_ontrain
     } else if (grid.algorithm %in% "gbm") {
       mainArgs[["booster"]] <- "gbtree"
-    } else if (any(grid.algorithm %in% c("drf", "randomForest"))) {
+    } else if (any(grid.algorithm %in% c("drf", "rf", "randomForest"))) {
       mainArgs[["booster"]] <- "gbtree"
       if (!is.null(model_contrl[["nrounds"]])) {
         mainArgs[["num_parallel_tree"]] <- model_contrl[["nrounds"]]

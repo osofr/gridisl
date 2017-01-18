@@ -4,7 +4,7 @@
 #' @importFrom pander pander
 NULL
 
-#' Pander method for H2OBinomialMetrics class
+#' Pander method for H2OBinomialMetrics S4 class
 #'
 #' Prints a H2OBinomialMetrics object in Pandoc's markdown.
 #' @param H2OBinomialMetricsObject H2OBinomialMetrics object
@@ -54,7 +54,7 @@ pander.H2OBinomialMetrics <- function(H2OBinomialMetricsObject, type) {
   return(invisible(H2OBinomialMetricsObject))
 }
 
-#' Pander method for H2ORegressionMetrics class
+#' Pander method for H2ORegressionMetrics S4 class
 #'
 #' Prints a H2ORegressionMetrics object in Pandoc's markdown.
 #' @param H2ORegressionMetricsObject H2ORegressionMetrics object
@@ -64,6 +64,20 @@ pander.H2OBinomialMetrics <- function(H2OBinomialMetricsObject, type) {
 pander.H2ORegressionMetrics <- function(H2ORegressionMetricsObject, type) {
   pander.H2OBinomialMetrics(H2ORegressionMetricsObject, type)
 }
+
+#' Pander method for H2OGrid S4 class
+#'
+#' Prints a H2OGrid object in Pandoc's markdown.
+#' @param H2OGridObject H2OGrid S4 object
+#' @return By default this function outputs (see: \code{?cat}) the result.
+#' If you would want to catch the result instead, then call \code{pander_return} instead.
+#' @export
+pander.H2OGrid <- function(H2OGridObject) {
+  grid_summary_tab <- H2OGridObject@summary_table
+  caption <- "H2O Grid. " %+% attr(grid_summary_tab, "header") %+% ": " %+% attr(grid_summary_tab, "description")
+  pander::pander(data.frame(grid_summary_tab), caption = caption)
+}
+
 
 #' S3 methods for printing model fit summary for glmfit class object
 #'
