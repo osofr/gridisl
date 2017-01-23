@@ -85,6 +85,14 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
                                    callbacks = c(list(xgboost::cb.evaluation.log()), callbacks)
                                    )
     }
+
+    ## cv raw models:
+    raw_models_cv <- lapply(model_fit[["models"]], '[[', "raw")
+    print("xgb cv model size"); print(object.size(raw_models_cv), units = "MB")
+    reloaded_models <- lapply(raw_models_cv, function(raw) xgboost::xgb.load(raw))
+    model_fit[["models"]] <- NULL
+    model_fit[["models"]] <- reloaded_models
+
     return(model_fit)
   }
 
@@ -103,6 +111,10 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
   if (!is.null(max_models) && nrow(gs) > max_models) gs <- gs[1:max_models, ]
 
   ## Fit every single model in the grid with CV and (possibly) using early stopping
+  # data.table::setDT(gs)
+  # for (i in 1:nrow(gs)) {
+  #   gs[i, xgb_fit := list(list(purrr::lift(run_singe_model)(gs[i, ])))]
+  # }
   gs <- gs %>% dplyr::mutate(xgb_fit = purrr::pmap(gs, run_singe_model))
 
   glob_params <- list(missing = missing, obj = obj, feval = feval, maximize = maximize)
@@ -115,14 +127,13 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
     dplyr::mutate(ntreelimit = purrr::map_dbl(xgb_fit, "best_ntreelimit", .null = NA)) %>%
     dplyr::mutate(params = purrr::map(xgb_fit, "params")) %>%
     dplyr::mutate(metrics = purrr::map2(xgb_fit, nrounds, function(fit, nrounds) fit$evaluation_log[nrounds,])) %>%
-    tidyr::unnest(metrics)
+    tidyr::unnest(metrics) %>%
+    data.table::data.table()
 
   # mutate(eval_metric = map_chr(xgb_fit,  function(fit) fit[['params']][['eval_metric']])) %>%
   # metric_used <- gs[["eval_metric"]][1]
   # if (!is.null(order_metric_name)) gs <- gs %>% arrange_("test_"%+%order_metric_name%+%"_mean")
   # gs <- gs %>% arrange_("test_"%+%metric_used%+%"_mean") %>% data.table::as.data.table()
-
-  gs <- data.table::as.data.table(gs)
 
   ## Sort the data.table with grid model fits by user-supplied test/train metric value (lowest to highest)
   if (!is.null(order_metric_name)) data.table::setkeyv(gs, cols = order_metric_type %+% "_" %+% order_metric_name %+% ifelse(runCV, "_mean", ""))

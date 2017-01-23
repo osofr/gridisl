@@ -413,6 +413,7 @@ XGBoostClass <- R6Class(classname = "XGBoost",
     },
 
     fit = function(data, subset_idx, validation_data = NULL, ...) {
+      # browser()
       assert_that(is.DataStorageClass(data))
 
       train_dmat <- self$setdata(data, subset_idx, ...)
