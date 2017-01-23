@@ -8,13 +8,13 @@ test.XGBoost.simple <- function() {
   cpp <- data.table::data.table(cpp)
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
-  params <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 5000, early_stopping_rounds = 2)
+  params <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 5000, early_stopping_rounds = 30)
   mfit_xgb1 <- fit(params, method = "none", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                   data = cpp)
 
   GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
                  defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
-                          seed = 123456
+                          seed = 123456,
                           search_criteria = list(
                             strategy = "RandomDiscrete",
                             max_models = 4),
@@ -58,6 +58,7 @@ test.XGBoost.GLM <- function() {
 
   params_glm <- defModel(estimator = "xgboost__glm", family = "gaussian",
                          eta = 1.7,
+                         early_stopping_rounds = 30,
                          nrounds = 1000,
                          alpha = 0.3,
                          lambda = 0.1)
@@ -67,7 +68,7 @@ test.XGBoost.GLM <- function() {
                  data = cpp_folds, fold_column = "fold")
 
   params_glm <- defModel(estimator = "xgboost__glm", family = "gaussian",
-                           eta = 1.7, nrounds = 1000,
+                           eta = 1.7, nrounds = 1000, early_stopping_rounds = 30,
                            alpha = 0.3, lambda = 0.1,
                            seed = 123456) +
                 defModel(estimator = "h2o__glm", family = "gaussian",
@@ -114,12 +115,16 @@ test.XGBoost.regularizedGLM_grid <- function() {
   lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5, 2)
 
   params_glm <- defModel(estimator = "xgboost__glm", family = "gaussian",
-                        eta = 1.3, nrounds = 1000,
+                        eta = 1.3,
+                        nrounds = 1000,
+                        early_stopping_rounds = 30,
+                        search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
                         param_grid = list(alpha = alpha_opt,
                                           lambda = lambda_opt),
                         seed = 123456) +
                 defModel(estimator = "h2o__glm", family = "gaussian",
-                        param_grid = list(alpha = alpha_opt,
+                         search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
+                         param_grid = list(alpha = alpha_opt,
                                           lambda = lambda_opt),
                          seed = 123456)
 
@@ -236,7 +241,9 @@ test.holdout.XGBoost <- function() {
   print("Top 5 models: "); print(models)
   res_tab <- xgboost_holdout$get_best_MSE_table(K = 5)
   print("5 best models among all learners: "); print(res_tab)
-  make_model_report(xgboost_holdout, data = cpp_holdout, K = 10, format = "html", openFile = FALSE)
+  make_model_report(xgboost_holdout, data = cpp_holdout, K = 10, format = "html",
+                    openFile = TRUE)
+                    # openFile = FALSE)
 
   ## Save the best performing h2o model fit to disk:
   # not implemented

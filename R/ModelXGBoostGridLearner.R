@@ -88,7 +88,7 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
 
     ## cv raw models:
     raw_models_cv <- lapply(model_fit[["models"]], '[[', "raw")
-    print("xgb cv model size"); print(object.size(raw_models_cv), units = "MB")
+    # print("xgb cv model size"); print(object.size(raw_models_cv), units = "MB")
     reloaded_models <- lapply(raw_models_cv, function(raw) xgboost::xgb.load(raw))
     model_fit[["models"]] <- NULL
     model_fit[["models"]] <- reloaded_models
