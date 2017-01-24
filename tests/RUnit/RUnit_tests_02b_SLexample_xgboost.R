@@ -1,3 +1,32 @@
+NOTUSED.parallel.xgb.grid <- function() {
+  data.table::setDTthreads(1)
+  library("doParallel")
+  registerDoParallel(cores = 2)
+
+  options(GriDiSL.verbose = FALSE)
+  # options(GriDiSL.verbose = TRUE)
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+
+  hyper_params = list(eta = c(0.3, 0.1,0.01),
+                      max_depth = c(4,6,8,10),
+                      max_delta_step = c(0,1),
+                      subsample = 1,
+                      scale_pos_weight = 1)
+
+  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100, nthreads = 1) +
+                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100, nthreads = 1,
+                         search_criteria = list(strategy = "RandomDiscrete", max_models = 8),
+                         param_grid = hyper_params, seed = 123456)
+
+  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+  xgboost_holdout <- fit(GRIDparams2, method = "holdout",
+                         ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                         data = cpp_holdout, hold_column = "hold")
+
+}
+
 ## ------------------------------------------------------------------------------------
 ## test xgboost GLM learner / GBM Grid, no model scoring (no cv or holdout), just fit all models
 ## ------------------------------------------------------------------------------------
@@ -201,8 +230,8 @@ test.holdout.XGBoost <- function() {
                       subsample = 1,
                       scale_pos_weight = 1)
 
-  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
-                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
+  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100, nthreads = 1) +
+                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100, nthreads = 1,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
                          param_grid = hyper_params, seed = 123456)
 

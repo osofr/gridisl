@@ -86,13 +86,13 @@ defModel <- function(estimator, x, search_criteria, param_grid, ...) {
 fit <- function(...) { UseMethod("fit") }
 
 # ---------------------------------------------------------------------------------------
-#' Fit Discrete SuperLearner (Ensemble)
+#' Fit Discrete SuperLearner
 #'
-#' Define and fit discrete SuperLearner for growth curve modeling.
-#' Model selection (scoring) is based on MSE for a single random (or last) holdout data-point for each subject.
-#' This is in contrast to the model selection with V-fold cross-validated MSE in \code{\link{fit_cvSL}},
-#' which leaves the entire subjects (entire growth curves) outside of the training sample.
-#' @param models ...
+#' Define and fit discrete SuperLearner for longitudinal data.
+#' Model selection (scoring) can be based on MSE evaluated for random holdout observations (method = "holdout")
+#' or V-fold cross-validated MSE (method = "cv").
+#' @param models Parameters specifying the model(s) to fit. This must be a result of calling \code{defModel(...) + defModel(...)} functions.
+#' See \code{\link{defModel}} for additional information.
 #' @param method The type of model selection procedure when fitting several models at once. Possible options are "none", "cv", and "holdout".
 #' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
 #' @param ID A character string name of the column that contains the unique subject identifiers.
@@ -106,12 +106,12 @@ fit <- function(...) { UseMethod("fit") }
 #' This holdout column must be defined and added to the input data prior to calling this function.
 #' @param hold_random Logical, specifying if the holdout observations should be selected at random.
 #' If FALSE then the last observation for each subject is selected as a holdout.
-#' @param seed Random number seed for selecting a random holdout.
+#' @param seed Random number seed for selecting random holdouts or validation folds.
 #' @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 #' When \code{FALSE}, it might be impossible to make predictions from this model fit.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
-#' @param ... Additional arguments that will be passed on to \code{fit_model} function.
-#' @return ...
+#' @param ... Additional arguments that will be passed on directly to \code{\link{fit_model}} function.
+#' @return An R6 object containing the model fit(s).
 # @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
 # @example tests/examples/1_GriDiSL_example.R
 #' @export
@@ -160,27 +160,6 @@ fit.ModelStack <- function(models,
   return(modelfit)
 }
 
-#' Save the best performing h2o model
-#'
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
-#' @export
-save_best_model <- function(modelfit, file.path = getOption('GriDiSL.file.path')) {
-  stop("...not implemented...")
-  assert_that(is.PredictionModel(modelfit))
-  best_model_name <- modelfit$get_best_model_names(K = 1)
-  message("saving the best model fit: " %+% best_model_name)
-  ## Will obtain the best model object trained on TRAINING data only
-  ## If CV SL was used this model is equivalent to the best model trained on all data
-  ## However, for holdout SL this model will be trained only on non-holdout observations
-  best_model_traindat <- modelfit$get_best_models(K = 1)[[1]]
-  h2o.saveModel(best_model_traindat, file.path, force = TRUE)
-  ## This model is always trained on all data (if exists)
-  best_model_alldat <- modelfit$BestModelFitObject$model.fit$modelfits_all
-  if (!is.null(best_model_alldat))
-    h2o.saveModel(best_model_alldat[[1]], file.path, force = TRUE)
-
-  return(invisible(NULL))
-}
 
 validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Oframe = FALSE, dest_frame = "all_train_H2Oframe") {
   # browser()
@@ -195,6 +174,7 @@ validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Ofram
   if (useH2Oframe && is.null(OData_input$H2Oframe)) OData_input$fast.load.to.H2O(saveH2O = TRUE, destination_frame = dest_frame)
   return(OData_input)
 }
+
 
 # ---------------------------------------------------------------------------------------
 # Discrete SuperLearner with one-out holdout validation

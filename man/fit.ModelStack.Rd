@@ -3,7 +3,7 @@
 \name{fit}
 \alias{fit}
 \alias{fit.ModelStack}
-\title{Fit Discrete SuperLearner (Ensemble)}
+\title{Fit Discrete SuperLearner}
 \usage{
 fit(...)
 
@@ -13,9 +13,10 @@ fit(...)
   verbose = getOption("GriDiSL.verbose"), ...)
 }
 \arguments{
-\item{...}{Additional arguments that will be passed on to \code{fit_model} function.}
+\item{...}{Additional arguments that will be passed on directly to \code{\link{fit_model}} function.}
 
-\item{models}{...}
+\item{models}{Parameters specifying the model(s) to fit. This must be a result of calling \code{defModel(...) + defModel(...)} functions.
+See \code{\link{defModel}} for additional information.}
 
 \item{method}{The type of model selection procedure when fitting several models at once. Possible options are "none", "cv", and "holdout".}
 
@@ -39,7 +40,7 @@ This holdout column must be defined and added to the input data prior to calling
 \item{hold_random}{Logical, specifying if the holdout observations should be selected at random.
 If FALSE then the last observation for each subject is selected as a holdout.}
 
-\item{seed}{Random number seed for selecting a random holdout.}
+\item{seed}{Random number seed for selecting random holdouts or validation folds.}
 
 \item{refit}{Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 When \code{FALSE}, it might be impossible to make predictions from this model fit.}
@@ -49,12 +50,11 @@ When \code{FALSE}, it might be impossible to make predictions from this model fi
 \item{params}{Parameters specifying the type of modeling procedure to be used.}
 }
 \value{
-...
+An R6 object containing the model fit(s).
 }
 \description{
-Define and fit discrete SuperLearner for growth curve modeling.
-Model selection (scoring) is based on MSE for a single random (or last) holdout data-point for each subject.
-This is in contrast to the model selection with V-fold cross-validated MSE in \code{\link{fit_cvSL}},
-which leaves the entire subjects (entire growth curves) outside of the training sample.
+Define and fit discrete SuperLearner for longitudinal data.
+Model selection (scoring) can be based on MSE evaluated for random holdout observations (method = "holdout")
+or V-fold cross-validated MSE (method = "cv").
 }
 

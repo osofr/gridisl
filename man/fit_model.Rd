@@ -19,26 +19,32 @@ fit_model(ID, t_name, x, y, train_data, valid_data, models, nfolds, fold_column,
 
 \item{train_data}{Input dataset, can be a \code{data.frame} or a \code{data.table}.}
 
-\item{valid_data}{Optional \code{data.frame} or \code{data.table} with validation data. When provided, this dataset will be used for scoring the model fit(s).}
+\item{valid_data}{Optional \code{data.frame} or \code{data.table} containing the validation data.
+When provided, this dataset will be used for scoring the final model fit(s). Can be used with either method = "cv" or "holdout".
+When method = "cv", the validation data must have exactly the same number of rows as the \code{train_data}.
+Each CV model will be re-scored (MSE) based on validation fold rows in \code{valid_data}.}
 
-\item{models}{Parameters specifying the type of modeling procedure to be used.}
+\item{models}{Parameters specifying the model(s) to fit. This must be a result of calling \code{defModel(...) + defModel(...)} functions.}
 
-\item{nfolds}{...}
+\item{nfolds}{Number of folds to use in cross-validation.}
 
-\item{fold_column}{...}
+\item{fold_column}{The name of the column in the input data that contains the cross-validation fold indicators (must be an ordered factor).}
 
-\item{seed}{...}
+\item{seed}{Random number seed for selecting random holdouts or validation folds.}
 
-\item{useH2Oframe}{...}
+\item{useH2Oframe}{Use existing H2OFrame object (if modeling with h2o R package) in input data object, rather than loading a new H2OFrame.}
 
-\item{subset_exprs}{...}
+\item{subset_exprs}{(Optional) Specify a logical R expression (as character string) for selecting training / validation rows in the input data.
+The expression will be evaluated in the environment of the input data.
+By default all rows of the input data will be used.}
 
-\item{subset_idx}{...}
+\item{subset_idx}{(Optional) Specify an vector index of rows in the input data to be used in model fitting / validation.
+By default all rows of the input data will be used.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
 }
 \value{
-...
+An R6 object containing the model fit(s).
 }
 \description{
 Generic modeling function for longitudinal data.

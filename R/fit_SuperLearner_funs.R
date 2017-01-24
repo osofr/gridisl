@@ -43,16 +43,22 @@ get_out_of_sample_predictions <- function(modelfit) {
 #' @param x A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.
 #' @param y A character string name of the column that represent the response variable in the model.
 #' @param train_data Input dataset, can be a \code{data.frame} or a \code{data.table}.
-#' @param valid_data Optional \code{data.frame} or \code{data.table} with validation data. When provided, this dataset will be used for scoring the model fit(s).
-#' @param models Parameters specifying the type of modeling procedure to be used.
-#' @param nfolds ...
-#' @param fold_column ...
-#' @param seed ...
-#' @param useH2Oframe ...
-#' @param subset_exprs ...
-#' @param subset_idx ...
+#' @param valid_data Optional \code{data.frame} or \code{data.table} containing the validation data.
+#' When provided, this dataset will be used for scoring the final model fit(s). Can be used with either method = "cv" or "holdout".
+#' When method = "cv", the validation data must have exactly the same number of rows as the \code{train_data}.
+#' Each CV model will be re-scored (MSE) based on validation fold rows in \code{valid_data}.
+#' @param models Parameters specifying the model(s) to fit. This must be a result of calling \code{defModel(...) + defModel(...)} functions.
+#' @param nfolds Number of folds to use in cross-validation.
+#' @param fold_column The name of the column in the input data that contains the cross-validation fold indicators (must be an ordered factor).
+#' @param seed Random number seed for selecting random holdouts or validation folds.
+#' @param useH2Oframe Use existing H2OFrame object (if modeling with h2o R package) in input data object, rather than loading a new H2OFrame.
+#' @param subset_exprs (Optional) Specify a logical R expression (as character string) for selecting training / validation rows in the input data.
+#' The expression will be evaluated in the environment of the input data.
+#' By default all rows of the input data will be used.
+#' @param subset_idx (Optional) Specify an vector index of rows in the input data to be used in model fitting / validation.
+#' By default all rows of the input data will be used.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
-#' @return ...
+#' @return An R6 object containing the model fit(s).
 # @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
 # @example tests/examples/1_GriDiSL_example.R
 #' @export

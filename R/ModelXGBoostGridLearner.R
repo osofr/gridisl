@@ -28,6 +28,10 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
 
   add_args <- list(...)
 
+  # ##  may cause a clash with xgboost OMP if data.table is running in parallel with >1 OMP threads
+  # oldDTthreads <- data.table::getDTthreads()
+  # data.table::setDTthreads(1)
+
   if (!missing(nfold)) stop("For model evaluation via cross-validation please specify the argument 'folds'; use of 'nfold' argument is not allowed here.")
   if (!is.null(validation_data) && !is.null(folds)) stop("Cannot use validation_data and folds at the same time.")
 
@@ -117,7 +121,7 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
     reloaded_models <- lapply(raw_models_cv, function(raw) xgboost::xgb.load(raw))
     model_fit[["models"]] <- NULL
 
-    gc(verbose = FALSE)
+    # gc(verbose = FALSE)
 
     model_fit[["models"]] <- reloaded_models
 
@@ -138,12 +142,37 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
   max_models <- search_criteria[["max_models"]]
   if (!is.null(max_models) && nrow(gs) > max_models) gs <- gs[1:max_models, ]
 
-  ## Fit every single model in the grid with CV and (possibly) using early stopping
-  # data.table::setDT(gs)
-  # for (i in 1:nrow(gs)) {
-  #   gs[i, xgb_fit := list(list(purrr::lift(run_singe_model)(gs[i, ])))]
+  ## ------------------------------------------------------------
+  ## Sequentially fit each model from the grid
+  ## ------------------------------------------------------------
+  data.table::setDT(gs)
+  for (i in 1:nrow(gs)) {
+    gs[i, xgb_fit := list(list(purrr::lift(run_singe_model)(gs[i, ])))]
+  }
+  # # gs <- gs %>% dplyr::mutate(xgb_fit = purrr::pmap(gs, run_singe_model))
+
+  ## ------------------------------------------------------------
+  ## TO RUN GRID MODELS IN PARALLEL
+  ## ------------------------------------------------------------
+  # # gs <- data.table::data.table(gs)
+  # gs <- data.frame(gs)
+  # # parallel <- TRUE
+  # # if (parallel) {
+  #   #     mcoptions <- list(preschedule = FALSE)
+  #   # '%dopar%' <- foreach::'%dopar%'
+  #   # xgb_fit <- foreach::foreach(i = 1:nrow(gs), .options.multicore = mcoptions) %dopar% {
+  #   #   purrr::lift(run_singe_model)(gs[i, ])
+  #   # }
+  #   #   , .options.multicore = mcoptions
+  # xgb_fit <- foreach::foreach(i = 1:nrow(gs)) %dopar% {
+  #   do.call(run_singe_model, gs[i, , drop = FALSE])
   # }
-  gs <- gs %>% dplyr::mutate(xgb_fit = purrr::pmap(gs, run_singe_model))
+  # gs <- data.table::data.table(gs)
+  # for (i in 1:nrow(gs)) {
+  #   gs[i, xgb_fit := list(xgb_fit[i])]
+  # }
+
+
 
   glob_params <- list(missing = missing, obj = obj, feval = feval, maximize = maximize)
   gs[["glob_params"]] <- rep.int(list(glob_params), nrow(gs))
@@ -169,6 +198,9 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
   print("grid fits ordered by test metric (lowest to highest):"); print(gs)
   # print(gs, topn = 5, nrows = 10, class = TRUE)
   # print(gs[, c(names(params), "nrounds", "ntreelimit",  "train_rmse_mean", "test_rmse_mean")])
+
+  # ##  set back to old number of threads for data.table
+  # data.table::setDTthreads(oldDTthreads)
 
   return(gs)
 
