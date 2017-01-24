@@ -10,7 +10,7 @@ make_model_report(modelfit, data, K = 5, format = c("html", "pdf", "word"),
   keep_md = FALSE, keep_tex = FALSE, ...)
 }
 \arguments{
-\item{modelfit}{Model fit object returned by functions \code{\link{fit_holdoutSL}} or \code{\link{fit_cvSL}}.}
+\item{modelfit}{Model fit object returned by model fitting functions.}
 
 \item{data}{Input dataset used for model fitting (optional).}
 

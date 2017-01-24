@@ -7,7 +7,7 @@
 save_best_model(modelfit, file.path = getOption("GriDiSL.file.path"))
 }
 \arguments{
-\item{modelfit}{A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.}
+\item{modelfit}{A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit}.}
 }
 \description{
 Save the best performing h2o model

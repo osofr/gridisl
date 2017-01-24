@@ -7,7 +7,7 @@
 get_out_of_sample_predictions(modelfit)
 }
 \arguments{
-\item{modelfit}{A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit_cvSL}.}
+\item{modelfit}{A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit}.}
 }
 \value{
 A vector of out-of-sample predictions from the best selected model (CV-MSE).

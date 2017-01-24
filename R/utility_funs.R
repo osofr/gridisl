@@ -32,7 +32,7 @@ capture.exprs <- function(...) {
 
 #' Save the best performing h2o model
 #'
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit}.
 #' @export
 save_best_model <- function(modelfit, file.path = getOption('GriDiSL.file.path')) {
   stop("...not implemented...")

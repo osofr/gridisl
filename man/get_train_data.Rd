@@ -7,7 +7,7 @@
 get_train_data(modelfit)
 }
 \arguments{
-\item{modelfit}{A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.}
+\item{modelfit}{A model object of class \code{PredictionModel} returned by function \code{fit_model} or \code{fit}.}
 }
 \value{
 \code{data.table} that was used for model training.

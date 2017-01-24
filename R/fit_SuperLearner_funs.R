@@ -7,7 +7,7 @@ NULL
 #' Get training data used by the modeling object
 #'
 #' Wrapper function for obtaining the training dataset saved in the modeling object.
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
+#' @param modelfit A model object of class \code{PredictionModel} returned by function \code{fit_model} or \code{fit}.
 #' @return \code{data.table} that was used for model training.
 #' @export
 get_train_data <- function(modelfit) {
@@ -17,7 +17,7 @@ get_train_data <- function(modelfit) {
 #' Get validation data used by the modeling object
 #'
 #' Wrapper function for obtaining the validation dataset saved in the modeling object.
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit}.
 #' @return \code{data.table} that was used for model scoring (CV-MSE).
 #' @export
 get_validation_data <- function(modelfit) {
@@ -27,7 +27,7 @@ get_validation_data <- function(modelfit) {
 
 #' Get the combined out of sample predictions from V cross-validation models
 #'
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit_cvSL}.
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit}.
 #' @return A vector of out-of-sample predictions from the best selected model (CV-MSE).
 #' @export
 get_out_of_sample_predictions <- function(modelfit) {
@@ -185,7 +185,7 @@ predict_generic <- function(modelfit,
                             force_data.table = TRUE,
                             verbose = getOption("GriDiSL.verbose")) {
 
-  if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
+  if (is.null(modelfit)) stop("must fit the model prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit) || is.PredictionStack(modelfit))
   gvars$verbose <- verbose
@@ -210,9 +210,10 @@ predict_generic <- function(modelfit,
   if (force_data.table) {
     preds <- as.data.table(preds)
     if (!holdout && best_only) names(preds)[1] <- "SL.preds"
+    if (holdout && best_only) names(preds)[1] <- "holdout.preds"
 
-    if (add_subject_data) {
-      if (missing(newdata)) newdata <- modelfit$OData_train
+    if (add_subject_data && !missing(newdata)) {
+      # if (missing(newdata)) newdata <- modelfit$OData_train
       covars <- c(nodes$IDnode, nodes$tnode, modelfit$outvar)
       ## to protect against an error if some variables are dropped from new data
       sel_covars <- names(newdata$dat.sVar)[names(newdata$dat.sVar) %in% covars]
@@ -256,7 +257,7 @@ predict_SL <- function(modelfit,
 
   force_data.table <- TRUE
 
-  if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
+  if (is.null(modelfit)) stop("must call fit() before obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   assert_that(is.PredictionModel(modelfit) || is.PredictionStack(modelfit))
   gvars$verbose <- verbose
