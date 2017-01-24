@@ -157,7 +157,7 @@ fit_model <- function(ID,
 }
 
 # ---------------------------------------------------------------------------------------
-#' Generic predict for new data
+#' Generic SuperLearner prediction function
 #'
 #' @param modelfit Model fit object returned by \code{\link{fit}} functions. Must be an object of class \code{PredictionModel} or \code{PredictionStack}.
 #' @param newdata Subject-specific data for which predictions should be obtained.
@@ -227,9 +227,9 @@ predict_generic <- function(modelfit,
 }
 
 # ---------------------------------------------------------------------------------------
-#' Predict for holdout or CV SuperLearner fits
+#' Predict from SuperLearner fit
 #'
-#' @param modelfit Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.
+#' @param modelfit Model fit object returned by \code{\link{fit}}.
 #' @param newdata Subject-specific data for which predictions should be obtained.
 #' If missing then the predictions for the training data will be typically returned.
 #' See \code{holdout} for discussion of alternative cases.
@@ -240,9 +240,9 @@ predict_generic <- function(modelfit,
 # @param best_refit_only Set to \code{TRUE} to obtained the predictions from the best scoring model that was re-trained on all observed data.
 #' @param holdout Set to \code{TRUE} for out-of-sample predictions for validation folds (out-of-sample observations) or holdouts.
 #'  When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
-#'  1. For \code{\link{fit_holdoutSL}} the default holdout predictions will be based on validation data.
-#'  2. For \code{\link{fit_cvSL}} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
-#' @param force_data.table ...
+#'  1. For \code{method = "holdout"} the default holdout predictions will be based on validation data.
+#'  2. For \code{method = "cv"} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
+# @param force_data.table Force the output predictions to be a \code{data.table}
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
 #' @return A data.table of subject level predictions (subject are rows, columns are different models)
 #' or a data.table with subject level covariates added along with model-based predictions.
@@ -252,8 +252,9 @@ predict_SL <- function(modelfit,
                        add_subject_data = FALSE,
                        subset_idx = NULL,
                        holdout = FALSE,
-                       force_data.table = TRUE,
                        verbose = getOption("GriDiSL.verbose")) {
+
+  force_data.table <- TRUE
 
   if (is.null(modelfit)) stop("must call fit_holdoutSL() or fit_cvSL() prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
@@ -269,7 +270,14 @@ predict_SL <- function(modelfit,
     newdata <- modelfit$OData_train
   }
 
-  preds <- predict_generic(modelfit, newdata, add_subject_data, subset_idx, best_only = TRUE, holdout, force_data.table, verbose)
+  preds <- predict_generic(modelfit,
+                           newdata,
+                           add_subject_data,
+                           subset_idx,
+                           best_only = TRUE,
+                           holdout,
+                           force_data.table,
+                           verbose)
 
   return(preds)
 }
@@ -319,8 +327,14 @@ predict_holdout <- function(modelfit,
                             subset_idx = NULL,
                             verbose = getOption("GriDiSL.verbose")) {
   if (missing(newdata) && !modelfit$runCV) newdata <- modelfit$OData_valid
-  return(predict_generic(modelfit, newdata, add_subject_data, subset_idx, best_only = best_only,
-                         holdout = TRUE, force_data.table = TRUE, verbose))
+  return(predict_generic(modelfit,
+                         newdata,
+                         add_subject_data,
+                         subset_idx,
+                         best_only = best_only,
+                         holdout = TRUE,
+                         force_data.table = TRUE,
+                         verbose))
 }
 
 # ---------------------------------------------------------------------------------------

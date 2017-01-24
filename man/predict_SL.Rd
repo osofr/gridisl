@@ -2,14 +2,13 @@
 % Please edit documentation in R/fit_SuperLearner_funs.R
 \name{predict_SL}
 \alias{predict_SL}
-\title{Predict for holdout or CV SuperLearner fits}
+\title{Predict from SuperLearner fit}
 \usage{
 predict_SL(modelfit, newdata, add_subject_data = FALSE, subset_idx = NULL,
-  holdout = FALSE, force_data.table = TRUE,
-  verbose = getOption("GriDiSL.verbose"))
+  holdout = FALSE, verbose = getOption("GriDiSL.verbose"))
 }
 \arguments{
-\item{modelfit}{Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.}
+\item{modelfit}{Model fit object returned by \code{\link{fit}}.}
 
 \item{newdata}{Subject-specific data for which predictions should be obtained.
 If missing then the predictions for the training data will be typically returned.
@@ -23,10 +22,8 @@ Default is \code{NULL} in which case all observations in \code{newdata} will be 
 
 \item{holdout}{Set to \code{TRUE} for out-of-sample predictions for validation folds (out-of-sample observations) or holdouts.
 When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
-1. For \code{\link{fit_holdoutSL}} the default holdout predictions will be based on validation data.
-2. For \code{\link{fit_cvSL}} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.}
-
-\item{force_data.table}{...}
+1. For \code{method = "holdout"} the default holdout predictions will be based on validation data.
+2. For \code{method = "cv"} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
 }
@@ -35,6 +32,6 @@ A data.table of subject level predictions (subject are rows, columns are differe
 or a data.table with subject level covariates added along with model-based predictions.
 }
 \description{
-Predict for holdout or CV SuperLearner fits
+Predict from SuperLearner fit
 }
 

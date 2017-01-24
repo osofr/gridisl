@@ -2,7 +2,7 @@
 % Please edit documentation in R/fit_SuperLearner_funs.R
 \name{predict_generic}
 \alias{predict_generic}
-\title{Generic predict for new data}
+\title{Generic SuperLearner prediction function}
 \usage{
 predict_generic(modelfit, newdata, add_subject_data = FALSE,
   subset_idx = NULL, best_only = TRUE, holdout = FALSE,
@@ -36,6 +36,6 @@ A data.table of subject level predictions (subject are rows, columns are differe
 or a data.table with subject level covariates added along with model-based predictions.
 }
 \description{
-Generic predict for new data
+Generic SuperLearner prediction function
 }
 
