@@ -171,8 +171,10 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
 
     if (is.null(mainArgs[["callbacks"]])){
       mainArgs[["callbacks"]] <- list(xgboost::cb.cv.predict(save_models = TRUE))
+      # mainArgs[["callbacks"]] <- list(xgboost::cb.cv.predict(save_models = FALSE))
     } else {
       mainArgs[["callbacks"]] <- c(mainArgs[["callbacks"]], list(xgboost::cb.cv.predict(save_models = TRUE)))
+      # mainArgs[["callbacks"]] <- c(mainArgs[["callbacks"]], list(xgboost::cb.cv.predict(save_models = FALSE)))
     }
   }
 

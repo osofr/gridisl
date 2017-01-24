@@ -18,10 +18,11 @@ evalMSEerror_byID <- function(preds, data) {
 ## Peforming simple hyperparameter grid search for xgboost with cross-validation
 ## Relies on tidyverse syntax and borrowed from: https://drsimonj.svbtle.com/grid-search-in-the-tidyverse
 #' @export
+# print_every_n = 1L,
 xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = NA,
                     prediction = FALSE, showsd = TRUE, metrics = list(), obj = NULL,
                     feval = NULL, stratified = TRUE, folds = NULL, verbose = TRUE,
-                    print_every_n = 1L, early_stopping_rounds = NULL, maximize = NULL,
+                    early_stopping_rounds = NULL, maximize = NULL,
                     callbacks = list(), search_criteria, seed = NULL, order_metric_name = NULL,
                     validation_data = NULL, ...) {
 
@@ -70,27 +71,54 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
     #                                                  verbose = verbose)
 
     if (!runCV) {
-      model_fit <- xgboost::xgb.train(params, data, as.integer(nrounds), watchlist,
-                                      obj, feval, verbose, print_every_n, early_stopping_rounds, maximize,
+      # browser()
+      model_fit <- xgboost::xgb.train(params = params,
+                                      data = data,
+                                      nrounds = as.integer(nrounds),
+                                      watchlist = watchlist,
+                                      obj = obj,
+                                      feval = feval,
+                                      verbose = verbose,
+                                      # print_every_n,
+                                      early_stopping_rounds = early_stopping_rounds,
+                                      maximize = maximize,
                                       callbacks = c(list(xgboost::cb.evaluation.log()), callbacks),
-                                      eval_metric = metrics, maximize = maximize)
+                                      eval_metric = metrics)
     } else {
+      # browser()
       ## Test models via V-fold cross-validation
-      model_fit <- xgboost::xgb.cv(params, data, nrounds, nfold, label, missing,
-                                   prediction, showsd, metrics, obj,
-                                   feval, stratified, folds, verbose,
-                                   print_every_n,
-                                   early_stopping_rounds,
-                                   maximize,
-                                   callbacks = c(list(xgboost::cb.evaluation.log()), callbacks)
+      model_fit <- xgboost::xgb.cv(params = params,
+                                   data = data,
+                                   nrounds = as.integer(nrounds),
+                                   nfold = nfold,
+                                   label = label,
+                                   missing = missing,
+                                   prediction = prediction,
+                                   showsd = showsd,
+                                   obj = obj,
+                                   feval = feval,
+                                   stratified = stratified,
+                                   folds = folds,
+                                   verbose = verbose,
+                                   # print_every_n,
+                                   early_stopping_rounds = early_stopping_rounds,
+                                   maximize = maximize,
+                                   callbacks = c(list(xgboost::cb.evaluation.log()), callbacks),
+                                   metrics = metrics
                                    )
     }
 
+    # browser()
+    # model_fit[["models"]]
+    # model_fit[["pred"]]
     ## cv raw models:
     raw_models_cv <- lapply(model_fit[["models"]], '[[', "raw")
     # print("xgb cv model size"); print(object.size(raw_models_cv), units = "MB")
     reloaded_models <- lapply(raw_models_cv, function(raw) xgboost::xgb.load(raw))
     model_fit[["models"]] <- NULL
+
+    gc(verbose = FALSE)
+
     model_fit[["models"]] <- reloaded_models
 
     return(model_fit)

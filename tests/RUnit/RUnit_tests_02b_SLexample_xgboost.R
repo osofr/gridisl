@@ -162,7 +162,8 @@ test.XGBoost.drfs <- function() {
   # lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5, 2)
 
   params_drf <- defModel(estimator = "xgboost__drf", family = "gaussian",
-                           eta = 1.3, nrounds = 200,
+                           eta = 1.3,
+                           nrounds = 200,
                            seed = 123456) +
                 defModel(estimator = "h2o__randomForest", distribution = "gaussian",
                            ntrees = 200,
@@ -201,7 +202,6 @@ test.holdout.XGBoost <- function() {
                       scale_pos_weight = 1)
 
   GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
-
                  defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 4),
                          param_grid = hyper_params, seed = 123456)
@@ -242,8 +242,8 @@ test.holdout.XGBoost <- function() {
   res_tab <- xgboost_holdout$get_best_MSE_table(K = 5)
   print("5 best models among all learners: "); print(res_tab)
   make_model_report(xgboost_holdout, data = cpp_holdout, K = 10, format = "html",
-                    openFile = TRUE)
-                    # openFile = FALSE)
+                    # openFile = TRUE)
+                    openFile = FALSE)
 
   ## Save the best performing h2o model fit to disk:
   # not implemented
@@ -324,8 +324,8 @@ test.CV.SL.XGBoost <- function() {
                     # file.name = paste0(fname, getOption("GriDiSL.file.name")),
                     title = paste0("Growth Curve Imputation with cpp Data"),
                     format = "html", keep_md = TRUE,
-                    # openFile = FALSE)
-                    openFile = TRUE)
+                    openFile = FALSE)
+                    # openFile = TRUE)
 
   mfit_cv$get_modelfits_grid()[[1]]
 

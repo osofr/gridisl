@@ -115,22 +115,36 @@ fit <- function(...) { UseMethod("fit") }
 # @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
 # @example tests/examples/1_GriDiSL_example.R
 #' @export
-fit.ModelStack <- function(models, method = c("none", "cv", "holdout"), data, ID, t_name, x, y,
-                           nfolds = NULL, fold_column = NULL,
-                           hold_column = NULL, hold_random = FALSE, seed = NULL, refit = TRUE,
-                           verbose = getOption("GriDiSL.verbose"), ...) {
+fit.ModelStack <- function(models,
+                           method = c("none", "cv", "holdout"),
+                           data,
+                           ID,
+                           t_name,
+                           x,
+                           y,
+                           nfolds = NULL,
+                           fold_column = NULL,
+                           hold_column = NULL,
+                           hold_random = FALSE,
+                           seed = NULL,
+                           refit = TRUE,
+                           verbose = getOption("GriDiSL.verbose"),
+                           ...) {
   method <- method[1L]
   gvars$method <- method
   gvars$verbose <- verbose
 
   if (!is.ModelStack(models)) stop("argument models must be of class 'ModelStack'")
-  if (!(method %in% c("none", "cv", "holdout"))) stop("argument method must be one of: 'none', 'cv', 'holdout'")
+  if (!(method %in% c("none", "cv", "holdout")))
+    stop("argument method must be one of: 'none', 'cv', 'holdout'")
   if (!data.table::is.data.table(data) && !is.DataStorageClass(data))
     stop("argument data must be of class 'data.table, please convert the existing data.frame to data.table by calling 'data.table::as.data.table(...)'")
+
   if (missing(ID)) ID <- names(data)[1]
   if (missing(t_name)) t_name <- names(data)[2]
   if (missing(y)) y <- names(data)[3]
   if (missing(x)) x <- names(data)[4:ncol(data)]
+
   nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
   orig_colnames <- colnames(data)
 
@@ -146,3 +160,167 @@ fit.ModelStack <- function(models, method = c("none", "cv", "holdout"), data, ID
   return(modelfit)
 }
 
+#' Save the best performing h2o model
+#'
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
+#' @export
+save_best_model <- function(modelfit, file.path = getOption('GriDiSL.file.path')) {
+  stop("...not implemented...")
+  assert_that(is.PredictionModel(modelfit))
+  best_model_name <- modelfit$get_best_model_names(K = 1)
+  message("saving the best model fit: " %+% best_model_name)
+  ## Will obtain the best model object trained on TRAINING data only
+  ## If CV SL was used this model is equivalent to the best model trained on all data
+  ## However, for holdout SL this model will be trained only on non-holdout observations
+  best_model_traindat <- modelfit$get_best_models(K = 1)[[1]]
+  h2o.saveModel(best_model_traindat, file.path, force = TRUE)
+  ## This model is always trained on all data (if exists)
+  best_model_alldat <- modelfit$BestModelFitObject$model.fit$modelfits_all
+  if (!is.null(best_model_alldat))
+    h2o.saveModel(best_model_alldat[[1]], file.path, force = TRUE)
+
+  return(invisible(NULL))
+}
+
+validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Oframe = FALSE, dest_frame = "all_train_H2Oframe") {
+  # browser()
+  if (is.DataStorageClass(input_data)) {
+    OData_input <- input_data
+    # if (useH2Oframe && is.null(OData_input$H2Oframe)) stop("fatal error: useH2Oframe was set to TRUE, but the H2Oframe could not be located in the input data.")
+  } else if (is.data.frame(input_data) || data.table::is.data.table(input_data)) {
+    OData_input <- importData(data = input_data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
+  } else {
+    stop("input training / validation data must be either data.frame, data.table or DataStorageClass object")
+  }
+  if (useH2Oframe && is.null(OData_input$H2Oframe)) OData_input$fast.load.to.H2O(saveH2O = TRUE, destination_frame = dest_frame)
+  return(OData_input)
+}
+
+# ---------------------------------------------------------------------------------------
+#' Discrete SuperLearner with one-out holdout validation
+#'
+#' Define and fit discrete SuperLearner for growth curve modeling.
+#' Model selection (scoring) is based on MSE for a single random (or last) holdout data-point for each subject.
+#' This is in contrast to the model selection with V-fold cross-validated MSE in \code{\link{fit_cvSL}},
+#' which leaves the entire subjects (entire growth curves) outside of the training sample.
+#' @param ID A character string name of the column that contains the unique subject identifiers.
+#' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
+#' @param x A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.
+#' @param y A character string name of the column that represent the response variable in the model.
+#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+#' @param models Parameters specifying the type of modeling procedure to be used.
+#' @param hold_column The name of the column that contains the holdout observation indicators (TRUE/FALSE) in the input data.
+#' This holdout column must be defined and added to the input data prior to calling this function.
+#' @param hold_random Logical, specifying if the holdout observations should be selected at random.
+#' If FALSE then the last observation for each subject is selected as a holdout.
+#' @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
+#' When \code{FALSE}, it might be impossible to make predictions from this model fit.
+#' @param seed Random number seed for selecting a random holdout.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+#' @return ...
+# @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
+# @example tests/examples/1_GriDiSL_example.R
+#' @export
+fit_holdoutSL <- function(ID,
+                          t_name,
+                          x,
+                          y,
+                          data,
+                          models,
+                          hold_column = NULL,
+                          hold_random = TRUE,
+                          refit = TRUE,
+                          seed = NULL,
+                          verbose = getOption("GriDiSL.verbose"),
+                          ...) {
+  gvars$verbose <- verbose
+  gvars$method <- "holdout"
+  nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
+  orig_colnames <- colnames(data)
+
+  if (is.null(hold_column)) {
+    hold_column <- "hold"
+    message("...selecting holdout observations...")
+    data <- add_holdout_ind(data, ID, hold_column = hold_column, random = hold_random, seed = seed)
+  }
+
+  train_data <- data[!data[[hold_column]], ]
+
+  ## ------------------------------------------------------------------------------------------
+  ## Define validation data (includes the holdout only, each summary is created without the holdout observation):
+  ## ------------------------------------------------------------------------------------------
+  valid_data <- data[data[[hold_column]], ]
+
+  ## ------------------------------------------------------------------------------------------
+  ## Perform fitting based on training set (and model scoring based on holdout validation set)
+  ## ------------------------------------------------------------------------------------------
+  modelfit <- fit_model(ID, t_name, x, y, train_data = train_data, valid_data = valid_data, models = models, verbose = verbose, ...)
+
+  ## ------------------------------------------------------------------------------------------
+  ## Re-fit the best scored model using all available data
+  ## ------------------------------------------------------------------------------------------
+  if (refit) {
+    message("refitting the best scored model on all data...")
+    OData_all <- importData(data = data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
+    best_fit <- modelfit$refit_best_model(OData_all, ...)
+  }
+
+  return(modelfit)
+}
+
+# ---------------------------------------------------------------------------------------
+#' Discrete SuperLearner with V-fold cross-validation.
+#'
+#' Define and fit discrete SuperLearner for growth curve modeling.
+#' Model selection (scoring) is based on V-fold cross-validated MSE that leaves entire subjects outside of the training sample.
+#' This is in contrast to holdout SuperLearner in \code{\link{fit_holdoutSL}} that leaves only a single random (or last) growth measurement  outside of the training sample.
+#' @param ID A character string name of the column that contains the unique subject identifiers.
+#' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
+#' @param x A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.
+#' @param y A character string name of the column that represent the response variable in the model.
+#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+#' @param models Parameters specifying the type of modeling procedure to be used.
+#' @param nfolds Number of folds to use in cross-validation.
+#' @param fold_column The name of the column in the input data that contains the cross-validation fold indicators (must be an ordered factor).
+#' @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
+#' When \code{FALSE}, it might be impossible to make predictions from this model fit.
+#' @param seed Random number seed for selecting a random holdout.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+#' @return ...
+# @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
+# @example tests/examples/1_GriDiSL_example.R
+#' @export
+fit_cvSL <- function(ID,
+                     t_name,
+                     x,
+                     y,
+                     data,
+                     models,
+                     nfolds = 5,
+                     fold_column = NULL,
+                     refit = TRUE,
+                     seed = NULL,
+                     verbose = getOption("GriDiSL.verbose"),
+                     ...) {
+  gvars$verbose <- verbose
+  gvars$method <- "cv"
+  nodes <- list(Lnodes = x, Ynode = y, IDnode = ID, tnode = t_name)
+  orig_colnames <- colnames(data)
+
+  if (is.null(fold_column)) {
+    fold_column <- "fold"
+    data <- add_CVfolds_ind(data, ID, nfolds = nfolds, fold_column = fold_column, seed = seed)
+  }
+
+  ## ------------------------------------------------------------------------------------------
+  ## Perform CV fitting (no scoring yet)
+  ## ------------------------------------------------------------------------------------------
+  modelfit <- fit_model(ID, t_name, x, y, train_data = data, models = models, fold_column = fold_column, verbose = verbose, ...)
+
+  ## ------------------------------------------------------------------------------------------
+  ## Re-fit the best manually-scored model on all data
+  ## ------------------------------------------------------------------------------------------
+  if (refit) best_fit <- modelfit$refit_best_model(modelfit$OData_train, ...)
+
+  return(modelfit)
+}
