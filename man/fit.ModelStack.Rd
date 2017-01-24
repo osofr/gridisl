@@ -3,7 +3,7 @@
 \name{fit}
 \alias{fit}
 \alias{fit.ModelStack}
-\title{Discrete SuperLearner with one-out holdout validation}
+\title{Fit Discrete SuperLearner (Ensemble)}
 \usage{
 fit(...)
 

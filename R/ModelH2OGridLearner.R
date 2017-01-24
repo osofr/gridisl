@@ -67,15 +67,17 @@ fit_single_h2o_grid <- function(grid.algorithm, training_frame, y, x, family = "
   algo_fun_name <- "h2o."%+%grid.algorithm
   if (!exists(algo_fun_name, where='package:h2o', mode='function')) stop("could not locate the function " %+% grid.algorithm)
 
-  # Is there a validation frame for model scoring?
-  if (!is.null(validation_frame)) mainArgs$validation_frame <- validation_frame
-
   # Is there a fold_column for cross-validation based model scoring?
   if (!missing(fold_column)) {
     if (!is.null(fold_column) && is.character(fold_column) && (fold_column != "")) {
-      mainArgs$fold_column <- fold_column
+      mainArgs[["fold_column"]] <- fold_column
+      validation_frame <- NULL
+      mainArgs[["validation_frame"]] <- NULL
     }
   }
+
+  # Is there a validation frame for model scoring?
+  if (!is.null(validation_frame)) mainArgs[["validation_frame"]] <- validation_frame
 
   ## doesn't work if h2o namespace is not loaded:
   # algo_fun <- get0(algo_fun_name, mode = "function", inherits = TRUE)

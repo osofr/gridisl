@@ -86,7 +86,7 @@ defModel <- function(estimator, x, search_criteria, param_grid, ...) {
 fit <- function(...) { UseMethod("fit") }
 
 # ---------------------------------------------------------------------------------------
-#' Discrete SuperLearner with one-out holdout validation
+#' Fit Discrete SuperLearner (Ensemble)
 #'
 #' Define and fit discrete SuperLearner for growth curve modeling.
 #' Model selection (scoring) is based on MSE for a single random (or last) holdout data-point for each subject.
