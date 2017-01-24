@@ -197,30 +197,30 @@ validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Ofram
 }
 
 # ---------------------------------------------------------------------------------------
-#' Discrete SuperLearner with one-out holdout validation
-#'
-#' Define and fit discrete SuperLearner for growth curve modeling.
-#' Model selection (scoring) is based on MSE for a single random (or last) holdout data-point for each subject.
-#' This is in contrast to the model selection with V-fold cross-validated MSE in \code{\link{fit_cvSL}},
-#' which leaves the entire subjects (entire growth curves) outside of the training sample.
-#' @param ID A character string name of the column that contains the unique subject identifiers.
-#' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
-#' @param x A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.
-#' @param y A character string name of the column that represent the response variable in the model.
-#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
-#' @param models Parameters specifying the type of modeling procedure to be used.
-#' @param hold_column The name of the column that contains the holdout observation indicators (TRUE/FALSE) in the input data.
-#' This holdout column must be defined and added to the input data prior to calling this function.
-#' @param hold_random Logical, specifying if the holdout observations should be selected at random.
-#' If FALSE then the last observation for each subject is selected as a holdout.
-#' @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
-#' When \code{FALSE}, it might be impossible to make predictions from this model fit.
-#' @param seed Random number seed for selecting a random holdout.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
-#' @return ...
+# Discrete SuperLearner with one-out holdout validation
+#
+# Define and fit discrete SuperLearner for growth curve modeling.
+# Model selection (scoring) is based on MSE for a single random (or last) holdout data-point for each subject.
+# This is in contrast to the model selection with V-fold cross-validated MSE in \code{\link{fit_cvSL}},
+# which leaves the entire subjects (entire growth curves) outside of the training sample.
+# @param ID A character string name of the column that contains the unique subject identifiers.
+# @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
+# @param x A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.
+# @param y A character string name of the column that represent the response variable in the model.
+# @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+# @param models Parameters specifying the type of modeling procedure to be used.
+# @param hold_column The name of the column that contains the holdout observation indicators (TRUE/FALSE) in the input data.
+# This holdout column must be defined and added to the input data prior to calling this function.
+# @param hold_random Logical, specifying if the holdout observations should be selected at random.
+# If FALSE then the last observation for each subject is selected as a holdout.
+# @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
+# When \code{FALSE}, it might be impossible to make predictions from this model fit.
+# @param seed Random number seed for selecting a random holdout.
+# @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+# @return ...
 # @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
 # @example tests/examples/1_GriDiSL_example.R
-#' @export
+# @export
 fit_holdoutSL <- function(ID,
                           t_name,
                           x,
@@ -269,27 +269,27 @@ fit_holdoutSL <- function(ID,
 }
 
 # ---------------------------------------------------------------------------------------
-#' Discrete SuperLearner with V-fold cross-validation.
-#'
-#' Define and fit discrete SuperLearner for growth curve modeling.
-#' Model selection (scoring) is based on V-fold cross-validated MSE that leaves entire subjects outside of the training sample.
-#' This is in contrast to holdout SuperLearner in \code{\link{fit_holdoutSL}} that leaves only a single random (or last) growth measurement  outside of the training sample.
-#' @param ID A character string name of the column that contains the unique subject identifiers.
-#' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
-#' @param x A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.
-#' @param y A character string name of the column that represent the response variable in the model.
-#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
-#' @param models Parameters specifying the type of modeling procedure to be used.
-#' @param nfolds Number of folds to use in cross-validation.
-#' @param fold_column The name of the column in the input data that contains the cross-validation fold indicators (must be an ordered factor).
-#' @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
-#' When \code{FALSE}, it might be impossible to make predictions from this model fit.
-#' @param seed Random number seed for selecting a random holdout.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
-#' @return ...
+# Discrete SuperLearner with V-fold cross-validation.
+#
+# Define and fit discrete SuperLearner for growth curve modeling.
+# Model selection (scoring) is based on V-fold cross-validated MSE that leaves entire subjects outside of the training sample.
+# This is in contrast to holdout SuperLearner in \code{\link{fit_holdoutSL}} that leaves only a single random (or last) growth measurement  outside of the training sample.
+# @param ID A character string name of the column that contains the unique subject identifiers.
+# @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
+# @param x A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.
+# @param y A character string name of the column that represent the response variable in the model.
+# @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+# @param models Parameters specifying the type of modeling procedure to be used.
+# @param nfolds Number of folds to use in cross-validation.
+# @param fold_column The name of the column in the input data that contains the cross-validation fold indicators (must be an ordered factor).
+# @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
+# When \code{FALSE}, it might be impossible to make predictions from this model fit.
+# @param seed Random number seed for selecting a random holdout.
+# @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+# @return ...
 # @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
 # @example tests/examples/1_GriDiSL_example.R
-#' @export
+# @export
 fit_cvSL <- function(ID,
                      t_name,
                      x,
