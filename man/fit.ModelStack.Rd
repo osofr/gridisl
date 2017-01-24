@@ -18,7 +18,10 @@ fit(...)
 \item{models}{Parameters specifying the model(s) to fit. This must be a result of calling \code{defModel(...) + defModel(...)} functions.
 See \code{\link{defModel}} for additional information.}
 
-\item{method}{The type of model selection procedure when fitting several models at once. Possible options are "none", "cv", and "holdout".}
+\item{method}{The type of model selection procedure when fitting several models.
+Possible options are "none" (no model selection),
+"cv" (model selection with V-fold cross-validation), and
+"holdout" (model selection based on validation holdout sample).}
 
 \item{data}{Input dataset, can be a \code{data.frame} or a \code{data.table}.}
 
