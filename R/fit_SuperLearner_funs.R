@@ -209,8 +209,9 @@ predict_generic <- function(modelfit,
 
   if (force_data.table) {
     preds <- as.data.table(preds)
-    if (!holdout && best_only) names(preds)[1] <- "SL.preds"
-    if (holdout && best_only) names(preds)[1] <- "holdout.preds"
+    if (best_only) names(preds)[1] <- "preds"
+    # if (!holdout && best_only) names(preds)[1] <- "SL.preds"
+    # if (holdout && best_only) names(preds)[1] <- "holdout.preds"
 
     if (add_subject_data && !missing(newdata)) {
       # if (missing(newdata)) newdata <- modelfit$OData_train
