@@ -109,7 +109,22 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
 
       newpreds_prev_CV_i <- NULL
       for (idx in seq_along(dest_key_LIST)) {
-        newpreds <- h2o::h2o.getFrame(dest_key_LIST[[idx]])
+        iter <- 0
+        while (iter <= 10) {
+          newpreds <- try(h2o::h2o.getFrame(dest_key_LIST[[idx]]), silent = TRUE)
+          if (inherits(newpreds, "try-error")) {
+            Sys.sleep(0.1)
+            iter <- iter + 1
+          } else {
+            break
+          }
+        }
+
+        if (inherits(newpreds, "try-error")) {
+          message(attr(newpreds, "condition")$message)
+          stop("predictions from some of h2o models could not be obtained after 10 attempts and wait time of 1 sec")
+        }
+
         if (ncol(newpreds) > 1) newpreds <- newpreds[["p1"]]
         newpreds_prev_CV_i <- h2o::h2o.cbind(newpreds_prev_CV_i, newpreds)
       }

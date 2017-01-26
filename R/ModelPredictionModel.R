@@ -316,21 +316,29 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (!self$is.fitted) stop("Please fit the model prior to making predictions.")
       if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
 
-      out_of_sample_preds_DT <- self$predict_out_of_sample(validation_data, subset_exprs, ...)
-
+      ## New validation dataset has been supplied. Use that to obtain out-of-sample preds and test values
       if (!missing(validation_data)) {
+        out_of_sample_preds_DT <- self$predict_out_of_sample(validation_data, subset_exprs, ...)
         subset_idx <- validation_data$evalsubst(subset_exprs = subset_exprs)
         test_values <- validation_data$get.outvar(subset_idx, var = self$outvar)
         IDs <- validation_data$get.outvar(subset_idx, var = validation_data$nodes$IDnode)
-      } else if (self$runCV) {
-        subset_idx <- OData_train$evalsubst(subset_exprs = subset_exprs)
-        test_values <- OData_train$get.outvar(subset_idx, var = self$outvar)
-        IDs <- OData_train$get.outvar(subset_idx, var = OData_train$nodes$IDnode)
-      } else if (!self$runCV) {
-        if (is.null(OData_valid)) stop("Must either use CV or provide validation data for model scoring")
+
+      ## Validation dataset has been previously provided during model training. Use that.
+      } else if (!is.null(OData_valid)) {
+        out_of_sample_preds_DT <- self$predict_out_of_sample(newdata = OData_valid, subset_exprs = subset_exprs, ...)
         subset_idx <- OData_valid$evalsubst(subset_exprs = subset_exprs)
         test_values <- OData_valid$get.outvar(subset_idx, var = self$outvar)
         IDs <- OData_valid$get.outvar(subset_idx, var = OData_valid$nodes$IDnode)
+
+      ## No trace of validation dataset -- can score models only if doing CV. Use old training data for scoring.
+      } else if (self$runCV) {
+        out_of_sample_preds_DT <- self$predict_out_of_sample(subset_exprs = subset_exprs, ...)
+        subset_idx <- OData_train$evalsubst(subset_exprs = subset_exprs)
+        test_values <- OData_train$get.outvar(subset_idx, var = self$outvar)
+        IDs <- OData_train$get.outvar(subset_idx, var = OData_train$nodes$IDnode)
+
+      } else {
+        stop("Model re-scoring not possible. Must either provide validation_data or use method = 'cv'")
       }
 
       private$MSE <- self$evalMSE_byID(out_of_sample_preds_DT, test_values, IDs)

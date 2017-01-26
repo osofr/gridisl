@@ -214,7 +214,10 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     },
 
     get_modelfits_grid = function() {
-      res_DT_list <- lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_modelfits_grid())
+      res_DT_list <- lapply(self$PredictionModels, function(PredictionModel) {
+        if (is.PredictionStack(PredictionModel)) PredictionModel <- PredictionModel$PredictionModels[[1]]
+        PredictionModel$get_modelfits_grid()
+      })
       return(res_DT_list)
     },
 

@@ -200,6 +200,10 @@ brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
       return(top_params)
     },
 
+    get_modelfits_grid = function(...) {
+      return(NULL)
+    },
+
     # Sets Xmat, Yvals, evaluates subset and performs correct subseting of data
     # everything is performed using data$ methods (data is of class DataStorageClass)
     setdata = function(data, subset_idx, getoutvar = TRUE, getXmat = TRUE, ...) {

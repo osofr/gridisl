@@ -145,7 +145,9 @@ fit_model <- function(ID,
     ## If validation data supplied then score the models based on validation set
     modelfit_stack$score_models(validation_data = valid_data, subset_exprs = subset_idx)
   } else if (runCV) {
-    ## If CV was used, then score the models based on pre-saved out-of-sample predictions (CV model predictions from validation folds)
+    ## If CV was used and no validation data provided,
+    ## then score the models based on pre-saved out-of-sample predictions
+    ## (CV model predictions from validation folds)
     modelfit_stack$score_models(subset_exprs = subset_idx)
   }
 
@@ -370,7 +372,7 @@ eval_MSE <- function(modelfit,
     if (!is.integer(subset_idx)) stop("subset_idx must be an integer vector, current class: " %+% class(subset_idx))
 
   if (missing(newdata)) {
-    ## Use out-of-sample predictions from original training data (automatically done by h2o) to evaluate the CV MSE
+    ## Use out-of-sample predictions from original training data (automatically saved by h2o) to evaluate the CV MSE
     modelfit <- modelfit$score_models(subset_exprs = subset_idx)
   } else {
     newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,

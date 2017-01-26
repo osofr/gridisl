@@ -389,7 +389,7 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
       ## ------------------------------------------------------------------------------------------
       ## PART I. Fit the univariate glm on training set. Define new outcome as a residual of glm predictions for entire data (train + validation)
       ## ------------------------------------------------------------------------------------------
-      ## will be made into a passable user-defined argument:
+      ## Will be made into a passable user-defined argument:
       firstGLM_params <- list(fit.package = "h2o", fit.algorithm = "glm", family = self$model_contrl$family)
 
       ## Option A (low level -- going directly for the residual glm fit)
@@ -404,11 +404,11 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
       firstGLM_preds_train <- predict_h2o_new(GLMmodelID, frame_id = h2o::h2o.getId(train_H2Oframe), convertResToDT = FALSE)
       firstGLM_preds_valid <- predict_h2o_new(GLMmodelID, frame_id = h2o::h2o.getId(valid_H2Oframe), convertResToDT = FALSE)
 
-      ## save predictions from the first model (fit on training data, but predictions made for all data)
+      ## Save predictions from the first model (fit on training data, but predictions made for all data)
       train_H2Oframe[["firstGLM_preds"]] <- firstGLM_preds_train
       train_H2Oframe[["residual_y"]] <- train_H2Oframe[[self$outvar]] - train_H2Oframe[["firstGLM_preds"]]
 
-      ## evaluate residuals and define them as new outcomes (to be used as outcomes for the next stage SL)
+      ## Evaluate residuals and define them as new outcomes (to be used as outcomes for the next stage SL)
       if (!is.null(validation_data)) {
         valid_H2Oframe[["firstGLM_preds"]] <- firstGLM_preds_valid
         valid_H2Oframe[["residual_y"]] <- valid_H2Oframe[[self$outvar]] - valid_H2Oframe[["firstGLM_preds"]]

@@ -34,8 +34,8 @@
 #'
 
 #+ warning=FALSE, message=FALSE, results='asis'
-  pander::set.caption("Top MSEs (for Holdout / Validation Data).")
   tabMSEonly <- modelfit$get_best_MSEs(K = K)
+  pander::set.caption("Top MSEs (for Holdout / Validation Data).")
   pander::pander(data.frame(model = names(tabMSEonly), MSEs = tabMSEonly, row.names = NULL))
 
 
@@ -46,9 +46,8 @@
 
 #+ warning=FALSE, message=FALSE, results='asis'
   tab <- modelfit$get_best_MSE_table(K = K)
-  tabMSE <- tab[, names(tab)[!names(tab) %in% "model.id"]]
   pander::set.caption("Best Performing Models (Based on MSE for Holdout / Validation Data).")
-  pander::pander(tabMSE)
+  pander::pander(tab)
 
 #' &nbsp;
 #'
@@ -66,13 +65,20 @@
     cat("\n\n\n");
   }
 
+#' &nbsp;
+#'
+#' &nbsp;
+#'
+
 #+ results='asis'
+  panderOptions('knitr.auto.asis', FALSE)
   grids <- modelfit$get_modelfits_grid()
   for (grid in grids) {
     if (is.data.frame(grid) || is.data.table(grid))
       grid <- grid[ , names(grid)[!(names(grid) %in% c("glob_params", "xgb_fit", "fit", "params"))], with = FALSE]
-    pander::pander(grid, caption = "Grid Details")
+    pander::pander(grid) # , caption = "Grid Details"
   }
+  panderOptions('knitr.auto.asis', TRUE)
 
 #' &nbsp;
 #'
@@ -81,17 +87,6 @@
 
 #'
 #' ## Top Performing Models
-#'
-
-#+ warning=FALSE, message=FALSE, results='asis'
-  tab <- modelfit$get_best_MSE_table(K = K)
-  tabIDs <- tab[, names(tab)[names(tab) %in% c("model.id", "model")]]
-  pander::set.caption("Model ID and name for top performing models.")
-  pander::pander(tabIDs)
-
-#' &nbsp;
-#'
-#' &nbsp;
 #'
 
 #+ echo=FALSE, warning=FALSE, message=FALSE, results='asis'
