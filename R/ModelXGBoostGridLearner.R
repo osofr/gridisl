@@ -28,10 +28,6 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
 
   add_args <- list(...)
 
-  # ##  may cause a clash with xgboost OMP if data.table is running in parallel with >1 OMP threads
-  # oldDTthreads <- data.table::getDTthreads()
-  # data.table::setDTthreads(1)
-
   if (!missing(nfold)) stop("For model evaluation via cross-validation please specify the argument 'folds'; use of 'nfold' argument is not allowed here.")
   if (!is.null(validation_data) && !is.null(folds)) stop("Cannot use validation_data and folds at the same time.")
 
@@ -75,7 +71,6 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
     #                                                  verbose = verbose)
 
     if (!runCV) {
-      # browser()
       model_fit <- xgboost::xgb.train(params = params,
                                       data = data,
                                       nrounds = as.integer(nrounds),
@@ -89,7 +84,6 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
                                       callbacks = c(list(xgboost::cb.evaluation.log()), callbacks),
                                       eval_metric = metrics)
     } else {
-      # browser()
       ## Test models via V-fold cross-validation
       model_fit <- xgboost::xgb.cv(params = params,
                                    data = data,
@@ -111,20 +105,12 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
                                    metrics = metrics
                                    )
     }
-
-    # browser()
-    # model_fit[["models"]]
-    # model_fit[["pred"]]
     ## cv raw models:
     raw_models_cv <- lapply(model_fit[["models"]], '[[', "raw")
-    # print("xgb cv model size"); print(object.size(raw_models_cv), units = "MB")
     reloaded_models <- lapply(raw_models_cv, function(raw) xgboost::xgb.load(raw))
     model_fit[["models"]] <- NULL
-
-    # gc(verbose = FALSE)
-
+    gc(verbose = FALSE)
     model_fit[["models"]] <- reloaded_models
-
     return(model_fit)
   }
 
@@ -172,8 +158,6 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
   #   gs[i, xgb_fit := list(xgb_fit[i])]
   # }
 
-
-
   glob_params <- list(missing = missing, obj = obj, feval = feval, maximize = maximize)
   gs[["glob_params"]] <- rep.int(list(glob_params), nrow(gs))
 
@@ -187,33 +171,11 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
     tidyr::unnest(metrics) %>%
     data.table::data.table()
 
-  # mutate(eval_metric = map_chr(xgb_fit,  function(fit) fit[['params']][['eval_metric']])) %>%
-  # metric_used <- gs[["eval_metric"]][1]
-  # if (!is.null(order_metric_name)) gs <- gs %>% arrange_("test_"%+%order_metric_name%+%"_mean")
-  # gs <- gs %>% arrange_("test_"%+%metric_used%+%"_mean") %>% data.table::as.data.table()
-
   ## Sort the data.table with grid model fits by user-supplied test/train metric value (lowest to highest)
   if (!is.null(order_metric_name)) data.table::setkeyv(gs, cols = order_metric_type %+% "_" %+% order_metric_name %+% ifelse(runCV, "_mean", ""))
 
   print("grid fits ordered by test metric (lowest to highest):"); print(gs)
-  # print(gs, topn = 5, nrows = 10, class = TRUE)
-  # print(gs[, c(names(params), "nrounds", "ntreelimit",  "train_rmse_mean", "test_rmse_mean")])
-
-  # ##  set back to old number of threads for data.table
-  # data.table::setDTthreads(oldDTthreads)
 
   return(gs)
 
-  # gs
-  # str(gs[1, "xgb_fit"][[1]][[1]])
-  # gs[1, "xgb_fit"][[1]][[1]]$evaluation_log
-  # str(gs[1, "xgb_fit"][[1]][[1]])
-  # gs[1, "xgb_fit"][[1]][[1]][['params']]
-  # str(gs[1, "xgb_fit"][[1]])
-  # fit_obj <- gs[1, "xgb_fit"][[1]][[1]]
-  # str(fit_obj)
-  # str(fit_obj$params$eval_metric)
-  # fit_obj$evaluation_log[fit_obj[['best_iteration']],]
-  # gs[["params"]]
-  # # print(object.size(model.fit), units = "Kb")
 }

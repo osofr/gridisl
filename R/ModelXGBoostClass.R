@@ -1,27 +1,25 @@
 ## ******************************
 ## GLMs ('glm' / 'gblinear')
 ## ******************************
-## For holdoutSL the test error is always assessed by predicting from LAST model iteration.
-## However, for cvSL the test error is assessed by predicting from the BEST iteration.
-## This is due to the fact that cvSL just grabs pre-saved holdout predictions (from xgboost), while holdoutSL does new holdout predictions (manual).
-## The refit of best model for both (cvSL & holdoutSL) will be done based only on best iteration from validation data.
+## For method = "holdout" the test error is always assessed by predicting from LAST model iteration.
+## However, for method = "cv" the test error is assessed by predicting from the BEST iteration.
+## This is due to the fact that cv just grabs pre-saved holdout predictions (from xgboost), while holdoutSL does new holdout predictions (manual).
+## The refit of best model for both (cv & holdout) will be done based only on best iteration from validation data.
 ## This is not how GLMs are generally implemented (minimizing the train error instead).
 ## A more conventional approach is to perhaps NEVER use the test data when training GLMs, so only call xgb.train(), with watchlist containing only data_train.
 ## The model performance could then be assessed in the usual way.
-## This still poses a problem for cvSL!!! No way to implement early stopping in xgb.cv so that its based on TRAINING DATA!
+## This still poses a problem for cv!!! No way to implement early stopping in xgb.cv so that its based on TRAINING DATA!
 
 ## ******
-## TO DO: Implement out of sample CV prediction for best grid model (use ntreelimit as an arg to predict)
-## TO DO: Automatically initiate the h2o cluster (h2o.init(2)) if its hasn't been started.
-## TO DO fit.xgb.train(): Add validation_data to watchlist as watchlist <- list(train = dtrain, eval = dtest)?
-## TO DO RFs: Add random forests to the grid (for RFs, the arg 'ntreelimit' might differ from 'best_iteration')
-## TO DO RFs: Investigate difference between 'best_iteration' & 'best_ntreelimit' (different only for RFs).
+## TO DO: RFs -- Investigate difference between 'best_iteration' & 'best_ntreelimit' (different only for RFs).
 ##            Which one should be used for prediction with RFs?
 ## TO DO: Add support for booster 'dart'
-## TO DO (xgb.grid): Add arg "nthread = value" to the main function call (will be passed on to params)
-## TO DO: Determine optimal number of nthreads based on type of evaluation (parallel fits as in stremr or a single fit)
-## TO DO: Implement an option for performing grid search in parallel (over nmodels)
+## ******
 
+## (DONE): Implement an option for performing grid search in parallel (over nmodels) -- see commented out section
+## (DONE) RFs: Add random forests to the grid (for RFs, the arg 'ntreelimit' might differ from 'best_iteration')
+## (DONE) fit.xgb.train(): Add validation_data to watchlist as watchlist <- list(train = dtrain, eval = dtest)?
+## (DONE): Implement out of sample CV prediction for best grid model (use ntreelimit as an arg to predict)
 ## (DONE, no longer needed due to new interface):
 ##        Implement a grid for xgboost that may include several learners (e.g., grid-based glm, gbm, drf and individual learner (no grid)
 ##        In fit.xgb.grid we could then rbind the data.table that contains these learners
@@ -280,10 +278,8 @@ getPredictXGBDMat <- function(m.fit, ParentObject, DataStorageObject, subset_idx
       # pred_dmat <- DataStorageObject$xgb.DMatrix[subset_idx, ]
 
     } else {
-      # fold_column <- ParentObject$fold_column
 
       newXmat <- as.matrix(DataStorageObject$dat.sVar[subset_idx, m.fit$params$predvars, with = FALSE])
-
       if (is.integer(newXmat)) newXmat[,1] <- as.numeric(newXmat[,1])
       pred_dmat <- xgboost::xgb.DMatrix(newXmat)
 
@@ -403,25 +399,13 @@ XGBoostClass <- R6Class(classname = "XGBoost",
         class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
       }
 
-      # if (fit.algorithm %in% c("glm", "drf", "gbm")) {
-      #   class(self$fit.class) <- c(class(self$fit.class), "xgb.train")
-      # } else if (fit.algorithm %in% "grid") {
-      #   class(self$fit.class) <- c(class(self$fit.class), "xgb.grid")
-      # } else {
-      #   class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
-      # }
-
       invisible(self)
     },
 
     fit = function(data, subset_idx, validation_data = NULL, ...) {
-      # browser()
       assert_that(is.DataStorageClass(data))
 
       train_dmat <- self$setdata(data, subset_idx, ...)
-      # train_dmat <- self$setdata(data, subset_idx, self$classify, destination_frame = destination_frame, ...)
-      # private$train_H2Oframe <- train_H2Oframe
-      # private$train_H2Oframe_ID <- h2o::h2o.getId(train_H2Oframe)
 
       if ( (length(self$predvars) == 0L) || (length(subset_idx) == 0L) ) {
       # if ((length(self$predvars) == 0L) || (length(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
@@ -448,7 +432,6 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       if (!is.null(self$fold_column)) {
         Vfold_valid_rows <- data$dat.sVar[subset_idx, ][, .I, by = eval(self$fold_column)]
         setkeyv(Vfold_valid_rows, cols = self$fold_column)
-        # Vfold_valid_rows[.(unique(fold)), mult = 'all']
         folds <- split(Vfold_valid_rows[["I"]], Vfold_valid_rows[[self$fold_column]])
       } else {
         folds <- NULL
@@ -489,9 +472,6 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       if (!missing(model_names)) {
         return(self$model.fit$modelfits_all[model_names])
       } else stop("Can only use 'model_names' for retrieving xgboost models")
-        # if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
-        # return(lapply(model_IDs, h2o::h2o.getModel))
-      # }
     },
 
     get_modelfits_grid = function(model_names, ...) {
@@ -500,8 +480,6 @@ XGBoostClass <- R6Class(classname = "XGBoost",
         return(self$model.fit$modelfits_grid[Model_idx, ])
       } else {
         return(self$model.fit$modelfits_grid)
-        # if (missing(model_IDs)) stop("Must provide either 'model_names' or 'model_IDs'.")
-        # return(lapply(model_IDs, h2o::h2o.getModel))
       }
     },
 
@@ -536,27 +514,19 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       if (self$useDMatrix) {
 
         stop("fitting with pre-saved DMatrix is not implemented for xgboost")
-        # if (missing(subset_idx)) {
-        #   fit_dmat <- data$H2Oframe
-        # } else {
-        #   subset_t <- system.time(fit_dmat <- data$H2Oframe[subset_idx, ])
-        #   # if (gvars$verbose) {
-        #   print("time to subset H2OFRAME: "); print(subset_t)
-        #   # }
-        # }
 
       } else {
-        # load_var_names <- c(outvar, predvars)
-        # if (!is.null(data$fold_column)) load_var_names <- c(load_var_names, data$fold_column)
         if (missing(subset_idx)) subset_idx <- (1:data$nobs)
         load_subset_t <- system.time({
           IDs <- data$get.outvar(subset_idx, data$nodes$IDnode)
           Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
+
           ## gives an error when all columns happen to be integer type:
           # fit_dmat <- xgboost::xgb.DMatrix(as.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE]), label = Yvals)
           ## still gives the same error:
           # fit_dmat <- xgboost::xgb.DMatrix(data.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE]), label = Yvals)
           # Another option is to stop at data.matrix and pass it directly to xgboost, passing Y's as separate arg
+
           Xmat <- as.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE])
           if (is.integer(Xmat)) Xmat[,1] <- as.numeric(Xmat[,1])
           if (ncol(Xmat) == 0)
@@ -576,17 +546,6 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       model.fit <- self$model.fit
       topmodel_grid <- self$model.fit[["topmodel_grid"]]
       modelfits_grid <- self$model.fit[["modelfits_grid"]]
-
-      # if (!is.null(modelfits_grid)) {
-      #   cat(" TOTAL NO. OF GRIDS: " %+% length(modelfits_grid) %+% "\n")
-      #   cat(" ======================= \n")
-      #   for (grid_nm in names(modelfits_grid)) {
-      #     print(modelfits_grid[[grid_nm]])
-      #     cat("\n TOP MODEL FOR THIS GRID: \n")
-      #     cat(" ======================= \n")
-      #     print(top_grid_models[[grid_nm]])
-      #   }
-      # }
 
       if (all_fits) {
         cat("\n...Printing the summary fits of all models contained in this ensemble...\n")
@@ -617,11 +576,6 @@ XGBoostClass <- R6Class(classname = "XGBoost",
     getmodel_ids = function() {
       if (is.null(self$model.fit$model_ids)) {
         return(assign_model_name_id(self$model.fit$modelfits_all[[1]], self$model.fit$model_algorithms[[1]], self$model_contrl$name))
-        # model_ids <- list(self$model.fit$H2O.model.object@model_id)
-        # new_names <- self$model.fit$model_algorithms[[1]]
-        # if (!is.null(self$model_contrl$name)) new_names <- new_names %+% "." %+% self$model_contrl$name
-        # names(model_ids) <- new_names
-        # return(model_ids)
       } else {
         return(self$model.fit$model_ids)
       }

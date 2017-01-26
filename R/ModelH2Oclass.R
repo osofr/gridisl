@@ -6,10 +6,6 @@ predict_h2o_new <- function(model_id, frame_id, convertResToDT = TRUE) {
   job_key <- res$key$name
   dest_key <- res$dest$name
 
-  # h2o.getFrame("train_H2Oframe")
-  # predict(h2o.getModel("Grid_GBM_train_H2Oframe_model_R_1481770962766_193_model_1"),h2o.getFrame(frame_id))
-  # predict(h2o.getModel(model_id), h2o.getFrame(frame_id))
-
   h2o:::.h2o.__waitOnJob(job_key, pollInterval = 0.01)
   newpreds <- h2o::h2o.getFrame(dest_key)
   if (ncol(newpreds) > 1) newpreds <- newpreds[["p1"]]
@@ -330,11 +326,6 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
     getmodel_ids = function() {
       if (is.null(self$model.fit$model_ids)) {
         return(assign_model_name_id(params = self$params, self$model.fit$modelfits_all[[1]], self$model.fit$model_algorithms[[1]], self$model_contrl$name))
-        # model_ids <- list(self$model.fit$H2O.model.object@model_id)
-        # new_names <- self$model.fit$model_algorithms[[1]]
-        # if (!is.null(self$model_contrl$name)) new_names <- new_names %+% "." %+% self$model_contrl$name
-        # names(model_ids) <- new_names
-        # return(model_ids)
       } else {
         return(self$model.fit$model_ids)
       }
