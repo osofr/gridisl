@@ -58,12 +58,13 @@ fit.brokenstick <- function(fit.class, params, subject, x, Yvals, knots = NULL, 
     if (is.null(mx)) mx <- max(x, na.rm = TRUE)
     if (length(knots) == 1) knots <- seq(mn, mx, length = knots)[-knots]
 
-    model.fit <- suppressMessages(brokenstick::brokenstick(
-                  x = x,
-                  y = Yvals,
-                  subject = subject,
-                  knots = knots,
-                  Boundary.knots = c(mn, mx))
+    model.fit <- suppressMessages(
+      brokenstick::brokenstick(
+                              y = Yvals,
+                              x = x,
+                              subjid = subject,
+                              knots = knots,
+                              boundary = c(mn, mx))
               )
   }
 
