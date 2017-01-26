@@ -156,6 +156,10 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   if (!is.null(fold_column)) {
     mainArgs[["folds"]] <- fold_column
 
+    ## If validation data is also provided make sure its not passed to xgb.cv
+    ## Default model scoring will be based on CV, validation data will be used later for model re-scoring
+    mainArgs[["validation_data"]] <- NULL
+
     ## callback that saves the CV models (and out-of-sample / holdout predictions)
     ## -----------------------------------------------------------------
     ## ********* SAVING CV PREDICTIONS / MODELS -- IMPORTANT *********

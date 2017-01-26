@@ -9,8 +9,8 @@ NOTUSED.parallel.xgb.grid <- function() {
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
-  hyper_params = list(eta = c(0.3, 0.1,0.01),
-                      max_depth = c(4,6,8,10),
+  hyper_params = list(eta = c(0.3, 0.1, 0.01),
+                      max_depth = c(4, 6, 8, 10),
                       max_delta_step = c(0,1),
                       subsample = 1,
                       scale_pos_weight = 1)
@@ -42,14 +42,15 @@ test.XGBoost.simple <- function() {
                   data = cpp)
 
   GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 100) +
-                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 100,
+                 defModel(estimator = "xgboost__gbm", family = "gaussian",
+                          nrounds = 100, early_stopping_rounds = 10,
                           seed = 123456,
                           search_criteria = list(
                             strategy = "RandomDiscrete",
                             max_models = 4),
                           param_grid = list(
-                            eta = c(0.3, 0.1,0.01),
-                            max_depth = c(4,6,8,10),
+                            eta = c(0.3, 0.1, 0.01),
+                            max_depth = c(4, 6, 8, 10),
                             max_delta_step = c(0,1),
                             subsample = 1,
                             scale_pos_weight = 1
