@@ -165,7 +165,7 @@ fit.h2ogrid <- function(fit.class, params, training_frame, y, x, model_contrl, f
 
   ## Assign names to each grid model, these are the names that are presented in the output tables
   model_names <- "h2o." %+% unlist(model_algorithms[1:ngridmodels])
-  if (!is.null(params[["Model_idx"]])) model_names <- "M." %+% params[["Model_idx"]] %+% "." %+% model_names
+  if (!is.null(params[["Model_idx"]])) model_names <- "m." %+% params[["Model_idx"]] %+% "." %+% model_names
   if (ngridmodels > 1) model_names <- model_names %+% ".grid." %+% (1:ngridmodels)
   if (!is.null(model_contrl[["name"]]))  model_names <- model_names %+% "." %+% model_contrl[["name"]]
 
