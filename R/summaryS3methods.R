@@ -208,9 +208,20 @@ summary.xgb.Booster <- function(xgb.model, ...) {
     # -----------------------------------------------------------------
     # variable importance:
     # -----------------------------------------------------------------
-    # browser()
+    feature_names <- xgb.model[["params"]][["feature_names"]]
+    caption <- "Feature Importance"
 
-  # }
+    if (class(xgb.model) %in% "xgb.cv.synchronous") {
+      xgb.model <- xgb.model[["models"]][[1]]
+      caption <- caption %+% " for Training Fold 1"
+    }
+
+    importance_matrix <- xgboost::xgb.importance(feature_names = feature_names, model = xgb.model)
+    importance_out <- pander::pander_return(importance_matrix, caption  = caption)
+    out <- c(out, importance_out)
+
+    ## To plot the feature importance:
+    # xgboost::xgb.plot.importance(importance_matrix = importance_matrix)
 
   return(out)
 }

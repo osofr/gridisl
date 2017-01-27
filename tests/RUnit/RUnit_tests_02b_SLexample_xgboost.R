@@ -28,12 +28,17 @@ test.xgb.grid.printing <- function() {
 
   models <- xgboost_holdout$get_best_models(K = 5)
   for (model_idx in seq_along(models)) {
-      if (!is.null(models[[model_idx]])) {
-        print_tables(models[[model_idx]])
-      } else {
-        cat("*no modeling objects found*")
-      }
+    if (!is.null(models[[model_idx]])) {
+      print_tables(models[[model_idx]])
+    }
   }
+
+  make_model_report(xgboost_holdout, data = cpp_holdout,
+                    K = 10,
+                    file.name = paste0("GLMs_", getOption("GriDiSL.file.name")),
+                    title = paste0("Growth Curve Imputation with GLM"),
+                    format = "html", keep_md = TRUE, openFile = TRUE)
+
 
 }
 
@@ -321,8 +326,9 @@ test.CV.SL.XGBoost <- function() {
   ## Fit xgboost model with model scoring via 5 fold CV:
   ## --------------------------------------------------------------------------------------------
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
-  mfit_cv <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                      data = cpp_folds, models = GRIDparams, fold_column = "fold")
+  mfit_cv <- fit(models = GRIDparams, method = "cv", data = cpp_folds,
+                 ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                 fold_column = "fold")
 
   ## Predictions for new data based on best SL model trained on all data:
   preds_alldat <- predict_SL(mfit_cv, newdata = cpp_folds, add_subject_data = TRUE)
@@ -342,6 +348,19 @@ test.CV.SL.XGBoost <- function() {
   preds_hold_best <- predict_generic(mfit_cv, add_subject_data = FALSE, best_only = TRUE, holdout = TRUE)
   checkTrue(ncol(preds_hold_best)==1)
   checkTrue(all.equal(holdout_preds[[1]], preds_hold_best[[1]]))
+
+
+  models <- mfit_cv$get_best_models(K = 5)
+  for (model_idx in seq_along(models)) {
+    if (!is.null(models[[model_idx]])) {
+      print_tables(models[[model_idx]])
+    }
+  }
+
+  make_model_report(mfit_cv, data = cpp_folds, K = 10,
+                    file.name = paste0("GLMs_", getOption("GriDiSL.file.name")),
+                    title = paste0("Growth Curve Imputation with GLM"),
+                    format = "html", keep_md = TRUE, openFile = TRUE)
 
   ## --------------------------------------------------------------------------------------------
   ## PERFORM OUT-OF-SAMPLE PREDICTIONS FOR CV MODELS using newdata

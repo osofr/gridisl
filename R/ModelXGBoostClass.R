@@ -107,6 +107,8 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
                    verbose = gvars$verbose,
                    seed = model_contrl[['seed']])
 
+  mainArgs[["feature_names"]] <- attr(train_data, ".Dimnames")[[2]]
+
   if (is.null(mainArgs[["objective"]])) {
     if (family %in% c("binomial", "quasibinomial")) {
       mainArgs[["objective"]] <- "reg:logistic"
