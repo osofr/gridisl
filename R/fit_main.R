@@ -112,11 +112,11 @@ fit <- function(...) { UseMethod("fit") }
 #' @param seed Random number seed for selecting random holdouts or validation folds.
 #' @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 #' When \code{FALSE}, it might be impossible to make predictions from this model fit.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
 #' @param ... Additional arguments that will be passed on directly to \code{\link{fit_model}} function.
 #' @return An R6 object containing the model fit(s).
-# @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
-# @example tests/examples/1_GriDiSL_example.R
+# @seealso \code{\link{gridisl-package}} for the general overview of the package,
+# @example tests/examples/1_gridisl_example.R
 #' @export
 fit.ModelStack <- function(models,
                            method = c("none", "cv", "holdout"),
@@ -131,7 +131,7 @@ fit.ModelStack <- function(models,
                            hold_random = FALSE,
                            seed = NULL,
                            refit = TRUE,
-                           verbose = getOption("GriDiSL.verbose"),
+                           verbose = getOption("gridisl.verbose"),
                            ...) {
   method <- method[1L]
   gvars$method <- method
@@ -198,10 +198,10 @@ validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Ofram
 # @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 # When \code{FALSE}, it might be impossible to make predictions from this model fit.
 # @param seed Random number seed for selecting a random holdout.
-# @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+# @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
 # @return ...
-# @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
-# @example tests/examples/1_GriDiSL_example.R
+# @seealso \code{\link{gridisl-package}} for the general overview of the package,
+# @example tests/examples/1_gridisl_example.R
 # @export
 fit_holdoutSL <- function(ID,
                           t_name,
@@ -213,7 +213,7 @@ fit_holdoutSL <- function(ID,
                           hold_random = TRUE,
                           refit = TRUE,
                           seed = NULL,
-                          verbose = getOption("GriDiSL.verbose"),
+                          verbose = getOption("gridisl.verbose"),
                           ...) {
   gvars$verbose <- verbose
   gvars$method <- "holdout"
@@ -267,10 +267,10 @@ fit_holdoutSL <- function(ID,
 # @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 # When \code{FALSE}, it might be impossible to make predictions from this model fit.
 # @param seed Random number seed for selecting a random holdout.
-# @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+# @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
 # @return ...
-# @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
-# @example tests/examples/1_GriDiSL_example.R
+# @seealso \code{\link{gridisl-package}} for the general overview of the package,
+# @example tests/examples/1_gridisl_example.R
 # @export
 fit_cvSL <- function(ID,
                      t_name,
@@ -282,7 +282,7 @@ fit_cvSL <- function(ID,
                      fold_column = NULL,
                      refit = TRUE,
                      seed = NULL,
-                     verbose = getOption("GriDiSL.verbose"),
+                     verbose = getOption("gridisl.verbose"),
                      ...) {
   gvars$verbose <- verbose
   gvars$method <- "cv"

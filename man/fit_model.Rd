@@ -6,7 +6,7 @@
 \usage{
 fit_model(ID, t_name, x, y, train_data, valid_data, models, nfolds, fold_column,
   seed, useH2Oframe = FALSE, subset_exprs = NULL, subset_idx = NULL,
-  verbose = getOption("GriDiSL.verbose"))
+  verbose = getOption("gridisl.verbose"))
 }
 \arguments{
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}
@@ -41,7 +41,7 @@ By default all rows of the input data will be used.}
 \item{subset_idx}{(Optional) Specify an vector index of rows in the input data to be used in model fitting / validation.
 By default all rows of the input data will be used.}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.}
 }
 \value{
 An R6 object containing the model fit(s).

@@ -9,13 +9,13 @@ if(FALSE) {
   load_all("./") # load all R files in /R and datasets in /data. Ignores NAMESPACE:
 
   setwd("..");
-  install("GriDiSL", build_vignettes = FALSE, dependencies = FALSE) # INSTALL W/ devtools:
-  library("GriDiSL")
+  install("gridisl", build_vignettes = FALSE, dependencies = FALSE) # INSTALL W/ devtools:
+  library("gridisl")
   # system("echo $PATH") # see the current path env var
-  # system("R CMD Rd2pdf GriDiSL")  # just create the pdf manual from help files
+  # system("R CMD Rd2pdf gridisl")  # just create the pdf manual from help files
   # CHECK AND BUILD PACKAGE:
   getwd()
-  # setwd("./GriDiSL"); setwd(".."); getwd()
+  # setwd("./gridisl"); setwd(".."); getwd()
   devtools::check() # runs full check
   devtools::check(args = c("--no-vignettes"), build_args = c("--no-build-vignettes")) # runs faster
   devtools::build_win(args = "--compact-vignettes") # build package on CRAN servers (windows os?)
@@ -27,7 +27,7 @@ if(FALSE) {
   devtools::revdep_check_summary(res)
   # revdep_check_save_logs(res)
 
-  # devtools::install_github('osofr/GriDiSL', build_vignettes = FALSE, dependencies = FALSE)
+  # devtools::install_github('osofr/gridisl', build_vignettes = FALSE, dependencies = FALSE)
 
   setwd("..")
 }
@@ -38,7 +38,7 @@ psi_RDs_DAG2b <- NULL
 
 test.learners <- function() {
   checkException(
-    params <- GriDiSL::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
+    params <- gridisl::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
                                nrounds = 500, early_stopping_rounds = 10,
                                learning_rate = 0.1, # learning_rate = 0.01,
                                param_grid = c(
@@ -48,7 +48,7 @@ test.learners <- function() {
     )
 
   checkException(
-    params <- GriDiSL::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
+    params <- gridisl::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
                                nrounds = 500, early_stopping_rounds = 10,
                                learning_rate = 0.1, # learning_rate = 0.01,
                                param_grid = list(
@@ -59,7 +59,7 @@ test.learners <- function() {
   )
 
   checkException(
-    params <- GriDiSL::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
+    params <- gridisl::defModel(estimator = "xgboost__gbm", family = "quasibinomial", nthread = 1,
                                nrounds = 500, early_stopping_rounds = 10,
                                learning_rate = 0.1, # learning_rate = 0.01,
                                param_grid = list(

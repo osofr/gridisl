@@ -1,4 +1,4 @@
-#' @useDynLib GriDiSL
+#' @useDynLib gridisl
 #' @import R6
 #' @importFrom magrittr %>%
 #' @importFrom Rcpp sourceCpp
@@ -35,7 +35,7 @@ capture.exprs <- function(...) {
 #'
 #' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit}.
 #' @export
-save_best_model <- function(modelfit, file.path = getOption('GriDiSL.file.path')) {
+save_best_model <- function(modelfit, file.path = getOption('gridisl.file.path')) {
   stop("...not implemented...")
   assert_that(is.PredictionModel(modelfit))
   best_model_name <- modelfit$get_best_model_names(K = 1)
@@ -138,16 +138,16 @@ add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed =
 # @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
 # @param covars Names of predictors (covariates) in the data.
 # @param OUTCOME Character name of the column containing outcomes.
-# @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+# @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
 # @return An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
-# @example tests/examples/1_GriDiSL_example.R
+# @example tests/examples/1_gridisl_example.R
 # @export
 
-importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("GriDiSL.verbose")) {
+importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("gridisl.verbose")) {
   gvars$verbose <- verbose
   # if (verbose) {
   #   current.options <- capture.output(str(gvars$opts))
-  #   print("Using the following GriDiSL options/settings: ")
+  #   print("Using the following gridisl options/settings: ")
   #   cat('\n')
   #   cat(paste0(current.options, collapse = '\n'), '\n')
   # }

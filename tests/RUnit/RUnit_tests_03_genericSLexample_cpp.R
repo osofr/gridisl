@@ -2,13 +2,13 @@
 ## Perform fitting using a single shared h2oFrame (loaded only once and shared by all models)
 ## ----------------------------------------------------------------
 test.shared_h2o_database <- function() {
-  library("GriDiSL")
+  library("gridisl")
   library("data.table")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
   # h2o::h2o.init(nthreads = 32, max_mem_size = "40G")
   # h2o::h2o.shutdown(prompt = FALSE)
-  options(GriDiSL.verbose = TRUE)
+  options(gridisl.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -137,11 +137,11 @@ test.shared_h2o_database <- function() {
 }
 
 test.genericSL.subset <- function() {
-  library("GriDiSL")
+  library("gridisl")
   library("data.table")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
-  options(GriDiSL.verbose = TRUE)
+  options(gridisl.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -232,12 +232,12 @@ test.genericSL.subset <- function() {
 ## or using internal h2o cross-validation
 ## ------------------------------------------------------------------------------------
 test.generic.h2oSL <- function() {
-  library("GriDiSL")
+  library("gridisl")
   require("h2o")
   h2o::h2o.init(nthreads = -1)
   # h2o::h2o.init(nthreads = 32, max_mem_size = "40G")
   # h2o::h2o.shutdown(prompt = FALSE)
-  options(GriDiSL.verbose = TRUE)
+  options(gridisl.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")

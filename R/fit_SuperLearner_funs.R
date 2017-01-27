@@ -57,10 +57,10 @@ get_out_of_sample_predictions <- function(modelfit) {
 #' By default all rows of the input data will be used.
 #' @param subset_idx (Optional) Specify an vector index of rows in the input data to be used in model fitting / validation.
 #' By default all rows of the input data will be used.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
 #' @return An R6 object containing the model fit(s).
-# @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
-# @example tests/examples/1_GriDiSL_example.R
+# @seealso \code{\link{gridisl-package}} for the general overview of the package,
+# @example tests/examples/1_gridisl_example.R
 #' @export
 fit_model <- function(ID,
                       t_name,
@@ -75,7 +75,7 @@ fit_model <- function(ID,
                       useH2Oframe = FALSE,
                       subset_exprs = NULL,
                       subset_idx = NULL,
-                      verbose = getOption("GriDiSL.verbose")) {
+                      verbose = getOption("gridisl.verbose")) {
   gvars$verbose <- verbose
 
   if (missing(train_data)) stop("train_data arg must be specified")
@@ -174,7 +174,7 @@ fit_model <- function(ID,
 #' @param holdout Set to \code{TRUE} for out-of-sample predictions for validation folds or holdouts.
 #' @param force_data.table Force the prediction result to be \code{data.table}.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
-#' Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+#' Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
 #' @return A data.table of subject level predictions (subject are rows, columns are different models)
 #' or a data.table with subject level covariates added along with model-based predictions.
 #' @export
@@ -185,7 +185,7 @@ predict_generic <- function(modelfit,
                             best_only = TRUE,
                             holdout = FALSE,
                             force_data.table = TRUE,
-                            verbose = getOption("GriDiSL.verbose")) {
+                            verbose = getOption("gridisl.verbose")) {
 
   if (is.null(modelfit)) stop("must fit the model prior to obtaining predictions")
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
@@ -247,7 +247,7 @@ predict_generic <- function(modelfit,
 #'  1. For \code{method = "holdout"} the default holdout predictions will be based on validation data.
 #'  2. For \code{method = "cv"} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
 # @param force_data.table Force the output predictions to be a \code{data.table}
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
 #' @return A data.table of subject level predictions (subject are rows, columns are different models)
 #' or a data.table with subject level covariates added along with model-based predictions.
 #' @export
@@ -256,7 +256,7 @@ predict_SL <- function(modelfit,
                        add_subject_data = FALSE,
                        subset_idx = NULL,
                        holdout = FALSE,
-                       verbose = getOption("GriDiSL.verbose")) {
+                       verbose = getOption("gridisl.verbose")) {
 
   force_data.table <- TRUE
 
@@ -293,7 +293,7 @@ predict_nonholdouts <- function(modelfit,
                                 best_only = TRUE,
                                 add_subject_data = FALSE,
                                 subset_idx = NULL,
-                                verbose = getOption("GriDiSL.verbose")) {
+                                verbose = getOption("gridisl.verbose")) {
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
   if (!missing(newdata))
@@ -329,7 +329,7 @@ predict_holdout <- function(modelfit,
                             best_only = TRUE,
                             add_subject_data = FALSE,
                             subset_idx = NULL,
-                            verbose = getOption("GriDiSL.verbose")) {
+                            verbose = getOption("gridisl.verbose")) {
   if (missing(newdata) && !modelfit$runCV) newdata <- modelfit$OData_valid
   return(predict_generic(modelfit,
                          newdata,
@@ -354,13 +354,13 @@ predict_holdout <- function(modelfit,
 #' @param modelfit Model fit object returned by \code{\link{fit_model}} function.
 #' @param newdata Optional new validation data for evaluating MSE, either a \code{data.table} or \code{DataStorageClass} object.
 #' @param subset_idx Optional row indices if MSE needs to be evaluating for a subset of the input data.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
 #' @return A list of MSEs by model.
 #' @export
 eval_MSE <- function(modelfit,
                      newdata,
                      subset_idx = NULL,
-                     verbose = getOption("GriDiSL.verbose")) {
+                     verbose = getOption("gridisl.verbose")) {
 
   if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
   if (is.null(modelfit)) stop("must call get_fit() prior to obtaining predictions")

@@ -5,8 +5,8 @@
 \title{Generate report(s) with modeling stats using pandoc.}
 \usage{
 make_model_report(modelfit, data, K = 5, format = c("html", "pdf", "word"),
-  file.name = getOption("GriDiSL.file.name"),
-  file.path = getOption("GriDiSL.file.path"), openFile = TRUE,
+  file.name = getOption("gridisl.file.name"),
+  file.path = getOption("gridisl.file.path"), openFile = TRUE,
   keep_md = FALSE, keep_tex = FALSE, ...)
 }
 \arguments{

@@ -10,7 +10,7 @@ fit(...)
 \method{fit}{ModelStack}(models, method = c("none", "cv", "holdout"), data,
   ID, t_name, x, y, nfolds = NULL, fold_column = NULL, hold_column = NULL,
   hold_random = FALSE, seed = NULL, refit = TRUE,
-  verbose = getOption("GriDiSL.verbose"), ...)
+  verbose = getOption("gridisl.verbose"), ...)
 }
 \arguments{
 \item{...}{Additional arguments that will be passed on directly to \code{\link{fit_model}} function.}
@@ -48,7 +48,7 @@ If FALSE then the last observation for each subject is selected as a holdout.}
 \item{refit}{Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 When \code{FALSE}, it might be impossible to make predictions from this model fit.}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.}
 
 \item{params}{Parameters specifying the type of modeling procedure to be used.}
 }

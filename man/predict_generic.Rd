@@ -6,7 +6,7 @@
 \usage{
 predict_generic(modelfit, newdata, add_subject_data = FALSE,
   subset_idx = NULL, best_only = TRUE, holdout = FALSE,
-  force_data.table = TRUE, verbose = getOption("GriDiSL.verbose"))
+  force_data.table = TRUE, verbose = getOption("gridisl.verbose"))
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit}} functions. Must be an object of class \code{PredictionModel} or \code{PredictionStack}.}
@@ -29,7 +29,7 @@ the predictions will be based on the best scoring model that was re-trained on a
 \item{force_data.table}{Force the prediction result to be \code{data.table}.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
-Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
+Turn this on by default using \code{options(gridisl.verbose=TRUE)}.}
 }
 \value{
 A data.table of subject level predictions (subject are rows, columns are different models)

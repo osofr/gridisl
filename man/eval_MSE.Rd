@@ -5,7 +5,7 @@
 \title{Evaluate MSE based on holdout/validation predictions}
 \usage{
 eval_MSE(modelfit, newdata, subset_idx = NULL,
-  verbose = getOption("GriDiSL.verbose"))
+  verbose = getOption("gridisl.verbose"))
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit_model}} function.}
@@ -14,7 +14,7 @@ eval_MSE(modelfit, newdata, subset_idx = NULL,
 
 \item{subset_idx}{Optional row indices if MSE needs to be evaluating for a subset of the input data.}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.}
 }
 \value{
 A list of MSEs by model.

@@ -1,4 +1,4 @@
-Package: GriDiSL
+Package: gridisl
 Title: Machine Learning Toolkit with Grid-Search Discrete SuperLearner for Longitudinal Data
 Version: 0.0.6.9000
 Authors@R: c(

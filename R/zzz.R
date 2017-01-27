@@ -2,12 +2,12 @@ options("datatable.print.nrows" = 20)
 options("datatable.print.class" = TRUE)
 
 #-----------------------------------------------------------------------------
-# Global State Vars (can be controlled globally with options(GriDiSL.optname = ))
+# Global State Vars (can be controlled globally with options(gridisl.optname = ))
 #-----------------------------------------------------------------------------
 gvars <- new.env(parent = emptyenv())
 gvars$verbose <- TRUE       # verbose mode (print all messages)
 gvars$method <- "none"      # Model selection method used ("cv", "holdout", "none")
-gvars$opts <- list()        # named list of package options that is controllable by the user (set_all_GriDiSL_options())
+gvars$opts <- list()        # named list of package options that is controllable by the user (set_all_gridisl_options())
 gvars$misval <- NA_integer_ # the default missing value for observations (# gvars$misval <- -.Machine$integer.max)
 gvars$misXreplace <- 0L     # the default replacement value for misval that appear in the design matrix
 gvars$tolerr <- 10^-12      # tolerance error: assume for abs(a-b) < gvars$tolerr => a = b
@@ -18,9 +18,9 @@ allowed.fit.package <- c("speedglm", "glm", "h2o", "xgboost", "brokenstick", "fa
 allowed.fit.algorithm = c("glm", "gbm", "randomForest", "drf", "deeplearning", "grid", "resid_grid")
 allowed.bin.method = c("equal.mass", "equal.len", "dhist")
 
-#' Querying/setting a single \code{GriDiSL} option
+#' Querying/setting a single \code{gridisl} option
 #'
-#' To list all \code{GriDiSL} options, just run this function without any parameters provided. To query only one value, pass the first parameter.
+#' To list all \code{gridisl} options, just run this function without any parameters provided. To query only one value, pass the first parameter.
 #' To set that, use the \code{value} parameter too.
 #'
 #'
@@ -28,18 +28,18 @@ allowed.bin.method = c("equal.mass", "equal.len", "dhist")
 #' @param value Value to assign (optional)
 #' @export
 #' @examples \dontrun{
-#' GriDiSLOptions()
-#' GriDiSLOptions('fit.package')
-#' GriDiSLOptions('fit.package', 'h2o')
+#' gridislOptions()
+#' gridislOptions('fit.package')
+#' gridislOptions('fit.package', 'h2o')
 #' }
-GriDiSLOptions <- function (o, value)  {
-  res <- getOption("GriDiSL")
+gridislOptions <- function (o, value)  {
+  res <- getOption("gridisl")
   if (missing(value)) {
     if (missing(o))
         return(res)
     if (o %in% names(res))
         return(res[[o]])
-    print("Possible `GriDiSL` options:")
+    print("Possible `gridisl` options:")
     print(names(res))
     stop(o %+% ": this options does not exist")
   } else {
@@ -51,39 +51,39 @@ GriDiSLOptions <- function (o, value)  {
     else {
       res[[o]] <- value
     }
-    # options(GriDiSL = res)
-    do.call("set_all_GriDiSL_options", res)
+    # options(gridisl = res)
+    do.call("set_all_gridisl_options", res)
   }
 }
 
 # getopt <- function(optname) {
-#   return(GriDiSLOptions(o = optname))
+#   return(gridislOptions(o = optname))
 #   # opt <- gvars$opts
 #   # if (!(optname %in% (names(opt)))) stop(optname %+% ": this options does not exist")
 #   # return(opt[[optname]])
 # }
 
-#' Print Current Option Settings for \code{GriDiSL}
-#' @return Invisibly returns a list of \code{GriDiSL} options.
-#' @seealso \code{\link{set_all_GriDiSL_options}}
+#' Print Current Option Settings for \code{gridisl}
+#' @return Invisibly returns a list of \code{gridisl} options.
+#' @seealso \code{\link{set_all_gridisl_options}}
 #' @export
-print_GriDiSL_opts <- function() {
+print_gridisl_opts <- function() {
   print(gvars$opts)
   invisible(gvars$opts)
 }
 
-#' Setting \code{GriDiSL} Options
+#' Setting \code{gridisl} Options
 #'
-#' Options that control \code{GriDiSL} package.
+#' Options that control \code{gridisl} package.
 #' \strong{Will reset all unspecified options (omitted arguments) to their default values}.
-#' The preferred way to set options for \code{GriDiSL} is to use \code{\link{GriDiSLOptions}}, which allows specifying individual options without having to reset all other options.
-#' To reset all options to their defaults simply run \code{set_all_GriDiSL_options()} without any parameters/arguments.
+#' The preferred way to set options for \code{gridisl} is to use \code{\link{gridislOptions}}, which allows specifying individual options without having to reset all other options.
+#' To reset all options to their defaults simply run \code{set_all_gridisl_options()} without any parameters/arguments.
 #' @param fit.package Specify the default package for performing model fitting: c("speedglm", "glm", "h2o")
 #' @param fit.algorithm Specify the default fitting algorithm: c("glm", "gbm", "randomForest", "SuperLearner")
 #' @return Invisibly returns a list with old option settings.
-#' @seealso \code{\link{GriDiSLOptions}}, \code{\link{print_GriDiSL_opts}}
+#' @seealso \code{\link{gridislOptions}}, \code{\link{print_gridisl_opts}}
 #' @export
-set_all_GriDiSL_options <- function(fit.package = c("speedglm", "glm", "h2o", "xgboost", "brokenstick", "face"),
+set_all_gridisl_options <- function(fit.package = c("speedglm", "glm", "h2o", "xgboost", "brokenstick", "face"),
                                     fit.algorithm = c("glm", "gbm", "randomForest", "drf", "deeplearning", "grid", "resid_grid")) {
 
   old.opts <- gvars$opts
@@ -98,7 +98,7 @@ set_all_GriDiSL_options <- function(fit.package = c("speedglm", "glm", "h2o", "x
   )
 
   gvars$opts <- opts
-  options(GriDiSL = opts)
+  options(gridisl = opts)
   invisible(old.opts)
 }
 
@@ -129,30 +129,30 @@ set.misval <- function(gvars, newmisval) {
 }
 gvars$misfun <- testmisfun()
 
-# Allows GriDiSL functions to use e.g., getOption("GriDiSL.verbose") to get verbose printing status
+# Allows gridisl functions to use e.g., getOption("gridisl.verbose") to get verbose printing status
 .onLoad <- function(libname, pkgname) {
   # reset all options to their defaults on load:
-  set_all_GriDiSL_options()
+  set_all_gridisl_options()
   op <- options()
-  op.GriDiSL <- list(
-    GriDiSL.verbose = gvars$verbose,
-    GriDiSL.file.path = tempdir(),
-    # GriDiSL.file.name = 'GriDiSL-report-%T-%N-%n'
-    GriDiSL.file.name = 'GriDiSL-report-'%+%Sys.Date()
+  op.gridisl <- list(
+    gridisl.verbose = gvars$verbose,
+    gridisl.file.path = tempdir(),
+    # gridisl.file.name = 'gridisl-report-%T-%N-%n'
+    gridisl.file.name = 'gridisl-report-'%+%Sys.Date()
   )
-  toset <- !(names(op.GriDiSL) %in% names(op))
-  if (any(toset)) options(op.GriDiSL[toset])
+  toset <- !(names(op.gridisl) %in% names(op))
+  if (any(toset)) options(op.gridisl[toset])
   invisible()
 }
 
 # Runs when attached to search() path such as by library() or require()
 .onAttach <- function(...) {
   if (interactive()) {
-  	packageStartupMessage('GriDiSL')
-  	# packageStartupMessage('Version: ', utils::packageDescription('GriDiSL')$Version)
-  	packageStartupMessage('Version: ', utils::packageDescription('GriDiSL')$Version, '\n')
-  	packageStartupMessage('Please note this package is still in its early stages of development. Check for updates and report bugs at http://github.com/osofr/GriDiSL.', '\n')
-  	# packageStartupMessage('To see the vignette use vignette("GriDiSL_vignette", package="GriDiSL"). To see all available package documentation use help(package = "GriDiSL") and ?GriDiSL.', '\n')
-  	# packageStartupMessage('To see the latest updates for this version, use news(package = "GriDiSL").', '\n')
+  	packageStartupMessage('gridisl')
+  	# packageStartupMessage('Version: ', utils::packageDescription('gridisl')$Version)
+  	packageStartupMessage('Version: ', utils::packageDescription('gridisl')$Version, '\n')
+  	packageStartupMessage('Please note this package is still in its early stages of development. Check for updates and report bugs at http://github.com/osofr/gridisl.', '\n')
+  	# packageStartupMessage('To see the vignette use vignette("gridisl_vignette", package="gridisl"). To see all available package documentation use help(package = "gridisl") and ?gridisl.', '\n')
+  	# packageStartupMessage('To see the latest updates for this version, use news(package = "gridisl").', '\n')
   }
 }

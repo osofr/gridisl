@@ -4,7 +4,7 @@
 \alias{save_best_model}
 \title{Save the best performing h2o model}
 \usage{
-save_best_model(modelfit, file.path = getOption("GriDiSL.file.path"))
+save_best_model(modelfit, file.path = getOption("gridisl.file.path"))
 }
 \arguments{
 \item{modelfit}{A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit}.}
