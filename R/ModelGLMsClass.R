@@ -158,7 +158,6 @@ glmModelClass <- R6Class(classname = "glmModelClass",
       self$model_contrl <- reg$model_contrl
       self$ReplMisVal0 <- reg$ReplMisVal0
 
-      if (!("glm" %in% fit.algorithm)) warning("over-riding fit.algorithm option with 'glm', since fit.package was set to 'speedglm' or 'glm'")
       assert_that(any(c("glm", "speedglm") %in% fit.package))
       self$fit.class <- fit.package
       class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
