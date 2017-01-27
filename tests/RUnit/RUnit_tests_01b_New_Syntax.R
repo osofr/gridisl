@@ -87,11 +87,12 @@ test.GBM_xgboost_onelearner <- function() {
                            # early_stopping_rounds = 50,
                            seed = 23)
 
-  ## SL with random holdout:
+  ## SuperLearner with random holdout:
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   mfit_hold <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                     data = cpp_holdout, method = "holdout", hold_column = "hold")
-  ## SL with CV:
+
+  ## SuperLearner with CV:
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
   mfit_cv <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                     data = cpp_folds, method = "cv", fold_column = "fold")
@@ -165,11 +166,12 @@ test.GBM_xgboost_vs_H2O <- function() {
                            early_stopping_rounds = 50,
                            seed = 23)
 
-  ## SL with random holdout:
+  ## SuperLearner with random holdout:
   cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
   mfit_hold <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                     data = cpp_holdout, method = "holdout", hold_column = "hold")
-  ## SL with CV:
+
+  ## SuperLearner with CV:
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
   mfit_cv <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                     data = cpp_folds, method = "cv", fold_column = "fold")
