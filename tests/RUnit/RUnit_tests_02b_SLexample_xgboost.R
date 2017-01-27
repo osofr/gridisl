@@ -1,10 +1,11 @@
-NOTUSED.parallel.xgb.grid <- function() {
-  data.table::setDTthreads(1)
-  library("doParallel")
-  registerDoParallel(cores = 2)
+test.xgb.grid.printing <- function() {
+  # data.table::setDTthreads(1)
+  # library("doParallel")
+  # registerDoParallel(cores = 2)
 
   options(GriDiSL.verbose = FALSE)
   # options(GriDiSL.verbose = TRUE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -25,13 +26,22 @@ NOTUSED.parallel.xgb.grid <- function() {
                          ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                          data = cpp_holdout, hold_column = "hold")
 
+  models <- xgboost_holdout$get_best_models(K = 5)
+  for (model_idx in seq_along(models)) {
+      if (!is.null(models[[model_idx]])) {
+        print_tables(models[[model_idx]])
+      } else {
+        cat("*no modeling objects found*")
+      }
+  }
+
 }
 
 ## ------------------------------------------------------------------------------------
 ## test xgboost GLM learner / GBM Grid, no model scoring (no cv or holdout), just fit all models
 ## ------------------------------------------------------------------------------------
 test.XGBoost.simple <- function() {
-  options(GriDiSL.verbose = TRUE)
+  options(GriDiSL.verbose = FALSE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   cpp <- data.table::data.table(cpp)

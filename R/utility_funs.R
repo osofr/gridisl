@@ -16,6 +16,7 @@ is.DataStorageClass <- function(DataStorageClass) "DataStorageClass"%in%class(Da
 is.PredictionModel <- function(PredictionModel) "PredictionModel"%in%class(PredictionModel)
 is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(PredictionStack)
 is.ModelStack <- function(obj) "ModelStack" %in% class(obj)
+is.H2OFrame <- function(fr)  base::`&&`(!missing(fr), class(fr)[1]=="H2OFrame")
 
 #-----------------------------------------------------------------------------
 # Capture the arguments passed on as ... in a list

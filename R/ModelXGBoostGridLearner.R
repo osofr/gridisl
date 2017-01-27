@@ -131,11 +131,12 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
   ## ------------------------------------------------------------
   ## Sequentially fit each model from the grid
   ## ------------------------------------------------------------
-  data.table::setDT(gs)
-  for (i in 1:nrow(gs)) {
-    gs[i, xgb_fit := list(list(purrr::lift(run_singe_model)(gs[i, ])))]
-  }
-  # # gs <- gs %>% dplyr::mutate(xgb_fit = purrr::pmap(gs, run_singe_model))
+  # data.table::setDT(gs)
+  # for (i in 1:nrow(gs)) {
+  #   gs[i, xgb_fit := list(list(purrr::lift(run_singe_model)(gs[i, ])))]
+  # }
+
+  gs <- gs %>% dplyr::mutate(xgb_fit = purrr::pmap(gs, run_singe_model))
 
   ## ------------------------------------------------------------
   ## TO RUN GRID MODELS IN PARALLEL
@@ -177,5 +178,4 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
   print("grid fits ordered by test metric (lowest to highest):"); print(gs)
 
   return(gs)
-
 }

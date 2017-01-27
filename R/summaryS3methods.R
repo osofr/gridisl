@@ -17,23 +17,27 @@ pander.H2OBinomialMetrics <- function(H2OBinomialMetricsObject, type) {
   modelID <- h2o_metrics$model$name
   categor <- h2o_metrics$model_category
   # metricsDF <- t(data.frame(h2o_metrics[names(h2o_metrics) %in% c("nobs", "MSE", "RMSE", "mean_residual_deviance", "mae", "rmsle", "logloss", "AUC", "Gini")]))
-  metricsDF <- t(data.frame(h2o_metrics[names(h2o_metrics) %in% c("nobs", "MSE", "RMSE", "r2", "logloss", "AUC", "mean_residual_deviance", "mae", "rmsle", "Gini")]))
+  metricsDF <- t(data.table::as.data.table(
+    h2o_metrics[
+      names(h2o_metrics) %in% c("nobs", "MSE", "RMSE", "r2", "logloss", "AUC", "mean_residual_deviance", "mae", "rmsle", "Gini")]
+      ))
 
-  metricsDF <- data.frame(metric = rownames(metricsDF), value = as.numeric(metricsDF[,1]), stringsAsFactors = FALSE)
+  metricsDF <- data.table::data.table(
+    metric = rownames(metricsDF),
+    value = as.numeric(metricsDF[,1]))
 
   if (H2OBinomialMetricsObject@algorithm == "glm") {
-    glmDF <- data.frame(
+    glmDF <- data.table::data.table(
       metric =
         c("Null Deviance:      ",
           "Residual Deviance:  ",
           "AIC:                "),
       value = c(h2o_metrics$null_deviance,
             h2o_metrics$residual_deviance,
-            h2o_metrics$AIC),
-      stringsAsFactors = FALSE)
+            h2o_metrics$AIC))
     metricsDF <- rbind(metricsDF, glmDF)
   }
-  colnames(metricsDF) <- NULL
+  # colnames(metricsDF) <- NULL
   pander::pander(metricsDF, justify = c('left', 'center'), caption = type %+% " data metrics" %+% "; Category: " %+% categor)
 
   # cm <- try(h2o::h2o.confusionMatrix(H2OBinomialMetricsObject), silent = TRUE)
@@ -75,7 +79,7 @@ pander.H2ORegressionMetrics <- function(H2ORegressionMetricsObject, type) {
 pander.H2OGrid <- function(H2OGridObject) {
   grid_summary_tab <- H2OGridObject@summary_table
   caption <- "H2O Grid. " %+% attr(grid_summary_tab, "header") %+% ": " %+% attr(grid_summary_tab, "description")
-  pander::pander(data.frame(grid_summary_tab), caption = caption)
+  pander::pander(data.table::as.data.table(grid_summary_tab), caption = caption)
 }
 
 
@@ -114,9 +118,9 @@ summary.GLMmodel <- function(model.fit, format_table = TRUE, ...) {
     if (is.null(coef_out)) {
       coef_out <- "---"; names(coef_out) <- coef_out
     }
-    coef_out <- data.frame(Terms = names(coef_out), Coefficients = as.vector(coef_out))
+    coef_out <- data.table::data.table(Terms = names(coef_out), Coefficients = as.vector(coef_out))
     # coef_out <- data.frame(Terms = model.fit$params$predvars, Coefficients = as.vector(coef_out))
-    rownames(coef_out) <- NULL
+    # rownames(coef_out) <- NULL
   }
   pander::set.caption(makeModelCaption(model.fit))
   out <- pander::pander_return(coef_out, justify = c('right', 'left'))
@@ -133,9 +137,9 @@ summary.GLMmodel <- function(model.fit, format_table = TRUE, ...) {
 summary.xgb.Booster <- function(xgb.model, ...) {
   out <- NULL
 
-  out <- c(out,
-          pander::pander_return(data.frame(function_call = as.character(xgb.model$call)[1], row.names = NULL))
-          )
+  # out <- c(out,
+  #         pander::pander_return(data.frame(function_call = as.character(xgb.model$call)[1], row.names = NULL))
+  #         )
 
   # -----------------------------------------------------------------
   # some basic model info:
@@ -166,13 +170,20 @@ summary.xgb.Booster <- function(xgb.model, ...) {
 
     params <- xgb.model$params
     params <- lapply(params, function(arg) if (length(arg) > 1) {paste0(arg, collapse = ",")} else {arg})
-    all_params <- t(data.frame(params))
-    all_params <- data.frame(parameter = rownames(all_params), value = all_params[,1], stringsAsFactors = FALSE, row.names = NULL)
+
+    all_params <- t(data.table::as.data.table(params)) # all_params <- t(data.frame(params))
+    all_params <- data.table::data.table(
+      parameter = rownames(all_params),
+      value = all_params[,1]) # , row.names = NULL
+
     all_params_pander <- pander::pander_return(all_params, caption  = "Model Parameters", justify = c('left', 'center'))
     out <- c(out, all_params_pander)
 
-    training_stats = data.frame(name = c("best_iteration", "best_ntreelimit", "niter"),
-                                value = c(xgb.model$best_iteration, xgb.model$best_ntreelimit, xgb.model$niter))
+    training_stats <- data.table::data.table(
+      name = c("best_iteration", "best_ntreelimit", "niter"),
+      value = c(xgb.model$best_iteration, xgb.model$best_ntreelimit, xgb.model$niter)
+      )
+
     training_stats_out <- pander::pander_return(training_stats, caption  = "Model Training Stats")
     out <- c(out, training_stats_out)
 
@@ -181,7 +192,10 @@ summary.xgb.Booster <- function(xgb.model, ...) {
     # -----------------------------------------------------------------
     if (!is.null(xgb.model$best_score)) {
       metric_name <- attr(xgb.model$best_score, "names")
-      performance <- data.frame(metric_name = metric_name, best_score = xgb.model$best_score)
+      performance <- data.table::data.table(
+        metric_name = metric_name,
+        best_score = xgb.model$best_score)
+
       performance_out <- pander::pander_return(performance, caption  = "Model Performance")
       out <- c(out, performance_out)
     }
@@ -192,26 +206,9 @@ summary.xgb.Booster <- function(xgb.model, ...) {
     out <- c(out, model_metrics_out)
 
     # -----------------------------------------------------------------
-    # validation data metrics:
-    # -----------------------------------------------------------------
-    # H2OBinomialMetrics_val <- xgb.model@model$validation_metrics
-    #   if (!is.null(H2OBinomialMetrics_val@metrics)) {
-    #   valid_model_metrics_out <- pander::pander_return(H2OBinomialMetrics_val, type = "Validation")
-    #   out <- c(out, valid_model_metrics_out)
-    # }
-
-    # -----------------------------------------------------------------
-    # cross validation data metrics:
-    # -----------------------------------------------------------------
-    # H2OBinomialMetrics_xval <- xgb.model@model$cross_validation_metrics
-    # if (!is.null(H2OBinomialMetrics_xval@metrics)) {
-    #   xval_model_metrics_out <- pander::pander_return(H2OBinomialMetrics_xval, type = "Cross-validation")
-    #   out <- c(out, xval_model_metrics_out)
-    # }
-
-    # -----------------------------------------------------------------
     # variable importance:
     # -----------------------------------------------------------------
+    # browser()
 
   # }
 
@@ -264,8 +261,13 @@ summary.H2ORegressionModel <- function(h2o.model, only.coefs = FALSE, ...) {
 
     params <- h2o.model@parameters[!names(h2o.model@parameters) %in% c("x", "model_id")]
     params <- lapply(params, function(arg) if (length(arg) > 1) {paste0(arg, collapse = ",")} else {arg})
-    all_params <- t(data.frame(params))
-    all_params <- data.frame(parameter = rownames(all_params), value = all_params[,1], stringsAsFactors = FALSE, row.names = NULL)
+
+    all_params <- t(data.table::as.data.table(params))
+
+    all_params <- data.table::data.table(
+      parameter = rownames(all_params),
+      value = all_params[,1])
+
     # all_params <- data.frame(param = names(params), value = unlist(params), row.names = NULL)
     all_params_pander <- pander::pander_return(all_params, caption  = "Detailed Model Parameters", justify = c('left', 'center'))
     out <- c(out, all_params_pander)

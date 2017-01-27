@@ -165,7 +165,6 @@ fit.ModelStack <- function(models,
 
 
 validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Oframe = FALSE, dest_frame = "all_train_H2Oframe") {
-  # browser()
   if (is.DataStorageClass(input_data)) {
     OData_input <- input_data
     # if (useH2Oframe && is.null(OData_input$H2Oframe)) stop("fatal error: useH2Oframe was set to TRUE, but the H2Oframe could not be located in the input data.")

@@ -69,8 +69,6 @@ fit.xgb.train <- function(fit.class, params, train_data, model_contrl, ...) {
   if (is.null(mainArgs[['eval_metric']]) && is.null(mainArgs[['params']][['eval_metric']])) mainArgs[['eval_metric']] <- list("rmse")
 
   # mainArgs[["callbacks"]] <- c(list(xgboost::cb.evaluation.log()))
-  # browser()
-  # browser()
   # mainArgs[['objective']] <- "reg:logistic"
 
   if (nrow(train_data) == 0L) {
@@ -210,6 +208,7 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   if (gvars$verbose) print("running xgb.grid with booster: " %+% mainArgs[["booster"]])
 
   model_fit <- try(do.call(xgb.grid, mainArgs), silent = FALSE)
+
   if (inherits(model_fit, "try-error"))
     stop("All grid models for xgb.grid with " %+% grid.algorithm %+% " have failed. This suggests an error in model specification.")
 
@@ -229,7 +228,6 @@ fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_colum
                                             family = family,
                                             model_contrl = model_contrl,
                                             fold_column = fold_column, ...)
-
 
   modelfits_all <- modelfits_grid[["xgb_fit"]]
   ngridmodels <- length(modelfits_all)
@@ -513,7 +511,6 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       outvar <- self$outvar
       predvars <- self$predvars
       assert_that(is.DataStorageClass(data))
-      # browser()
 
       if (self$useDMatrix) {
 

@@ -103,7 +103,6 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
 
     # Predict the response E[Y|newdata] for out of sample observations  (validation set / holdouts);
     predict_out_of_sample = function(best_only, ...) {
-      # browser()
       ## obtain out-of-sample prediction from the best non-refitted model
       if (best_only) {
 

@@ -30,10 +30,7 @@ RegressionClass <- R6Class("RegressionClass",
                           subset_exprs = NULL,
                           model_contrl = list()) {
 
-# fit.package = getopt("fit.package"),
-# fit.algorithm = getopt("fit.algorithm"),
-# browser()
-## Confirm the args are of the same type as the initials
+      ## Confirm the args are of the same type as the initials
       self$ReplMisVal0 <- ReplMisVal0
       self$Model_idx <- Model_idx
       # self$fit.package <- fit.package
