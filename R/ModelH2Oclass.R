@@ -253,9 +253,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
           subsetH2Oframe <- data$H2Oframe
         } else {
           subset_t <- system.time(subsetH2Oframe <- data$H2Oframe[subset_idx, ])
-          # if (gvars$verbose) {
-          print("time to subset H2OFRAME: "); print(subset_t)
-          # }
+          if (gvars$verbose) { print("time to subset H2OFRAME: "); print(subset_t) }
         }
 
       } else {
@@ -265,9 +263,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
         if (missing(subset_idx)) subset_idx <- (1:data$nobs)
         load_subset_t <- system.time(subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[subset_idx, load_var_names, with = FALSE], destination_frame = destination_frame))
-        # if (gvars$verbose) {
-          print("time to subset and load data into H2OFRAME: "); print(load_subset_t)
-        # }
+        if (gvars$verbose) { print("time to subset and load data into H2OFRAME: "); print(load_subset_t) }
       }
 
       self$outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))

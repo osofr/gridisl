@@ -11,7 +11,7 @@ fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DT
     message("For optimal performance please install the most recent version of data.table package.")
     H2O.dat.sVar <- h2o::as.h2o(data.frame(dat.sVar), destination_frame = destination_frame)
   } else {
-    data.table::fwrite(dat.sVar, tmpf, verbose = TRUE, na = "NA_h2o")
+    data.table::fwrite(dat.sVar, tmpf, verbose = gvars$verbose, na = "NA_h2o")
 
     types <- sapply(dat.sVar, class)
     types <- gsub("integer64", "numeric", types)
@@ -28,6 +28,7 @@ fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DT
     tmpf.dest2 <- gsub('.', 'X', tmpf.dest1, fixed = TRUE)
     tmpf.dest3 <- gsub('_', 'X', tmpf.dest2, fixed = TRUE)
 
+    if (gvars$verbose) h2o::h2o.show_progress() else h2o::h2o.no_progress()
     H2O.dat.sVar <- h2o::h2o.importFile(path = tmpf,
                                         header = TRUE,
                                         col.types = types,

@@ -32,7 +32,9 @@ test.H2O_holdoutSL_GLM_old_syntax <- function() {
                     K = 10,
                     file.name = paste0("GLMs_", getOption("GriDiSL.file.name")),
                     title = paste0("Growth Curve Imputation with GLM"),
-                    format = "html", keep_md = TRUE, openFile = TRUE)
+                    format = "html", keep_md = TRUE,
+                    # openFile = TRUE)
+                    openFile = FALSE)
 
     ## PREDICT FOR BEST MODEL RE-TRAINED ON ALL DATA:
     preds_best_all <- predict_SL(mfit_holdGLM, newdata = cpp_holdout, add_subject_data = TRUE)
