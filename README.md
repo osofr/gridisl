@@ -1,10 +1,10 @@
 gridisl
 ==========
-<!-- 
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/gridisl)](http://cran.r-project.org/package=gridisl)
-[![](http://cranlogs.r-pkg.org/badges/gridisl)](http://cran.rstudio.com/web/packages/gridisl/index.html)
 [![Travis-CI Build Status](https://travis-ci.org/osofr/gridisl.svg?branch=master)](https://travis-ci.org/osofr/gridisl)
 [![Coverage Status](https://coveralls.io/repos/osofr/gridisl/badge.svg?branch=master&service=github)](https://coveralls.io/github/osofr/gridisl?branch=master)
+<!-- 
+[![](http://cranlogs.r-pkg.org/badges/gridisl)](http://cran.rstudio.com/web/packages/gridisl/index.html)
  -->
 
 Machine Learning Toolkit with Grid-Search Discrete SuperLearner for Longitudinal Data. Provides access to machine learning algorithms implemented in xgboost or h2o (RandomForests, Gradient Boosting Machines, Deep Neural Nets). Simple syntax for specifying large grids of tuning parameters, including random grid search over parameter space. Model selection can be performed via V-fold cross-validation or random validation splits.
