@@ -51,7 +51,6 @@ r_binary_packages:
   - pander
   - purrr
   - xgboost
-  - zoo
 
 r_github_packages:
   - jimhester/covr

@@ -26,8 +26,7 @@ Imports:
     speedglm,
     stats,
     tibble,
-    tidyr,
-    zoo
+    tidyr
 LinkingTo: Rcpp
 Suggests:
     brokenstick,
