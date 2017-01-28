@@ -13,6 +13,7 @@
 #----------------------------------------------------------------
 
 language: r
+cache: packages
 warnings_are_errors: false
 # r_build_args: "--compact-vignettes"
 # r_check_args: "--as-cran"
@@ -25,27 +26,39 @@ os:
   - linux
   # - osx
 
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libicu-dev
+  - sudo apt-get install -y pandoc
+
 r_binary_packages:
   - assertthat
+  - doParallel
   - data.table
+  - dplyr
   - foreach
   - ggplot2
-  - igraph
+  - ggiraph
+  - magrittr
   - knitr
   - R6
   - Rcpp
+  - rmarkdown
   - RUnit
   - speedglm
-  - stringr
-  - rmarkdown
-  - magrittr
+  - tibble
+  - tidyr
+  - pander
+  - purrr
+  - xgboost
+  - zoo
 
 r_github_packages:
   - jimhester/covr
-  - osofr/simcausal
 
-# r_packages:
-#   - ltmle
+r_packages:
+  - h2o
+
 #   - bindata
 
 env:

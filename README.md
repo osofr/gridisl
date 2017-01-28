@@ -7,6 +7,7 @@ gridisl
 [![Coverage Status](https://coveralls.io/repos/osofr/gridisl/badge.svg?branch=master&service=github)](https://coveralls.io/github/osofr/gridisl?branch=master)
  -->
 
+Machine Learning Toolkit with Grid-Search Discrete SuperLearner for Longitudinal Data. Provides access to machine learning algorithms implemented in xgboost or h2o (RandomForests, Gradient Boosting Machines, Deep Neural Nets). Simple syntax for specifying large grids of tuning parameters, including random grid search over parameter space. Model selection can be performed via V-fold cross-validation or random validation splits.
 
 ### Installation
 
