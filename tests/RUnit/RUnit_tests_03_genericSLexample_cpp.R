@@ -5,7 +5,7 @@ test.genericSL.subset <- function() {
   library("gridisl")
   library("data.table")
   require("h2o")
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
   options(gridisl.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -99,7 +99,7 @@ test.genericSL.subset <- function() {
 test.generic.h2oSL <- function() {
   library("gridisl")
   require("h2o")
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
   # h2o::h2o.init(nthreads = 32, max_mem_size = "40G")
   # h2o::h2o.shutdown(prompt = FALSE)
   options(gridisl.verbose = TRUE)

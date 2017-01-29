@@ -54,7 +54,7 @@ test.holdoutfit_all <- function() {
   res_GLM1 <- run_algo("speedglm", "glm")
   res_GLM2 <- run_algo("glm", "glm")
 
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
   res_GLM3 <- run_algo("h2o", "glm")
   res_GBM <- run_algo("h2o", "gbm")
   res_DRF <- run_algo("h2o", "randomForest")

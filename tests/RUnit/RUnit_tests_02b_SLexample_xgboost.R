@@ -98,7 +98,7 @@ test.XGBoost.simple <- function() {
 ## ------------------------------------------------------------------------------------
 test.XGBoost.GLM <- function() {
   require("h2o")
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
   options(gridisl.verbose = FALSE)
   # options(gridisl.verbose = TRUE)
   data(cpp)
@@ -153,7 +153,7 @@ test.XGBoost.GLM <- function() {
 ## ------------------------------------------------------------------------------------
 test.XGBoost.regularizedGLM_grid <- function() {
   require("h2o")
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
   options(gridisl.verbose = FALSE)
   # options(gridisl.verbose = TRUE)
   data(cpp)
@@ -200,7 +200,7 @@ test.XGBoost.regularizedGLM_grid <- function() {
 ## ------------------------------------------------------------------------------------
 test.XGBoost.drfs <- function() {
   require("h2o")
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
   # options(gridisl.verbose = FALSE)
   options(gridisl.verbose = TRUE)
   data(cpp)
@@ -435,7 +435,7 @@ test.CV.SL.XGBoost <- function() {
 test.residual.holdoutSL.xgboost <- function() {
   # library("gridisl")
   require("h2o")
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
   options(gridisl.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]

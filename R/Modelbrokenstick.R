@@ -1,7 +1,7 @@
 
 
 if(getRversion() >= "2.15.1") {
-  utils::globalVariables(c("yhat", "y", "x", "subject"))
+  utils::globalVariables(c("yhat", "y", "x", "subject", "new_vals_ind"))
 }
 
 

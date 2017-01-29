@@ -1,7 +1,7 @@
 test.H2O_holdoutSL_GLM_old_syntax <- function() {
   # require("h2o")
   # library("data.table")
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
   options(gridisl.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -72,7 +72,7 @@ test.H2O_holdoutSL_GLM_old_syntax <- function() {
 ## ------------------------------------------------------------------------------------
 test.H2O_holdoutSL_GRID_GBM_old_syntax <- function() {
   require("h2o")
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
   options(gridisl.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -178,7 +178,7 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
   # library("gridisl")
   # require("data.table")
   require("h2o")
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
   options(gridisl.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -354,7 +354,7 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
 test.H2O_residual_holdoutSL_old_syntax <- function() {
   # library("gridisl")
   require("h2o")
-  h2o::h2o.init(nthreads = -1)
+  h2o::h2o.init(nthreads = 1)
   options(gridisl.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
