@@ -2,12 +2,12 @@
 ## Perform fitting using some subset of rows of intput data
 ## ----------------------------------------------------------------
 test.genericSL.subset <- function() {
-  # library("gridisl")
-  library("data.table")
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
   require("h2o")
   h2o::h2o.init(nthreads = 1)
 
-  options(gridisl.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")

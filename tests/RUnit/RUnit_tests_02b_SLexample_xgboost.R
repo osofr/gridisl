@@ -1,10 +1,10 @@
 test.xgb.grid.printing <- function() {
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
   # data.table::setDTthreads(1)
   # library("doParallel")
   # registerDoParallel(cores = 2)
-
-  options(gridisl.verbose = FALSE)
-  # options(gridisl.verbose = TRUE)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -50,7 +50,9 @@ test.xgb.grid.printing <- function() {
 ## test xgboost GLM learner / GBM Grid, no model scoring (no cv or holdout), just fit all models
 ## ------------------------------------------------------------------------------------
 test.XGBoost.simple <- function() {
+  # options(gridisl.verbose = TRUE)
   options(gridisl.verbose = FALSE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   cpp <- data.table::data.table(cpp)
@@ -97,10 +99,12 @@ test.XGBoost.simple <- function() {
 ## test xgboost glm, model scoring with CV
 ## ------------------------------------------------------------------------------------
 test.XGBoost.GLM <- function() {
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
   require("h2o")
   h2o::h2o.init(nthreads = 1)
-  options(gridisl.verbose = FALSE)
-  # options(gridisl.verbose = TRUE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -153,6 +157,8 @@ test.XGBoost.GLM <- function() {
 ## test xgboost glm, model scoring with CV
 ## ------------------------------------------------------------------------------------
 test.XGBoost.regularizedGLM_grid <- function() {
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
 
   require("h2o")
   h2o::h2o.init(nthreads = 1)
@@ -196,22 +202,23 @@ test.XGBoost.regularizedGLM_grid <- function() {
   pred_alldat_hold <- predict_SL(mfit_hold, newdata = cpp_holdout, add_subject_data = FALSE)
   head(pred_alldat_hold[])
 
+  h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }
 
 ## ------------------------------------------------------------------------------------
 ## test xgboost random forest, model scoring with CV
 ## ------------------------------------------------------------------------------------
 test.XGBoost.drfs <- function() {
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
   require("h2o")
   h2o::h2o.init(nthreads = 1)
-  # options(gridisl.verbose = FALSE)
-  options(gridisl.verbose = TRUE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
-
-  # alpha_opt <- c(0,1.0,seq(0.1,0.9,0.1))
-  # lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5, 2)
 
   params_drf <- defModel(estimator = "xgboost__drf", family = "gaussian",
                            eta = 1.3,
@@ -233,16 +240,17 @@ test.XGBoost.drfs <- function() {
   mfit_hold <- fit(params_drf, method = "holdout", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                    data = cpp_holdout, hold_column = "hold")
 
-  # grid_mfit_xgboost_holdout <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-  #                                             data = cpp_holdout, params = GRIDparams, hold_column = "hold")
-  pred_alldat_hold <- predict_SL(mfit_hold, newdata = cpp_holdout, add_subject_data = FALSE)
+  pred_alldat_hold <- predict_SL(mfit_hold, newdata = cpp_holdout, add_subject_data = FALSE, holdout = TRUE)
   head(pred_alldat_hold[])
 
+  h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }
 
 test.holdout.XGBoost <- function() {
-  options(gridisl.verbose = FALSE)
   # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -300,8 +308,6 @@ test.holdout.XGBoost <- function() {
   ## Save the best performing h2o model fit to disk:
   # not implemented
   # save_best_model(xgboost_holdout, file.path = "/Users/olegsofrygin/GoogleDrive/HBGDki/ImputationSL/sofware")
-  h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(1)
 }
 
 
@@ -309,9 +315,9 @@ test.holdout.XGBoost <- function() {
 ## xgboost with model scoring based on full V-FOLD CROSS-VALIDATION
 ## ------------------------------------------------------------------------------------
 test.CV.SL.XGBoost <- function() {
-  # library("gridisl");
-  # options(gridisl.verbose = FALSE)
-  options(gridisl.verbose = TRUE)
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -437,10 +443,12 @@ test.CV.SL.XGBoost <- function() {
 ## --------------------------------------------------------------------------------------------
 ## Holdout Growth Curve SL based on residuals from initial glm regression (model scoring based on random holdouts)
 NOtest.residual.holdoutSL.xgboost <- function() {
-  # library("gridisl")
-  require("h2o")
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
+  library("h2o")
   h2o::h2o.init(nthreads = 1)
-  options(gridisl.verbose = TRUE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -484,4 +492,7 @@ NOtest.residual.holdoutSL.xgboost <- function() {
   ## Predictions for new data based on best SL model re-trained on all data:
   preds_alldat <- predict_SL(mfit_resid_hold, newdata = cpp_holdout, add_subject_data = TRUE)
   preds_alldat[]
+
+  h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }

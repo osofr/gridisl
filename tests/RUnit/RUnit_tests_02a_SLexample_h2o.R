@@ -1,8 +1,11 @@
 test.H2O_holdoutSL_GLM_old_syntax <- function() {
-  # require("h2o")
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
   library("data.table")
+  library("h2o")
   h2o::h2o.init(nthreads = 1)
-  options(gridisl.verbose = TRUE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -72,9 +75,12 @@ test.H2O_holdoutSL_GLM_old_syntax <- function() {
 ## Holdout Growth Curve SL with model scoring based on random holdouts
 ## ------------------------------------------------------------------------------------
 test.H2O_holdoutSL_GRID_GBM_old_syntax <- function() {
-  require("h2o")
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
+  library("h2o")
   h2o::h2o.init(nthreads = 1)
-  options(gridisl.verbose = TRUE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -177,11 +183,12 @@ test.H2O_holdoutSL_GRID_GBM_old_syntax <- function() {
 ## Growth Curve SL with model scoring based on full V-FOLD CROSS-VALIDATION
 ## ------------------------------------------------------------------------------------
 test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
-  # library("gridisl")
-  # require("data.table")
-  require("h2o")
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
+  library("h2o")
   h2o::h2o.init(nthreads = 1)
-  options(gridisl.verbose = TRUE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -347,6 +354,8 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
     print(test2); checkTrue(test1)
   }
 
+  h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }
 
 
@@ -355,10 +364,12 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
 ## NOT IMPLEMENTED
 ## ------------------------------------------------------------------------------------
 NOtest.H2O_residual_holdoutSL_old_syntax <- function() {
-  # library("gridisl")
-  require("h2o")
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
+  library("h2o")
   h2o::h2o.init(nthreads = 1)
-  options(gridisl.verbose = TRUE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -415,4 +426,7 @@ NOtest.H2O_residual_holdoutSL_old_syntax <- function() {
   ## Predictions for new data based on best SL model re-trained on all data:
   preds_alldat <- predict_SL(mfit_resid_hold, newdata = cpp_holdout, add_subject_data = TRUE)
   preds_alldat[]
+
+  h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }

@@ -4,6 +4,10 @@
 test.holdoutfit_all <- function() {
   # options(gridisl.verbose = TRUE)
   options(gridisl.verbose = FALSE)
+
+  library("h2o")
+  h2o::h2o.init(nthreads = 1)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   # covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -53,8 +57,6 @@ test.holdoutfit_all <- function() {
 
   res_GLM1 <- run_algo("speedglm", "glm")
   res_GLM2 <- run_algo("glm", "glm")
-
-  h2o::h2o.init(nthreads = 1)
 
   res_GLM3 <- run_algo("h2o", "glm")
   res_GBM <- run_algo("h2o", "gbm")

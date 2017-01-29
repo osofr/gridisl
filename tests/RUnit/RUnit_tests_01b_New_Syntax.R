@@ -1,7 +1,10 @@
 test.SL.H2O.GLM_GBM_change_covars <- function() {
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
   require("h2o")
   h2o::h2o.init(nthreads = 1)
-  options(gridisl.verbose = TRUE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -55,8 +58,9 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
 }
 
 test.GBM_xgboost_onelearner <- function() {
-  options(gridisl.verbose = TRUE)
-  # options(gridisl.verbose = FALSE)
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -105,10 +109,12 @@ test.GBM_xgboost_onelearner <- function() {
 ## New syntax for learners. Compare gbm w/ xgboost vs. h2o
 ## ------------------------------------------------------------------------------------------------------
 test.GBM_xgboost_vs_H2O <- function() {
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
   require("h2o")
   h2o::h2o.init(nthreads = 1)
-  options(gridisl.verbose = TRUE)
-  # options(gridisl.verbose = FALSE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
@@ -222,9 +228,12 @@ test.GBM_xgboost_vs_H2O <- function() {
 }
 
 test.H2O_GRID_GBM_GLM <- function() {
+  # options(gridisl.verbose = TRUE)
+  options(gridisl.verbose = FALSE)
+
   require("h2o")
   h2o::h2o.init(nthreads = 1)
-  options(gridisl.verbose = TRUE)
+
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
