@@ -179,27 +179,31 @@ test.GBM_xgboost_vs_H2O <- function() {
   ## ------------------------------------------------------------------------------------------------------
   ## Grid GBM h2o vs xgboost
   ## ------------------------------------------------------------------------------------------------------
+  ## Note: when ntrees (or nrounds) is part of param_grid, the param_grid values over-ride any other.
   GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian",
-                          ntrees = 500,
+                          ntrees = 25,
                           param_grid = list(
-                            learn_rate = c(0.01, 0.02, 0.5, 0.3),
+                            ntrees = c(10, 50),
+                            learn_rate = c(0.3, 0.5),
                             max_depth = 5,
-                            sample_rate = c(0.3, 0.5, 0.8, 0.9, 1),
-                            col_sample_rate_per_tree = c(0.3, 0.4, 0.5, 0.7, 0.9, 1.0)
+                            sample_rate = c(0.9, 1),
+                            col_sample_rate_per_tree = c(0.5, 1.0)
                           ),
-                          stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
+                          # stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
                           seed = 23) +
 
                 defModel(estimator = "xgboost__gbm", family = "gaussian",
-                          nrounds = 500,
+                          nrounds = 25,
                           param_grid = list(
-                            eta = c(0.01, 0.02, 0.5, 0.3),
+                            nrounds = c(10, 50),
+                            # nrounds = c(100, 200),
+                            eta = c(0.3, 0.5),
                             max_depth = 5,
                             max_delta_step = c(0,1),
-                            subsample = c(0.3, 0.5, 0.8, 0.9, 1),
-                            colsample_bytree = c(0.3, 0.4, 0.5, 0.7, 0.9, 1.0)
+                            subsample = c(0.9, 1),
+                            colsample_bytree = c(0.5, 1.0)
                             ),
-                          early_stopping_rounds = 50,
+                          # early_stopping_rounds = 50,
                           seed = 23)
 
   ## SL with random holdout:

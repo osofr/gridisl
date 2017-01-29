@@ -97,7 +97,8 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   ## These defaults can be over-ridden in model_contrl
   # ********************************************************************************
   mainArgs <- list(data = train_data,
-                   nrounds = 100, # nrounds = 1000,
+                   nrounds = 100,
+                   # nrounds = 1000,
                    # early_stopping_rounds = 10,
                    # metrics = list(evalMSEerror),
                    # order_metric_name = "RMSE",
@@ -181,9 +182,9 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   }
 
   ## THE grid of hyper-parameters, if specified should be a named list of hyper-params
-  grid_params <- model_contrl[["param_grid"]]
-  if (is.null(grid_params)) grid_params <- list()
-  mainArgs[["param_grid"]] <- grid_params
+  param_grid <- model_contrl[["param_grid"]]
+  if (is.null(param_grid)) param_grid <- list()
+  mainArgs[["param_grid"]] <- param_grid
   model_contrl[["param_grid"]] <- NULL
 
   mainArgs[["search_criteria"]] <- model_contrl[["search_criteria"]]

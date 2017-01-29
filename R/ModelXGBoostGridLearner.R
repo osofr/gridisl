@@ -103,7 +103,7 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
     order_metric_type <- "test"
   }
 
-  run_singe_model <- function(...) {
+  run_singe_model <- function(nrounds, ...) {
     params <- list(...)
     if (length(add_args) > 0) params <- c(params, add_args)
 
@@ -118,7 +118,7 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
     if (!runCV) {
       model_fit <- xgboost::xgb.train(params = params,
                                       data = data,
-                                      nrounds = as.integer(nrounds),
+                                      nrounds = nrounds,
                                       watchlist = watchlist,
                                       obj = obj,
                                       feval = feval,
@@ -132,7 +132,7 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
       ## Test models via V-fold cross-validation
       model_fit <- xgboost::xgb.cv(params = params,
                                    data = data,
-                                   nrounds = as.integer(nrounds),
+                                   nrounds = nrounds,
                                    nfold = nfold,
                                    label = label,
                                    missing = missing,
@@ -159,6 +159,8 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
     model_fit[["models"]] <- reloaded_models
     return(model_fit)
   }
+
+  if (!( "nrounds" %in% names(param_grid) )) param_grid[["nrounds"]] <- nrounds
 
   ## Convert to data frame grid
   gs <- param_grid %>% purrr::cross_d()
