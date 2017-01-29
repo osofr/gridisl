@@ -1,6 +1,6 @@
 test.H2O_holdoutSL_GLM_old_syntax <- function() {
   # require("h2o")
-  # library("data.table")
+  library("data.table")
   h2o::h2o.init(nthreads = 1)
   options(gridisl.verbose = TRUE)
   data(cpp)
@@ -307,7 +307,7 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
   ## ------------------------------------------------------------------------------------------------
   ## Define folds for CV internally
   ## ------------------------------------------------------------------------------------------------
-  mfit_cv3 <- fit( method = "cv", data = cpp_folds,
+  mfit_cv3 <- fit(params, method = "cv", data = cpp_folds,
                    ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz", nfolds = 5)
 
   (models <- mfit_cv3$get_best_models(K = 1))
@@ -350,8 +350,9 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
 
 ## ------------------------------------------------------------------------------------
 ## Holdout Growth Curve SL based on residuals from initial glm regression (model scoring based on random holdouts)
+## NOT IMPLEMENTED
 ## ------------------------------------------------------------------------------------
-test.H2O_residual_holdoutSL_old_syntax <- function() {
+NOtest.H2O_residual_holdoutSL_old_syntax <- function() {
   # library("gridisl")
   require("h2o")
   h2o::h2o.init(nthreads = 1)

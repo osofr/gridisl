@@ -76,7 +76,6 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
 }
 
 #' @importFrom assertthat assert_that is.count is.string is.flag
-#' @export
 faceModelClass <- R6Class(classname = "faceModelClass",
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,

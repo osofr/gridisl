@@ -136,7 +136,6 @@ predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, s
 }
 
 #' @importFrom assertthat assert_that is.count is.string is.flag
-#' @export
 brokenstickModelClass <- R6Class(classname = "brokenstickModelClass",
   cloneable = TRUE, # changing to TRUE to make it easy to clone input h_g0/h_gstar model fits
   portable = TRUE,

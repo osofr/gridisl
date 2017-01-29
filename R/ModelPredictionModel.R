@@ -70,48 +70,39 @@ create_fit_params <- function(reg) {
 #' S3 methods for printing model fit summary for PredictionModel R6 class object
 #'
 #' Prints the modeling summaries
-#' @param model The model fit object produced by functions \code{get_fit}.
+#' @param x The model fit object produced by functions \code{get_fit}.
 #' @param model_stats Also print some model summaries?
 #' @param all_fits Print all of the modeling fits contained in this object? Warning: this may produce a lot of output!
 #' @param ... Additional options passed on to \code{print.PredictionModel}.
 #' @export
-print.PredictionModel <- function(model, model_stats = FALSE, all_fits = FALSE, ...) {
-  model$show(model_stats = model_stats, all_fits = all_fits)
+print.PredictionModel <- function(x, model_stats = FALSE, all_fits = FALSE, ...) {
+  x$show(model_stats = model_stats, all_fits = all_fits)
   return(invisible(NULL))
 }
 
-# summary.PredictionModel <- function(model, ...) {
-#   return(model$summary())
-#   # return(invisible(NULL))
-# }
-
 ## ---------------------------------------------------------------------
-#' R6 class for fitting and making predictions for a single or a grid of regression models E(outvar | predvars)
-#'
-#' This R6 class can request, store and manage the design matrix Xmat, as well as the outcome Y
-#'  The class has methods that perform queries to data storage R6 class DataStorageClass to get appropriate data columns & row subsets
-#'
-#' @docType class
-#' @format An \code{\link{R6Class}} generator object
-#' @keywords R6 class
-#' @details
-#' \itemize{
-#' \item{GLMpackage} - Controls which package will be used for performing model fits (\code{glm} or \code{speedglm}).
-#' \item{ModelFitObject} - Pointer to an instance of \code{ModelFitObject} class that contains the data.
-#' }
-#' @section Methods:
-#' \describe{
-#'   \item{\code{new(reg)}}{Uses \code{reg} R6 \code{\link{RegressionClass}} object to instantiate a new model for a
-#'   logistic regression with binary outcome.}
-#'   \item{\code{show()}}{Print information on outcome and predictor names used in this regression model}
-#'   \item{\code{fit()}}{...}
-#'   \item{\code{copy.fit()}}{...}
-#'   \item{\code{predict()}}{...}
-#'   \item{\code{copy.predict()}}{...}
-#'   \item{\code{predictAeqa()}}{...}
-#' }
+## R6 class for fitting and making predictions for a single or a grid of regression models E(outvar | predvars)
+## The class has methods that perform queries to data storage R6 class DataStorageClass
+## to get appropriate data columns & row subsets
+##
+## @docType class
+## @format An \code{\link{R6Class}} generator object
+## @keywords R6 class
+## @details
+## \itemize{
+## \item{ModelFitObject} - Pointer to an instance of \code{ModelFitObject} class that contains the data.
+## }
+## @section Methods:
+## \describe{
+##   \item{\code{new(reg)}}{Uses \code{reg} R6 \code{RegressionClass} object to instantiate a new model .}
+##   \item{\code{show()}}{Print information on outcome and predictor names used in this regression model}
+##   \item{\code{fit()}}{...}
+##   \item{\code{copy.fit()}}{...}
+##   \item{\code{predict()}}{...}
+##   \item{\code{copy.predict()}}{...}
+##   \item{\code{predictAeqa()}}{...}
+## }
 #' @importFrom assertthat assert_that is.flag
-#' @export
 PredictionModel  <- R6Class(classname = "PredictionModel",
   cloneable = TRUE,
   portable = TRUE,

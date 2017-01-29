@@ -1,10 +1,10 @@
 ## ---------------------------------------------------------------------------------
 ## S3 constructors for new modeling classes:
 ## ---------------------------------------------------------------------------------
-#' @export
+## @export
 newFitModel <- function(fit.package, fit.algorithm, reg, ...) { UseMethod("newFitModel") }
 
-#' @export
+## @export
 newFitModel.h2o <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) {
   h2oModelClass$new(fit.algorithm, fit.package, reg, ...)
   if (fit.algorithm %in% "grid") {
@@ -17,17 +17,17 @@ newFitModel.h2o <- function(fit.package, fit.algorithm, reg, useH2Oframe, ...) {
   return(ModelFitObject)
 }
 
-#' @export
+## @export
 newFitModel.xgboost <- function(fit.package, fit.algorithm, reg, useDMatrix, ...) XGBoostClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, useDMatrix = useDMatrix, ...)
 
-#' @export
+## @export
 newFitModel.glm <- function(fit.package, fit.algorithm, reg, ...) ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
 
-#' @export
+## @export
 newFitModel.speedglm <- function(fit.package, fit.algorithm, reg, ...) ModelFitObject <- glmModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
 
-#' @export
+## @export
 newFitModel.face <- function(fit.package, fit.algorithm, reg, ...) faceModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)
 
-#' @export
+## @export
 newFitModel.brokenstick <- function(fit.package, fit.algorithm, reg, ...) brokenstickModelClass$new(fit.algorithm = fit.algorithm, fit.package = fit.package, reg = reg, ...)

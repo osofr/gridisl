@@ -43,9 +43,7 @@ fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DT
 #-----------------------------------------------------------------------------
 # DataStorageClass CLASS:
 #-----------------------------------------------------------------------------
-
 #' @importFrom assertthat assert_that is.count is.flag
-#' @export
 DataStorageClass <- R6Class(classname = "DataStorageClass",
   portable = TRUE,
   class = TRUE,

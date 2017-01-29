@@ -26,7 +26,7 @@ make_PredictionStack <- function(...) {
 ## *******************************************************************************************
 ## Needs to be renamed to ReportStack -- because is the only actual purpose of this class
 ## *******************************************************************************************
-#' @export
+## @export
 PredictionStack  <- R6Class(classname = "PredictionStack",
   cloneable = TRUE,
   portable = TRUE,

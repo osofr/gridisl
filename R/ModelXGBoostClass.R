@@ -89,7 +89,6 @@ fit.xgb.train <- function(fit.class, params, train_data, model_contrl, ...) {
                            fitclass = "XGBoostmodel"))
 }
 
-#' @export
 fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomial",
                                     model_contrl, fold_column = NULL, validation_data  = NULL, ...) {
 
@@ -218,7 +217,6 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   return(model_fit)
 }
 
-#' @export
 fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_column, ...) {
   family <- model_contrl[["family"]]
   if (is.null(family)) family <- "binomial"

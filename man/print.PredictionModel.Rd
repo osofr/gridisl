@@ -4,11 +4,11 @@
 \alias{print.PredictionModel}
 \title{S3 methods for printing model fit summary for PredictionModel R6 class object}
 \usage{
-\method{print}{PredictionModel}(model, model_stats = FALSE,
-  all_fits = FALSE, ...)
+\method{print}{PredictionModel}(x, model_stats = FALSE, all_fits = FALSE,
+  ...)
 }
 \arguments{
-\item{model}{The model fit object produced by functions \code{get_fit}.}
+\item{x}{The model fit object produced by functions \code{get_fit}.}
 
 \item{model_stats}{Also print some model summaries?}
 

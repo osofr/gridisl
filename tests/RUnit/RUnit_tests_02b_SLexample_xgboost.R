@@ -432,7 +432,7 @@ test.CV.SL.XGBoost <- function() {
 ## ****** (NOT IMPLEMENTED) *******
 ## --------------------------------------------------------------------------------------------
 ## Holdout Growth Curve SL based on residuals from initial glm regression (model scoring based on random holdouts)
-test.residual.holdoutSL.xgboost <- function() {
+NOtest.residual.holdoutSL.xgboost <- function() {
   # library("gridisl")
   require("h2o")
   h2o::h2o.init(nthreads = 1)
