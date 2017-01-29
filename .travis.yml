@@ -59,6 +59,8 @@ r_github_packages:
 
 r_packages:
   - h2o
+  - brokenstick
+  - face
   - ggiraph
   - xgboost
 
