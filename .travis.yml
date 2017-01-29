@@ -15,12 +15,15 @@
 language: r
 cache: packages
 warnings_are_errors: false
+sudo: required
 # r_build_args: "--compact-vignettes"
 # r_check_args: "--as-cran"
 r_build_args: "--no-build-vignettes --no-manual"
 r_check_args: "--no-build-vignettes --no-manual --as-cran"
 
-sudo: required
+repos:
+  CRAN: http://cran.rstudio.com
+  deltarho: http://packages.deltarho.org
 
 os:
   - linux
@@ -52,6 +55,7 @@ r_binary_packages:
 
 r_github_packages:
   - jimhester/covr
+  - schloerke/travisDrat
 
 r_packages:
   - h2o
@@ -63,7 +67,11 @@ env:
    - CRAN: http://cran.rstudio.com
 
 after_success:
+  - Rscript -e 'print(packageVersion("brokenstick")); print(packageVersion("face"))'
+  - Rscript -e "packagedocs::deploy_travis()"
   - Rscript -e 'covr::coveralls()'
+
+# - Rscript -e "travisDrat::deploy_drat()"
 
 on_failure:
   - ./travis-tool.sh dump_logs
