@@ -5,12 +5,12 @@
 \alias{summary.H2ORegressionModel}
 \title{S3 methods for fit summary for h2o}
 \usage{
-\method{summary}{H2ORegressionModel}(h2o.model, only.coefs = FALSE, ...)
+\method{summary}{H2ORegressionModel}(object, only.coefs = FALSE, ...)
 
-\method{summary}{H2OBinomialModel}(h2o.model, only.coefs = FALSE, ...)
+\method{summary}{H2OBinomialModel}(object, only.coefs = FALSE, ...)
 }
 \arguments{
-\item{h2o.model}{The model fit object produced by h2o (and extracted with \code{getmodel_byname}).}
+\item{object}{The model fit object produced by h2o (and extracted with \code{getmodel_byname}).}
 
 \item{only.coefs}{Skip all of the h2o-specific model stats, only print the coefficients table (when running \code{fit.algorithm = "glm"}).}
 

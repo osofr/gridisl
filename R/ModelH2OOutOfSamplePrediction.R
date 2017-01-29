@@ -1,5 +1,5 @@
 check_out_of_sample_consistency <- function(models_list, valid_H2Oframe, predvars, fold_column) {
-  all_folds_h2o <- lapply(models_list, h2o.cross_validation_fold_assignment)
+  all_folds_h2o <- lapply(models_list, function(x) h2o::h2o.cross_validation_fold_assignment(x))
   train_frame_ID_1 <- models_list[[1]]@parameters$training_frame
 
   if (length(all_folds_h2o) > 1) {
@@ -128,7 +128,7 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
         if (ncol(newpreds) > 1) newpreds <- newpreds[["p1"]]
         newpreds_prev_CV_i <- h2o::h2o.cbind(newpreds_prev_CV_i, newpreds)
       }
-      newpreds_prev_CV_i <- h2o::h2o.cbind(h2o.which(fold_CV_i_logical), newpreds_prev_CV_i)
+      newpreds_prev_CV_i <- h2o::h2o.cbind(h2o::h2o.which(fold_CV_i_logical), newpreds_prev_CV_i)
       pAoutMat_h2o <- h2o::h2o.rbind(pAoutMat_h2o, newpreds_prev_CV_i)
     }
 

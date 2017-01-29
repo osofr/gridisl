@@ -4,10 +4,10 @@
 \alias{print.brokenstickmodel}
 \title{S3 methods for printing model fit summary for brokenstickmodel class object}
 \usage{
-\method{print}{brokenstickmodel}(model.fit, ...)
+\method{print}{brokenstickmodel}(x, ...)
 }
 \arguments{
-\item{model.fit}{The model fit object produced by functions stremr:::fit.glm or stremr:::fit.speedglm}
+\item{x}{The model fit object produced by functions stremr:::fit.glm or stremr:::fit.speedglm}
 
 \item{...}{Additional options passed on to \code{summary.GLMmodel}.}
 }

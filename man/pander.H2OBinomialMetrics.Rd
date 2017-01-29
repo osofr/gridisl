@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{H2OBinomialMetricsObject}{H2OBinomialMetrics object}
+
+\item{type}{Character name specifying the type of metric (e.g., "training", "validation", "cross-validation")}
 }
 \value{
 By default this function outputs (see: \code{?cat}) the result.

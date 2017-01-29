@@ -8,6 +8,8 @@ save_best_model(modelfit, file.path = getOption("gridisl.file.path"))
 }
 \arguments{
 \item{modelfit}{A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit}.}
+
+\item{file.path}{Specify the directory where the model object file should be saved.}
 }
 \description{
 Save the best performing h2o model

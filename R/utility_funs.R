@@ -1,5 +1,7 @@
 #' @useDynLib gridisl
 #' @import R6
+#' @import ggplot2
+#' @import ggiraph
 #' @importFrom magrittr %>%
 #' @importFrom Rcpp sourceCpp
 #' @importFrom graphics axis barplot hist par text  legend plot
@@ -34,6 +36,7 @@ capture.exprs <- function(...) {
 #' Save the best performing h2o model
 #'
 #' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit}.
+#' @param file.path Specify the directory where the model object file should be saved.
 #' @export
 save_best_model <- function(modelfit, file.path = getOption('gridisl.file.path')) {
   stop("...not implemented...")
@@ -44,11 +47,11 @@ save_best_model <- function(modelfit, file.path = getOption('gridisl.file.path')
   ## If CV SL was used this model is equivalent to the best model trained on all data
   ## However, for holdout SL this model will be trained only on non-holdout observations
   best_model_traindat <- modelfit$get_best_models(K = 1)[[1]]
-  h2o.saveModel(best_model_traindat, file.path, force = TRUE)
+  h2o::h2o.saveModel(best_model_traindat, file.path, force = TRUE)
   ## This model is always trained on all data (if exists)
   best_model_alldat <- modelfit$BestModelFitObject$model.fit$modelfits_all
   if (!is.null(best_model_alldat))
-    h2o.saveModel(best_model_alldat[[1]], file.path, force = TRUE)
+    h2o::h2o.saveModel(best_model_alldat[[1]], file.path, force = TRUE)
 
   return(invisible(NULL))
 }
@@ -146,7 +149,7 @@ add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed =
 importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("gridisl.verbose")) {
   gvars$verbose <- verbose
   # if (verbose) {
-  #   current.options <- capture.output(str(gvars$opts))
+  #   current.options <- utils::capture.output(str(gvars$opts))
   #   print("Using the following gridisl options/settings: ")
   #   cat('\n')
   #   cat(paste0(current.options, collapse = '\n'), '\n')
@@ -264,17 +267,30 @@ CheckVarNameExists <- function(data, varname) {
   return(invisible(NULL))
 }
 
+
+if(getRversion() >= "2.15.1") {
+  utils::globalVariables(c("model",
+                           "MSE",
+                           "CIlow",
+                           "CIhi",
+                           "algorithm",
+                           "tooltip",
+                           "model.id",
+                           "onclick"))
+}
+
 # ---------------------------------------------------------------------------------------
-#' Plot the top K smallest MSEs for a given model ensemble object.
+#' Plot the top (smallest) validation MSEs for an ensemble of prediction models
 #'
 #' @param PredictionModel Must be an R6 object of class \code{PredictionModel} (returned by \code{get_fit} function)
 #' or an object of class \code{PredictionStack} (returned by \code{make_PredictionStack} function).
 #' Must also contain validation /test set predictions and corresponding MSEs.
 #' @param K How many top (smallest) MSEs should be plotted? Default is 5.
+#' @param interactive Setting this to \code{TRUE} will produce an interactive plot in html format using the package \code{ggiraph}.
 #' @export
 plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
-  # require("ggplot2")
-  require("ggiraph")
+  require("ggplot2")
+  # require("ggiraph")
   assert_that(is.PredictionModel(PredictionModel) || is.PredictionStack(PredictionModel))
   assert_that(is.integerish(K))
 
@@ -296,15 +312,15 @@ plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
     p <- p + geom_point_interactive(aes(color = algorithm, tooltip = tooltip, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
     # p <- p + geom_point_interactive(aes(color = algorithm, tooltip = model.id, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
   } else {
-    p <- p + geom_point(aes(color = algorithm), size = 2, position = position_dodge(0.01)) # alpha = 0.8
+    p <- p + geom_point(aes(color = algorithm), size = 2, position = ggplot2::position_dodge(0.01)) # alpha = 0.8
   }
-  p <- p + geom_errorbar(aes(color = algorithm), width = 0.2, position = position_dodge(0.01))
-  p <- p + theme_bw() + coord_flip()
+  p <- p + ggplot2::geom_errorbar(aes(color = algorithm), width = 0.2, position = ggplot2::position_dodge(0.01))
+  p <- p + ggplot2::theme_bw() + ggplot2::coord_flip()
 
   if (interactive){
-    ggiraph(code = print(p), width = .6,
-            tooltip_extra_css = "padding:2px;background:rgba(70,70,70,0.1);color:black;border-radius:2px 2px 2px 2px;",
-            hover_css = "fill:#1279BF;stroke:#1279BF;cursor:pointer;"
+    ggiraph::ggiraph(code = print(p), width = .6,
+                     tooltip_extra_css = "padding:2px;background:rgba(70,70,70,0.1);color:black;border-radius:2px 2px 2px 2px;",
+                     hover_css = "fill:#1279BF;stroke:#1279BF;cursor:pointer;"
             )
     # to active zoom on a plot:
     # zoom_max = 2

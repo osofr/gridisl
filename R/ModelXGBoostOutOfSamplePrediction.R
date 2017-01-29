@@ -1,35 +1,3 @@
-# check_out_of_sample_consistency <- function(models_list, valid_H2Oframe, predvars, fold_column) {
-#   all_folds_h2o <- lapply(models_list, h2o.cross_validation_fold_assignment)
-#   train_frame_ID_1 <- models_list[[1]]@parameters$training_frame
-
-#   if (length(all_folds_h2o) > 1) {
-#     ## 1. Test that the exactly the same fold assignments were used by all CV models in the ensemble.
-#     for (idx in 2:length(all_folds_h2o) ) {
-#       if (!h2o::h2o.all(all_folds_h2o[[1]]==all_folds_h2o[[idx]])  )
-#         stop("Out-of-sample (holdout) predictions for new data has failed. The fold assignmets of the following CV model do not match to others: " %+% names(models_list)[idx])
-#     }
-
-#     ## 2. Test that same training h2oFrame was used for all models in the ensemble (just in case).
-#     for (idx in 2:length(all_folds_h2o) ) {
-#       if (!all.equal(train_frame_ID_1, models_list[[idx]]@parameters$training_frame))
-#         stop("Out-of-sample (holdout) predictions for new data has failed. It appears that some of the CV models in ensemble used different training frames.")
-#     }
-#   }
-
-#   ## 3. Test that the validation and training data have exactly the same fold assignments (in h2oFrame)
-#   if (!all(valid_H2Oframe[[fold_column]] == all_folds_h2o[[1]]))
-#     stop("Out-of-sample (holdout) predictions for new data has failed. The fold assignments in new data (validation_data) and training data appear to be different.")
-
-#   ## 4a. Test that the new validation data (in h2oFrame) has the same number of observations as the training data
-#   if (!(nrow(valid_H2Oframe) == nrow(h2o::h2o.getFrame(train_frame_ID_1))))
-#     stop("Out-of-sample (holdout) predictions for new data has failed. The number of rows in new data (validation_data) does not match that of the training data.")
-
-#   ## 4b. Test that all predictors are present in the validation data (in h2oFrame)
-#   if (!all(c(predvars,fold_column) %in% colnames(valid_H2Oframe)))
-#     stop("Out-of-sample (holdout) predictions for new data has failed. Some of the predictors were not found in new data (validation_data).")
-#   return(invisible(TRUE))
-# }
-
 ## ----------------------------------------------------------------------------------------------------------------------------------
 ## Evaluate out-of-sample predictions from V cross-validation models, based on new validation_data.
 ## Can be useful for re-scoring the models when the validation data has to change from the training data in V-fold cross-validation.
@@ -37,7 +5,7 @@
 ## (i.e., predictions in validation_data will be only made for rows that were not used for training the model V_i)
 ## In the end we generate a vector of n=nrow(validation_data) predictions by combining predictions from all models V=(V_1,...,V_v)
 ## This procedure is repeated for each cross-validated model in the ensemble, resulting in a matrix of predictions (n,k),
-## where k is the total number of models trained by this ensemble (with h2o.grid, etc) and is equal to length(models_list)
+## where k is the total number of models trained by this ensemble (with xgb.grid, etc) and is equal to length(models_list)
 ## ----------------------------------------------------------------------------------------------------------------------------------
 xgb_predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subset_idx, predict_model_names, ...) {
   models_list <- m.fit$modelfits_all

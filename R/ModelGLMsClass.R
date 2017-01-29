@@ -19,7 +19,7 @@ fit.glm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
     SuppressGivenWarnings({
       model.fit <- stats::glm.fit(x = Xmat,
                                   y = Yvals,
-                                  family = quasibinomial() ,
+                                  family = stats::quasibinomial() ,
                                   control = ctrl)
     }, GetWarningsToSuppress())
   }
@@ -54,7 +54,7 @@ fit.speedglm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
     model.fit <- try(speedglm::speedglm.wfit(X = Xmat,
                                              y = Yvals,
                                              method = 'Cholesky',
-                                             family = quasibinomial(),
+                                             family = stats::quasibinomial(),
                                              trace = FALSE),
                     silent = TRUE)
     }, GetWarningsToSuppress())
@@ -121,7 +121,7 @@ predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
 #' }
 #' @section Methods:
 #' \describe{
-#'   \item{\code{new(reg)}}{Uses \code{reg} R6 \code{\link{RegressionClass}} object to instantiate a new storage container for a
+#'   \item{\code{new(reg)}}{Uses \code{reg} R6 \code{RegressionClass} object to instantiate a new storage container for a
 #'   design matrix and binary outcome.}
 #'   \item{\code{setdata()}}{...}
 #' }

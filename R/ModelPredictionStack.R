@@ -1,13 +1,11 @@
 #' S3 methods for printing model fit summary for PredictionModel R6 class object
 #'
 #' Prints the modeling summaries
-#' @param modelstack The model fit object produced by functions \code{make_PredictionStack}.
-#' @param model_stats Also print some model summaries?
-#' @param all_fits Print all of the modeling fits contained in this object? Warning: this may produce a lot of output!
+#' @param x The model fit object produced by functions \code{make_PredictionStack}.
 #' @param ... Additional options passed on to \code{print.PredictionModel}.
 #' @export
-print.PredictionStack <- function(modelstack, model_stats = FALSE, all_fits = FALSE, ...) {
-  modelstack$show(model_stats = model_stats, all_fits = all_fits)
+print.PredictionStack <- function(x, ...) {
+  x$show(...)
   return(invisible(NULL))
 }
 

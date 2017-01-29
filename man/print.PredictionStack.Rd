@@ -4,15 +4,10 @@
 \alias{print.PredictionStack}
 \title{S3 methods for printing model fit summary for PredictionModel R6 class object}
 \usage{
-\method{print}{PredictionStack}(modelstack, model_stats = FALSE,
-  all_fits = FALSE, ...)
+\method{print}{PredictionStack}(x, ...)
 }
 \arguments{
-\item{modelstack}{The model fit object produced by functions \code{make_PredictionStack}.}
-
-\item{model_stats}{Also print some model summaries?}
-
-\item{all_fits}{Print all of the modeling fits contained in this object? Warning: this may produce a lot of output!}
+\item{x}{The model fit object produced by functions \code{make_PredictionStack}.}
 
 \item{...}{Additional options passed on to \code{print.PredictionModel}.}
 }

@@ -1,6 +1,12 @@
+
+
+if(getRversion() >= "2.15.1") {
+  utils::globalVariables(c("xgb_fit", "niter"))
+}
+
 ## custom MSE error evaluation function. Averages the subject level MSE first, then averages across subjects
 evalMSEerror_byID <- function(preds, data) {
-  labels <- getinfo(data, "label")
+  labels <- xgboost::getinfo(data, "label")
   # The usual RMSE (based on rows in the dataset)
   # err = sqrt(as.numeric(sum((labels - preds)^2))/length(labels))
   # RMSE based on the average MSE across subjects first
@@ -15,8 +21,47 @@ evalMSEerror_byID <- function(preds, data) {
   return(list(metric = "RMSE", value = err))
 }
 
-## Peforming simple hyperparameter grid search for xgboost with cross-validation
-## Relies on tidyverse syntax and borrowed from: https://drsimonj.svbtle.com/grid-search-in-the-tidyverse
+#' Hyper-parameter grid search for xgboost
+#'
+#' Performing simple hyper-parameter grid search for xgboost. Model scoring can be
+#' done either with validation data or with V-fold cross-validation.
+#' @param param_grid A named list with xgboost parameter names, consisting of vectors of hyper-parameter values.
+#' The dataset containing the grid of possible hyper-parameters for model
+#' training is formed internally by running \code{purrr::cross_d(param_grid)}.
+#' @param data Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param nrounds Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param nfold Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param label Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param missing Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param prediction Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param showsd Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param metrics Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param obj Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param feval  Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param stratified Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param folds  Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param verbose  Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param early_stopping_rounds Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param maximize Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param callbacks Same as in \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @param search_criteria Define how to search over the grid of hyper-parameters.
+#' This should be the list with parameters controlling the grid search.
+#' Currently supported parameters are: \code{'strategy'} and \code{'max_models'}.
+#' Currently supported values for \code{strategy} are \code{'Cartesian'} (covers the entire space of hyper-parameter combinations) or
+#' \code{'RandomDiscrete'} (do a random search of all the combinations of hyper-parameters).
+#' \code{'max_models'} parameter can be set to an integer >0 that defines the maximum number of models to be trained.
+#' @param seed Specify the seed to use for determining the random model order in random grid search.
+#' @param order_metric_name What is the name of the metric for ranking the final grid of model fits?
+#' @param validation_data Validation data to score the model performance while training with \code{xgboost::xgb.train}.
+#' Must be in the same format as \code{data}, see \code{?xgboost::xgb.train} for additional information.
+#' @param ... Other parameters passed on directly to either \code{xgboost::xgb.train} or \code{xgboost::xgb.cv}.
+#' @return A resulting grid search of model object fits in a form of a \code{data.table} with \code{xgboost} model fit
+#' objects saved in a list column named \code{'xgb_fit'}.
+#' In addition, the output \code{data.table} contains the original hyper-parameters used as well as the model
+#' performance metrics assessed by \code{xgboost}. The dataset is sorted according to the \code{order_metric_name}.
+#' @author The code for using \code{tidyverse} syntax for model grid search is borrowed and adapted from:
+#' \href{https://drsimonj.svbtle.com/grid-search-in-the-tidyverse}{https://drsimonj.svbtle.com/grid-search-in-the-tidyverse}.
+#' The \code{search_criteria} idea is borrowed from \code{h2o::h2o.grid}.
 #' @export
 # print_every_n = 1L,
 xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = NA,
@@ -132,12 +177,11 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
   ## ------------------------------------------------------------
   ## Sequentially fit each model from the grid
   ## ------------------------------------------------------------
+  gs <- gs %>% dplyr::mutate(xgb_fit = purrr::pmap(gs, run_singe_model))
   # data.table::setDT(gs)
   # for (i in 1:nrow(gs)) {
   #   gs[i, xgb_fit := list(list(purrr::lift(run_singe_model)(gs[i, ])))]
   # }
-
-  gs <- gs %>% dplyr::mutate(xgb_fit = purrr::pmap(gs, run_singe_model))
 
   ## ------------------------------------------------------------
   ## TO RUN GRID MODELS IN PARALLEL

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utility_funs.R
 \name{plotMSEs}
 \alias{plotMSEs}
-\title{Plot the top K smallest MSEs for a given model ensemble object.}
+\title{Plot the top (smallest) validation MSEs for an ensemble of prediction models}
 \usage{
 plotMSEs(PredictionModel, K = 1, interactive = FALSE)
 }
@@ -12,8 +12,10 @@ or an object of class \code{PredictionStack} (returned by \code{make_PredictionS
 Must also contain validation /test set predictions and corresponding MSEs.}
 
 \item{K}{How many top (smallest) MSEs should be plotted? Default is 5.}
+
+\item{interactive}{Setting this to \code{TRUE} will produce an interactive plot in html format using the package \code{ggiraph}.}
 }
 \description{
-Plot the top K smallest MSEs for a given model ensemble object.
+Plot the top (smallest) validation MSEs for an ensemble of prediction models
 }
 

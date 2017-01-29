@@ -1,44 +1,51 @@
+
+
+if(getRversion() >= "2.15.1") {
+  utils::globalVariables(c("yhat", "y", "x", "subject"))
+}
+
+
 #' S3 methods for printing model fit summary for brokenstickmodel class object
 #'
 #' Prints the modeling summary for the glm fit (\code{stats::glm.fit} or \code{speedglm::speedglm.wfit})
-#' @param model.fit The model fit object produced by functions stremr:::fit.glm or stremr:::fit.speedglm
+#' @param x The model fit object produced by functions stremr:::fit.glm or stremr:::fit.speedglm
 #' @param ... Additional options passed on to \code{summary.GLMmodel}.
 #' @return The output is printed with \code{cat}. To capture the markdown-formated model summary use \code{summary.GLMmodel}.
 #' @export
-print.brokenstickmodel <- function(model.fit, ...) {
-  cat(paste(summary(model.fit, ...), collapse = '\n'))
+print.brokenstickmodel <- function(x, ...) {
+  cat(paste(summary(x, ...), collapse = '\n'))
 }
 
 #' S3 methods for getting model fit summary for glmfit class object
 #'
 #' Prints the modeling summary for the GLM fit (\code{stats::glm.fit} or \code{speedglm::speedglm.wfit})
-#' @param model.fit The model fit object produced by functions stremr:::glmfit.glm or stremr:::glmfit.speedglm
+#' @param object The model fit object produced by functions stremr:::glmfit.glm or stremr:::glmfit.speedglm
 #' @param format_table Format the coefficients into a data.frame table?
 #' @param ... Additional options (not used)
 #' @return The markdown-formated model summary returned by \code{pander::pander_return}.
 #' @export
-summary.brokenstickmodel <- function(model.fit, format_table = TRUE, ...) {
-  makeModelCaption <- function(model.fit) {
+summary.brokenstickmodel <- function(object, format_table = TRUE, ...) {
+  makeModelCaption <- function(object) {
     return(
-      "Model: " %+% model.fit$params$outvar %+% " ~ " %+% paste0(model.fit$params$predvars, collapse = " + ") %+% "; \\
-       Stratify: " %+% model.fit$params$stratify %+% "; \\
-       N: " %+% prettyNum(model.fit$nobs, big.mark = ",", scientific = FALSE) %+% "; \\
-       Fit function: " %+% model.fit$fitfunname
+      "Model: " %+% object$params$outvar %+% " ~ " %+% paste0(object$params$predvars, collapse = " + ") %+% "; \\
+       Stratify: " %+% object$params$stratify %+% "; \\
+       N: " %+% prettyNum(object$nobs, big.mark = ",", scientific = FALSE) %+% "; \\
+       Fit function: " %+% object$fitfunname
     )
   }
-  nobs <- model.fit$nobs
-  coef_out <- model.fit$coef
+  nobs <- object$nobs
+  coef_out <- object$coef
   if (format_table) {
     if (is.null(coef_out)) {
       coef_out <- "---"; names(coef_out) <- coef_out
     }
     coef_out <- data.frame(Terms = names(coef_out), Coefficients = as.vector(coef_out))
-    # coef_out <- data.frame(Terms = model.fit$params$predvars, Coefficients = as.vector(coef_out))
+    # coef_out <- data.frame(Terms = object$params$predvars, Coefficients = as.vector(coef_out))
     rownames(coef_out) <- NULL
   }
-  pander::set.caption(makeModelCaption(model.fit))
-  # S4 class: model.fit$model.object
-  m.summary <- capture.output(print(model.fit$model.object))
+  pander::set.caption(makeModelCaption(object))
+  # S4 class: object$model.object
+  m.summary <- utils::capture.output(print(object$model.object))
   out <- c(pander::pander_return(coef_out, justify = c('right', 'left')), m.summary)
   out
 }
@@ -120,7 +127,7 @@ predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, s
     assert_that(new_vals_idx[1] > length(fitted.Yvals))
 
     setkeyv(new.dat, cols = "subject")
-    bs.predict <- getFromNamespace("predict.brokenstick", "brokenstick")
+    bs.predict <- utils::getFromNamespace("predict.brokenstick", "brokenstick")
     new.dat[, yhat := bs.predict(model.object, y = y, x = x, output = "vector"), by = subject]
     new.preds <- new.dat[new_vals_ind == TRUE, yhat]
     pAout[subset_idx] <- as.vector(new.preds)

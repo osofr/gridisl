@@ -1,11 +1,11 @@
 #' S3 methods for printing a collection of learners
 #'
 #' Prints the stack models
-#' @param modelstack An object (list) of class ModelStack
+#' @param x An object (list) of class ModelStack
 #' @param ... Additional options passed on to \code{print.PredictionModel}.
 #' @export
-print.ModelStack <- function(modelstack, ...) {
-  str(modelstack)
+print.ModelStack <- function(x, ...) {
+  str(x)
   return(invisible(NULL))
 }
 
@@ -102,7 +102,6 @@ fit <- function(...) { UseMethod("fit") }
 #' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
 #' @param x A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.
 #' @param y A character string name of the column that represent the response variable in the model.
-#' @param params Parameters specifying the type of modeling procedure to be used.
 #' @param nfolds Number of folds to use in cross-validation.
 #' @param fold_column The name of the column in the input data that contains the cross-validation fold indicators (must be an ordered factor).
 #' @param hold_column The name of the column that contains the holdout observation indicators (TRUE/FALSE) in the input data.

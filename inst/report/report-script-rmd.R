@@ -126,7 +126,7 @@
     # for (single_model in models$modelfits_all) {
     #   # print(models, only.coefs = only.coefs)
     #   print(single_model)
-    #   # res <- capture.output(single_models)
+    #   # res <- utils::capture.output(single_models)
     #   # pander(print(paste(res, collapse = '\n')))
     # }
   }

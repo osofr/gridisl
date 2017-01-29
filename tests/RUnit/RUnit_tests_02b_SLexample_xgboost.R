@@ -33,11 +33,15 @@ test.xgb.grid.printing <- function() {
     }
   }
 
+  plotMSEs(xgboost_holdout, interactive = TRUE)
+
   make_model_report(xgboost_holdout, data = cpp_holdout,
                     K = 10,
                     file.name = paste0("GLMs_", getOption("gridisl.file.name")),
                     title = paste0("Growth Curve Imputation with GLM"),
-                    format = "html", keep_md = TRUE, openFile = TRUE)
+                    format = "html", keep_md = TRUE,
+                    # openFile = TRUE)
+                    openFile = FALSE)
 
 
 }

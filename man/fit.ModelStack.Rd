@@ -49,8 +49,6 @@ If FALSE then the last observation for each subject is selected as a holdout.}
 When \code{FALSE}, it might be impossible to make predictions from this model fit.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.}
-
-\item{params}{Parameters specifying the type of modeling procedure to be used.}
 }
 \value{
 An R6 object containing the model fit(s).

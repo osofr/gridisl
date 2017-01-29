@@ -5,12 +5,12 @@
 \alias{summary.xgb.cv.synchronous}
 \title{S3 methods for fit summary from xgboost}
 \usage{
-\method{summary}{xgb.Booster}(xgb.model, ...)
+\method{summary}{xgb.Booster}(object, ...)
 
-\method{summary}{xgb.cv.synchronous}(xgb.model, ...)
+\method{summary}{xgb.cv.synchronous}(object, ...)
 }
 \arguments{
-\item{xgb.model}{The model fit object produced by xgboost (and extracted with \code{getmodel_byname}).}
+\item{object}{The model fit object produced by xgboost (and extracted with \code{getmodel_byname}).}
 
 \item{...}{Additional options (not used)}
 }

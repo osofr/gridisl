@@ -3,8 +3,6 @@ fit.face <- function(fit.class, params, subj, argvals, Yvals, knots = NULL, mode
   if (gvars$verbose) print("calling face::face.sparse...")
   if (length(subj) == 0L) {
     model.fit <- list()
-    model.fit$coef = rep.int(NA_real_, ncol(Xmat))
-    names(model.fit$coef) <- colnames(Xmat)
   } else {
     facedat <- data.frame(
       argvals = argvals,
@@ -67,7 +65,7 @@ predictP1.facemodel <- function(m.fit, ParentObject, DataStorageObject, subset_i
     assert_that(length(new_vals_idx) == length(new.Yvals))
     assert_that(new_vals_idx[1] > length(fitted.Yvals))
 
-    fpredict <- getFromNamespace("predict.face.sparse", "face")
+    fpredict <- utils::getFromNamespace("predict.face.sparse", "face")
     predict.res <- fpredict(model.object, new.face.dat)
     all.preds <- predict.res$y.pred
     assert_that(length(all.preds)==nrow(new.face.dat))

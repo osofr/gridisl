@@ -1,49 +1,5 @@
-# # default metalearner (NN least squares)
-# h2o.glm_nn <- function(..., non_negative = TRUE) h2o.glm.wrapper(..., non_negative = non_negative)
-
-# # Train a model using a single h2o learner (user-spec) with cross-validation & keep CV predictions
-# # @export
-# fit_single_h2o_learner <- function(learner, training_frame, y, x, family = "binomial", model_contrl, fold_column, validation_frame = NULL, ...) {
-#   if (gvars$verbose) h2o::h2o.show_progress() else h2o::h2o.no_progress()
-#   learner_fun <- match.fun(learner)
-
-#   mainArgs <- list(y = y, training_frame = training_frame, family = family,
-#                    keep_cross_validation_predictions = TRUE,
-#                    keep_cross_validation_fold_assignment = TRUE)
-
-#   if (!missing(fold_column)) {
-#     if (!is.null(fold_column) && is.character(fold_column) && (fold_column != "")) {
-#       mainArgs$fold_column <- fold_column
-#     }
-#   }
-
-#   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = learner_fun)
-
-#   if (!is.null(validation_frame)) mainArgs$validation_frame <- validation_frame
-
-#   if (("x" %in% names(formals(learner))) && (as.character(formals(learner)$x)[1] != "")) {
-#     # Special case where we pass a subset of the colnames, x, in a custom learner function wrapper
-#     # model_fit <- learner_fun(y = y, training_frame = training_frame, validation_frame = NULL, family = family, fold_column = fold_column, keep_cross_validation_folds = TRUE)
-#   } else {
-#     # Use all predictors in training set for training
-#     mainArgs$x <- x
-#     # model_fit <- learner_fun(y = y, x = x, training_frame = training_frame, validation_frame = NULL, family = family, fold_column = fold_column, keep_cross_validation_folds = TRUE)
-#   }
-
-#   model_fit <- do.call(learner_fun, mainArgs)
-
-#   fit <- vector(mode = "list")
-#   fit$fitfunname <- learner;
-#   if (gvars$verbose) {
-#     print("grid search fitted models:"); print(model_fit)
-#   }
-#   fit$model_fit <- model_fit
-#   class(fit) <- c(class(fit)[1], c("H2Omodel"))
-#   return(fit)
-# }
 
 
-#' @export
 fit_single_h2o_grid <- function(grid.algorithm, training_frame, y, x, family = "binomial", model_contrl, fold_column, validation_frame  = NULL, ...) {
   if (gvars$verbose) h2o::h2o.show_progress() else h2o::h2o.no_progress()
   mainArgs <- list(x = x, y = y, training_frame = training_frame,
@@ -81,7 +37,7 @@ fit_single_h2o_grid <- function(grid.algorithm, training_frame, y, x, family = "
 
   ## doesn't work if h2o namespace is not loaded:
   # algo_fun <- get0(algo_fun_name, mode = "function", inherits = TRUE)
-  algo_fun <- getFromNamespace(algo_fun_name, ns='h2o')
+  algo_fun <- utils::getFromNamespace(algo_fun_name, ns='h2o')
 
   mainArgs <- keep_only_fun_args(mainArgs, fun = algo_fun)   # Keep only the relevant args in mainArgs list:
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = algo_fun) # Add user args that pertain to this specific learner:
@@ -120,7 +76,6 @@ fit_single_h2o_grid <- function(grid.algorithm, training_frame, y, x, family = "
 
 }
 
-#' @export
 fit.h2ogrid <- function(fit.class, params, training_frame, y, x, model_contrl, fold_column, ...) {
   family <- model_contrl[["family"]]
   if (is.null(family)) family <- "binomial"

@@ -4,10 +4,10 @@
 \alias{print.ModelStack}
 \title{S3 methods for printing a collection of learners}
 \usage{
-\method{print}{ModelStack}(modelstack, ...)
+\method{print}{ModelStack}(x, ...)
 }
 \arguments{
-\item{modelstack}{An object (list) of class ModelStack}
+\item{x}{An object (list) of class ModelStack}
 
 \item{...}{Additional options passed on to \code{print.PredictionModel}.}
 }
