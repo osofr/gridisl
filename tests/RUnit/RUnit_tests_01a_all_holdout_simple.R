@@ -55,6 +55,7 @@ test.holdoutfit_all <- function() {
   res_GLM2 <- run_algo("glm", "glm")
 
   h2o::h2o.init(nthreads = 1)
+
   res_GLM3 <- run_algo("h2o", "glm")
   res_GBM <- run_algo("h2o", "gbm")
   res_DRF <- run_algo("h2o", "randomForest")
@@ -83,4 +84,5 @@ test.holdoutfit_all <- function() {
   val_dat <- get_validation_data(res_GBM$mfit_cor_hold)
 
   h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }

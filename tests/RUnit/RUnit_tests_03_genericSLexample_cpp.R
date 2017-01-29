@@ -6,7 +6,6 @@ test.genericSL.subset <- function() {
   library("data.table")
   require("h2o")
   h2o::h2o.init(nthreads = 1)
-  Sys.sleep(5)
 
   options(gridisl.verbose = TRUE)
   data(cpp)
@@ -93,5 +92,9 @@ test.genericSL.subset <- function() {
 
   fit_holdout_b <- predict_SL(grid_mfit_cv_b, newdata = OData_train, holdout = TRUE, add_subject_data = TRUE, subset_idx = subset_idx)
   fit_holdout_b[]
+
+
+  h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }
 

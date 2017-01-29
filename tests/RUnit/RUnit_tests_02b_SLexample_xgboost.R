@@ -146,14 +146,17 @@ test.XGBoost.GLM <- function() {
   head(pred_alldat_hold[])
 
   h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }
 
 ## ------------------------------------------------------------------------------------
 ## test xgboost glm, model scoring with CV
 ## ------------------------------------------------------------------------------------
 test.XGBoost.regularizedGLM_grid <- function() {
+
   require("h2o")
   h2o::h2o.init(nthreads = 1)
+
   options(gridisl.verbose = FALSE)
   # options(gridisl.verbose = TRUE)
   data(cpp)
@@ -298,6 +301,7 @@ test.holdout.XGBoost <- function() {
   # not implemented
   # save_best_model(xgboost_holdout, file.path = "/Users/olegsofrygin/GoogleDrive/HBGDki/ImputationSL/sofware")
   h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }
 
 

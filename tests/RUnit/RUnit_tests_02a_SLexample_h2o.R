@@ -64,6 +64,7 @@ test.H2O_holdoutSL_GLM_old_syntax <- function() {
     print("GLM preds_best_train"); print(preds_best_train[])
 
     h2o::h2o.shutdown(prompt = FALSE)
+    Sys.sleep(1)
 }
 
 
@@ -169,6 +170,7 @@ test.H2O_holdoutSL_GRID_GBM_old_syntax <- function() {
   ## Save the best performing h2o model fit to disk:
   # save_best_h2o_model(mfit_hold2, file.path = "/Users/olegsofrygin/GoogleDrive/HBGDki/ImputationSL/sofware")
   h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }
 
 ## ------------------------------------------------------------------------------------

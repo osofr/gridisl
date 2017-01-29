@@ -51,6 +51,7 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
                     data = cpp_folds, method = "cv", fold_column = "fold")
 
   h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }
 
 test.GBM_xgboost_onelearner <- function() {
@@ -217,6 +218,7 @@ test.GBM_xgboost_vs_H2O <- function() {
                     data = cpp_folds, method = "cv", fold_column = "fold")
 
   h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }
 
 test.H2O_GRID_GBM_GLM <- function() {
@@ -274,4 +276,5 @@ test.H2O_GRID_GBM_GLM <- function() {
                     data = cpp_folds, method = "cv", fold_column = "fold")
 
   h2o::h2o.shutdown(prompt = FALSE)
+  Sys.sleep(1)
 }
