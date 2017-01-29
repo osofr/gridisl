@@ -5,7 +5,7 @@
 if(require("RUnit", quietly=TRUE)) {
     ## --- Setup ---
 
-    pkg <- "stremr" # <-- Tested package name
+    pkg <- "gridisl" # <-- Tested package name
 
     if(Sys.getenv("RCMDCHECK") == "FALSE") {
     ## Path to unit tests for standalone running under Makefile (not R CMD check)
