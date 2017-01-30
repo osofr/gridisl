@@ -6,6 +6,7 @@ test.holdoutfit_all <- function() {
   options(gridisl.verbose = FALSE)
 
   library("h2o")
+  Sys.sleep(3)
   h2o::h2o.init(nthreads = 2)
 
   data(cpp)

@@ -6,7 +6,7 @@ test.genericSL.subset <- function() {
   options(gridisl.verbose = FALSE)
 
   require("h2o")
-  Sys.sleep(2)
+  Sys.sleep(3)
   h2o::h2o.init(nthreads = 2)
 
   data(cpp)

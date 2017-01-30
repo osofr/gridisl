@@ -103,6 +103,7 @@ test.XGBoost.GLM <- function() {
   options(gridisl.verbose = FALSE)
 
   require("h2o")
+  Sys.sleep(3)
   h2o::h2o.init(nthreads = 2)
 
   data(cpp)
@@ -161,7 +162,7 @@ test.XGBoost.regularizedGLM_grid <- function() {
   options(gridisl.verbose = FALSE)
 
   require("h2o")
-  Sys.sleep(2)
+  Sys.sleep(3)
   h2o::h2o.init(nthreads = 2)
 
   data(cpp)
@@ -213,7 +214,7 @@ test.XGBoost.drfs <- function() {
   options(gridisl.verbose = FALSE)
 
   require("h2o")
-  Sys.sleep(2)
+  Sys.sleep(3)
   h2o::h2o.init(nthreads = 2)
 
   data(cpp)
@@ -449,6 +450,7 @@ NOtest.residual.holdoutSL.xgboost <- function() {
   options(gridisl.verbose = FALSE)
 
   library("h2o")
+  Sys.sleep(3)
   h2o::h2o.init(nthreads = 2)
 
   data(cpp)
