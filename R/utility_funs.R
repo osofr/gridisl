@@ -1,6 +1,6 @@
 #' @useDynLib gridisl
 #' @import R6
-#' @import ggplot2
+# @import ggplot2
 #' @importFrom magrittr %>%
 #' @importFrom Rcpp sourceCpp
 #' @importFrom graphics axis barplot hist par text  legend plot
@@ -288,7 +288,7 @@ if(getRversion() >= "2.15.1") {
 #' @param interactive Setting this to \code{TRUE} will produce an interactive plot in html format using the package \code{ggiraph}.
 #' @export
 plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
-  require("ggplot2")
+  # require("ggplot2")
   # require("ggiraph")
   assert_that(is.PredictionModel(PredictionModel) || is.PredictionStack(PredictionModel))
   assert_that(is.integerish(K))

@@ -9,12 +9,12 @@ BugReports: https://github.com/osofr/gridisl/issues
 SystemRequirements: pandoc (http://pandoc.org) for generating and exporting
     markdown reports to other formats.
 Depends:
-    R (>= 3.2.1)
+    R (>= 3.2.1),
+    ggplot2 (>= 2.2.0)
 Imports:
     assertthat,
     data.table,
     dplyr,
-    ggplot2,
     magrittr,
     methods,
     R6,
