@@ -17,7 +17,7 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
   ## ------------------------------------------------------------------------------------------------
   ## gbm grid learner:
   gbm_hyper <- list(
-    ntrees = c(10, 20, 30, 50),
+    ntrees = c(10, 20),
     learn_rate = c(0.1, 0.3),
     max_depth = c(3, 4, 5, 6, 9),
     sample_rate = c(0.7, 0.8, 0.9, 1.0),
@@ -69,9 +69,9 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
   checkTrue(all.equal(preds_alldat1, preds_alldat2))
 
   ## Predictions for best CV model (not re-trained, trained only on non-holdouts), must match:
-  preds_best_CV <- gridisl:::predict_nonholdouts(mfit_cv1, add_subject_data = FALSE)
+  checkException(preds_best_CV <- gridisl:::predict_nonholdouts(mfit_cv1, add_subject_data = FALSE))
   # preds_best_CV[]
-  preds_best_CV <- gridisl:::predict_nonholdouts(mfit_cv1, add_subject_data = TRUE)
+  checkException(preds_best_CV <- gridisl:::predict_nonholdouts(mfit_cv1, add_subject_data = TRUE))
   # preds_best_CV[]
   # checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
 
@@ -173,7 +173,7 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
   }
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(3)
+  Sys.sleep(1)
 }
 
 
@@ -246,5 +246,5 @@ NOtest.H2O_residual_holdoutSL_old_syntax <- function() {
   preds_alldat[]
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(3)
+  Sys.sleep(1)
 }

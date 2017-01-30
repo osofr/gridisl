@@ -97,6 +97,6 @@ test.genericSL.subset <- function() {
 
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(3)
+  Sys.sleep(1)
 }
 

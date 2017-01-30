@@ -12,10 +12,11 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
   ## ------------------------------------------------------------------------------------
   ## SL with random holdout:
   ## ------------------------------------------------------------------------------------
-  GRIDparams <- defModel(estimator = "speedglm__glm", family = "gaussian") +
+  GRIDparams <-
+              # defModel(estimator = "speedglm__glm", family = "gaussian") +
 
-               defModel(estimator = "speedglm__glm", family = "gaussian",
-                          x = c("agedays", "apgar1", "apgar5", "parity")) +
+              #  defModel(estimator = "speedglm__glm", family = "gaussian",
+              #             x = c("agedays", "apgar1", "apgar5", "parity")) +
 
                defModel(estimator = "h2o__glm", family = "gaussian",
                           x = c("agedays", "apgar1", "apgar5", "parity")) +
@@ -54,7 +55,7 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
                     data = cpp_folds, method = "cv", fold_column = "fold")
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(2)
+  Sys.sleep(1)
 }
 
 test.GBM_xgboost_onelearner <- function() {
@@ -192,7 +193,7 @@ test.GBM_xgboost_vs_H2O <- function() {
                     data = cpp_folds, method = "cv", fold_column = "fold")
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(3)
+  Sys.sleep(1)
 }
 
 test.H2O_GRID_GBM_GLM <- function() {
@@ -253,5 +254,5 @@ test.H2O_GRID_GBM_GLM <- function() {
                     data = cpp_folds, method = "cv", fold_column = "fold")
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(3)
+  Sys.sleep(1)
 }

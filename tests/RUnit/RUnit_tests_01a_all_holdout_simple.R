@@ -21,7 +21,7 @@ test.holdoutfit_all <- function() {
   y <- "haz"
 
   run_algo <- function(fit.package, fit.algorithm) {
-    mfit_cor_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
+    mfit_cor_hold <- gridisl:::fit_holdoutSL(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
                                     data = cpp_holdout, hold_column = "hold",
                                     models = list(
                                               list(fit.package = fit.package,
@@ -86,5 +86,5 @@ test.holdoutfit_all <- function() {
   val_dat <- get_validation_data(res_GBM$mfit_cor_hold)
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(2)
+  Sys.sleep(1)
 }

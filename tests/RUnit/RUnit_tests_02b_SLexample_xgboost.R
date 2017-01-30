@@ -150,7 +150,7 @@ test.XGBoost.GLM <- function() {
   head(pred_alldat_hold[])
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(3)
+  Sys.sleep(1)
 }
 
 ## ------------------------------------------------------------------------------------
@@ -201,7 +201,7 @@ test.XGBoost.regularizedGLM_grid <- function() {
   head(pred_alldat_hold[])
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(3)
+  Sys.sleep(1)
 }
 
 ## ------------------------------------------------------------------------------------
@@ -242,7 +242,7 @@ test.XGBoost.drfs <- function() {
   head(pred_alldat_hold[])
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(3)
+  Sys.sleep(1)
 }
 
 test.holdout.XGBoost <- function() {
@@ -372,7 +372,9 @@ test.CV.SL.XGBoost <- function() {
   make_model_report(mfit_cv, data = cpp_folds, K = 10,
                     file.name = paste0("GLMs_", getOption("gridisl.file.name")),
                     title = paste0("Growth Curve Imputation with GLM"),
-                    format = "html", keep_md = TRUE, openFile = TRUE)
+                    format = "html", keep_md = TRUE,
+                    openFile = FALSE)
+                    # openFile = TRUE)
 
   ## --------------------------------------------------------------------------------------------
   ## PERFORM OUT-OF-SAMPLE PREDICTIONS FOR CV MODELS using newdata
@@ -492,5 +494,5 @@ NOtest.residual.holdoutSL.xgboost <- function() {
   preds_alldat[]
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(3)
+  Sys.sleep(1)
 }
