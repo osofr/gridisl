@@ -1,7 +1,6 @@
 #' @useDynLib gridisl
 #' @import R6
 #' @import ggplot2
-#' @import ggiraph
 #' @importFrom magrittr %>%
 #' @importFrom Rcpp sourceCpp
 #' @importFrom graphics axis barplot hist par text  legend plot
@@ -307,12 +306,12 @@ plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
   # datMSE$onclick <- sprintf("window.open(\"%s%s\")", "http://en.wikipedia.org/wiki/", "Florida")  # pop-up box:
   # datMSE$onclick = paste0("alert(\"",datMSE$model.id, "\")")
 
-  p <- ggplot(datMSE, aes(x = model, y = MSE, ymin=CIlow, ymax=CIhi)) # will use model name (algorithm)
+  p <- ggplot2::ggplot(datMSE, aes(x = model, y = MSE, ymin=CIlow, ymax=CIhi)) # will use model name (algorithm)
   if (interactive) {
-    p <- p + geom_point_interactive(aes(color = algorithm, tooltip = tooltip, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
+    p <- p + ggiraph::geom_point_interactive(aes(color = algorithm, tooltip = tooltip, data_id = model.id, onclick = onclick), size = 2, position = ggplot2::position_dodge(0.01)) # alpha = 0.8
     # p <- p + geom_point_interactive(aes(color = algorithm, tooltip = model.id, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
   } else {
-    p <- p + geom_point(aes(color = algorithm), size = 2, position = ggplot2::position_dodge(0.01)) # alpha = 0.8
+    p <- p + ggplot2::geom_point(aes(color = algorithm), size = 2, position = ggplot2::position_dodge(0.01)) # alpha = 0.8
   }
   p <- p + ggplot2::geom_errorbar(aes(color = algorithm), width = 0.2, position = ggplot2::position_dodge(0.01))
   p <- p + ggplot2::theme_bw() + ggplot2::coord_flip()
