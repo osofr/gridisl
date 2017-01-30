@@ -161,6 +161,7 @@ test.XGBoost.regularizedGLM_grid <- function() {
   options(gridisl.verbose = FALSE)
 
   require("h2o")
+  Sys.sleep(2)
   h2o::h2o.init(nthreads = 2)
 
   data(cpp)
@@ -212,6 +213,7 @@ test.XGBoost.drfs <- function() {
   options(gridisl.verbose = FALSE)
 
   require("h2o")
+  Sys.sleep(2)
   h2o::h2o.init(nthreads = 2)
 
   data(cpp)
@@ -220,10 +222,10 @@ test.XGBoost.drfs <- function() {
 
   params_drf <- defModel(estimator = "xgboost__drf", family = "gaussian",
                            eta = 1.3,
-                           nrounds = 50,
+                           nrounds = 10,
                            seed = 123456) +
                 defModel(estimator = "h2o__randomForest", distribution = "gaussian",
-                           ntrees = 50,
+                           ntrees = 10,
                            seed = 123456)
 
   # params_drf[[1]][["fit.algorithm"]] <- "glm"

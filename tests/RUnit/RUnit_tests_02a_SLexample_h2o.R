@@ -6,6 +6,7 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
   options(gridisl.verbose = FALSE)
 
   library("h2o")
+  Sys.sleep(2)
   h2o::h2o.init(nthreads = 2)
 
   data(cpp)
@@ -37,16 +38,15 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
                       alpha = c(0,1,seq(0.1,0.9,0.1)),
                       lambda = c(0,1e-7,1e-5,1e-3,1e-1)
                       )
-                    ) +
-
-            defModel(estimator = "h2o__gbm",
-                    search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
-                    family = "gaussian",
-                    seed = 23,
-                    param_grid = gbm_hyper,
-                    stopping_rounds = 2,
-                    stopping_tolerance = 1e-4,
-                    stopping_metric = "MSE")
+                    )
+            # defModel(estimator = "h2o__gbm",
+            #         search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
+            #         family = "gaussian",
+            #         seed = 23,
+            #         param_grid = gbm_hyper,
+            #         stopping_rounds = 2,
+            #         stopping_tolerance = 1e-4,
+            #         stopping_metric = "MSE")
 
   ## define CV folds (respecting that multiple observations per subject must fall within the same fold)
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)

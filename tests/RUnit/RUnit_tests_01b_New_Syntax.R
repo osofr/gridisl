@@ -3,6 +3,7 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
   options(gridisl.verbose = FALSE)
 
   library("h2o")
+  Sys.sleep(2)
   h2o::h2o.init(nthreads = 2)
 
   data(cpp)
@@ -201,6 +202,7 @@ test.H2O_GRID_GBM_GLM <- function() {
   options(gridisl.verbose = FALSE)
 
   require("h2o")
+  Sys.sleep(2)
   h2o::h2o.init(nthreads = 2)
 
   data(cpp)

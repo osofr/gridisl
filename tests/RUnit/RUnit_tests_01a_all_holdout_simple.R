@@ -55,8 +55,8 @@ test.holdoutfit_all <- function() {
     return(list(mfit_cor_hold =  mfit_cor_hold))
   }
 
-  res_GLM1 <- run_algo("speedglm", "glm")
-  res_GLM2 <- run_algo("glm", "glm")
+  # res_GLM1 <- run_algo("speedglm", "glm")
+  # res_GLM2 <- run_algo("glm", "glm")
 
   res_GLM3 <- run_algo("h2o", "glm")
   res_GBM <- run_algo("h2o", "gbm")
