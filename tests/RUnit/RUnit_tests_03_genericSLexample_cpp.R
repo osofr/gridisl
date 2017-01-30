@@ -6,7 +6,7 @@ test.genericSL.subset <- function() {
   options(gridisl.verbose = FALSE)
 
   require("h2o")
-  h2o::h2o.init(nthreads = 1)
+  h2o::h2o.init(nthreads = 2)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -30,8 +30,8 @@ test.genericSL.subset <- function() {
   ## Define learners (glm, grid glm and grid gbm)
   ## ----------------------------------------------------------------
   ## gbm grid learner:
-  gbm_hyper_params <- list(ntrees = c(100, 200, 300, 500),
-                           learn_rate = c(0.005, 0.01, 0.03, 0.06),
+  gbm_hyper_params <- list(ntrees = c(10, 20, 30, 50),
+                           learn_rate = c(.1, .3),
                            max_depth = c(3, 4, 5, 6, 9),
                            sample_rate = c(0.7, 0.8, 0.9, 1.0),
                            col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
@@ -39,7 +39,7 @@ test.genericSL.subset <- function() {
   ## single glm learner:
   # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
   params <- defModel(estimator = "h2o__glm", family = "gaussian",
-                     search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
+                     search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
                      param_grid = list(
                       alpha = c(0,1,seq(0.1,0.9,0.1)),
                       lambda = c(0,1e-7,1e-5,1e-3,1e-1)),
@@ -47,13 +47,14 @@ test.genericSL.subset <- function() {
             defModel(estimator = "h2o__gbm", family = "gaussian",
                      search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
                      param_grid = gbm_hyper_params,
-                     stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10,
+                     stopping_rounds = 2, stopping_tolerance = 1e-4, stopping_metric = "MSE",
                      seed = 23)
 
   ## ----------------------------------------------------------------
   ## Cross-validated modeling on a subset of training data (subset specified via subsetting expression)
   ## ----------------------------------------------------------------
-  grid_mfit_cv <- fit(params, data = OData_train, method = "cv", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+  grid_mfit_cv <- fit(params, data = OData_train, method = "cv",
+                      ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                       fold_column = "fold", seed = 12345,
                       useH2Oframe = TRUE, subset_exprs = list("agedays == 1"))
 
@@ -73,7 +74,8 @@ test.genericSL.subset <- function() {
   ## Cross-validated modeling on a subset of training data (subset specified via row index)
   ## ----------------------------------------------------------------
   subset_idx <- OData_train$evalsubst(subset_exprs = "agedays == 1")
-  grid_mfit_cv_b <- fit(params, data = OData_train, method = "cv", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+  grid_mfit_cv_b <- fit(params, data = OData_train, method = "cv",
+                        ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                         fold_column = "fold", seed = 12345,
                         useH2Oframe = TRUE, subset_idx = subset_idx)
 
@@ -95,6 +97,6 @@ test.genericSL.subset <- function() {
 
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(1)
+  Sys.sleep(3)
 }
 

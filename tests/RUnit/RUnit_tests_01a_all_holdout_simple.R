@@ -6,7 +6,7 @@ test.holdoutfit_all <- function() {
   options(gridisl.verbose = FALSE)
 
   library("h2o")
-  h2o::h2o.init(nthreads = 1)
+  h2o::h2o.init(nthreads = 2)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -86,5 +86,5 @@ test.holdoutfit_all <- function() {
   val_dat <- get_validation_data(res_GBM$mfit_cor_hold)
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(1)
+  Sys.sleep(2)
 }

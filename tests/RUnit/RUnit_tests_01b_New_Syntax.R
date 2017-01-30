@@ -2,8 +2,8 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
   # options(gridisl.verbose = TRUE)
   options(gridisl.verbose = FALSE)
 
-  require("h2o")
-  h2o::h2o.init(nthreads = 1)
+  library("h2o")
+  h2o::h2o.init(nthreads = 2)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -20,10 +20,10 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
                defModel(estimator = "h2o__glm", family = "gaussian",
                           x = c("agedays", "apgar1", "apgar5", "parity")) +
 
-                defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
+                defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 50,
                          search_criteria = list(strategy = "Cartesian"),
-                         stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
-                         param_grid = list(learn_rate = c(0.01),
+                         stopping_rounds = 2, stopping_metric = "MSE", # score_each_iteration = TRUE, score_tree_interval = 1,
+                         param_grid = list(learn_rate = c(0.5),
                                            max_depth = c(5, 6),
                                            sample_rate = 0.8,
                                            col_sample_rate = 0.5),
@@ -39,10 +39,10 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
   ## ------------------------------------------------------------------------------------
   GRIDparams <- defModel(estimator = "h2o__glm", family = "gaussian",
                            x = c("agedays", "apgar1", "apgar5", "parity")) +
-                defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
+                defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 50,
                          search_criteria = list(strategy = "Cartesian"),
-                         stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
-                         param_grid = list(learn_rate = c(0.01),
+                         stopping_rounds = 2, stopping_metric = "MSE", # score_each_iteration = TRUE, score_tree_interval = 1,
+                         param_grid = list(learn_rate = c(0.5),
                                            max_depth = c(5, 6),
                                            sample_rate = 0.8,
                                            col_sample_rate = 0.5),
@@ -54,7 +54,7 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
                     data = cpp_folds, method = "cv", fold_column = "fold")
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(1)
+  Sys.sleep(2)
 }
 
 test.GBM_xgboost_onelearner <- function() {
@@ -113,7 +113,7 @@ test.GBM_xgboost_vs_H2O <- function() {
   options(gridisl.verbose = FALSE)
 
   require("h2o")
-  h2o::h2o.init(nthreads = 1)
+  h2o::h2o.init(nthreads = 2)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -125,52 +125,21 @@ test.GBM_xgboost_vs_H2O <- function() {
   ## Single GBM w/ h2o vs. xgboost with (roughly) equivalent parameter settings as evaluated by holdout MSE & CV-MSE
   ## ------------------------------------------------------------------------------------------------------
   GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian",
-                           ntrees = 500,
-                           learn_rate = 0.01,
-                           # learn_rate_annealing = , # [default=1]
+                           ntrees = 50,
+                           learn_rate = 0.5,
                            max_depth = 5,
                            min_rows = 10, # [default=10]
-                           # nbins = ,# [default=20]
-                           # nbins_top_level = ,# [default=1024]
-                           # nbins_cats = , # [default=1024]
-                           # sample_rate = 0.8,
-                           # sample_rate_per_class = , # [default=?]
-                           # col_sample_rate = , # [default=1]
-                           # col_sample_rate_change_per_level = , # [default=1, range: 0.0-2.0]
                            col_sample_rate_per_tree = 0.3,  # [default=1]
-                           # min_split_improvement = , # [default=1e-05]
-                           # histogram_type = , # ["AUTO", "UniformAdaptive", "Random", "QuantilesGlobal", "RoundRobin"]
-                           # categorical_encoding = , # ["AUTO", "Enum", "OneHotInternal", "OneHotExplicit", "Binary", "Eigen"]
-
-                           stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
+                           stopping_rounds = 2, stopping_metric = "MSE",
                            seed = 23) +
 
                 defModel(estimator = "xgboost__gbm", family = "gaussian",
-                           nrounds = 500,
-                           learning_rate = 0.01, # (alias eta), try around 5 in range (0.01-0.1)
-                           # min_split_loss = 1, # [default=0, range: [1,∞]] (alias gamma)
-                            # minimum loss reduction required to make a further partition on a leaf node of the tree.
-                            # The larger, the more conservative the algorithm will be. Usually OK to leave at 0.
-                            # Other guidelines suggest gamme range is [0,1], suggested values: [0.05, 0.1, seq(0.3, 1, by = 0.2), 1.0]
+                           nrounds = 50,
+                           learning_rate = 0.5, # (alias eta), try around 5 in range (0.01-0.1)
                            max_depth = 5,
                            min_child_weight = 10, # [default=1, range: [0,∞]]
-                            # In linear regression mode, this simply corresponds to minimum number of instances needed to be in each node.
-                            # The larger, the more conservative the algorithm will be.
-                            # Helps with rare events, start with 1/sqrt(event rate)
-                           # max_delta_step = , # [default=0]
-                            # Maximum delta step we allow each tree's weight estimation to be.
-                            # If the value is set to 0, it means there is no constraint.
-                            # If it is set to a positive value, it can help making the update step more conservative.
-                            # Usually this parameter is not needed, but it might help in logistic regression when class is extremely imbalanced.
-                            # Set it to value of 1-10 might help control the update
-                           # subsample = 0.8, [default=1, range: (0,1]], good value is to leave at 1
                            colsample_bytree = 0.3, # [default=1, range: (0,1]], good values: (0.3-0.5)
-                           # colsample_bylevel = , # [default=1, range: (0,1]],
-                           # lambda = , #  [default=1] L2 regularization term on weights, increase this value will make model more conservative.
-                            # try seq(0.01, 0.1, by = 0.04), 0.1, 1.0
-                           # alpha =  ,# [default=0, alias: reg_alpha] L1 regularization term on weights, increase this value will make model more conservative.
-                            # try 0, 0.1, 0.5, 1.0
-                           early_stopping_rounds = 50,
+                           early_stopping_rounds = 2,
                            seed = 23)
 
   ## SuperLearner with random holdout:
@@ -190,20 +159,19 @@ test.GBM_xgboost_vs_H2O <- function() {
   GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian",
                           ntrees = 25,
                           param_grid = list(
-                            ntrees = c(10, 50),
-                            learn_rate = c(0.3, 0.5),
+                            ntrees = c(10, 20),
+                            learn_rate = c(0.5),
                             max_depth = 5,
                             sample_rate = c(0.9, 1),
                             col_sample_rate_per_tree = c(0.5, 1.0)
                           ),
-                          # stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
+                          # stopping_rounds = 10, stopping_metric = "MSE",
                           seed = 23) +
 
                 defModel(estimator = "xgboost__gbm", family = "gaussian",
                           nrounds = 25,
                           param_grid = list(
-                            nrounds = c(10, 50),
-                            # nrounds = c(100, 200),
+                            nrounds = c(10, 20),
                             eta = c(0.3, 0.5),
                             max_depth = 5,
                             max_delta_step = c(0,1),
@@ -224,7 +192,7 @@ test.GBM_xgboost_vs_H2O <- function() {
                     data = cpp_folds, method = "cv", fold_column = "fold")
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(1)
+  Sys.sleep(3)
 }
 
 test.H2O_GRID_GBM_GLM <- function() {
@@ -232,7 +200,7 @@ test.H2O_GRID_GBM_GLM <- function() {
   options(gridisl.verbose = FALSE)
 
   require("h2o")
-  h2o::h2o.init(nthreads = 1)
+  h2o::h2o.init(nthreads = 2)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -244,28 +212,28 @@ test.H2O_GRID_GBM_GLM <- function() {
   alpha_opt <- c(0,1,seq(0.1,0.9,0.1))
   lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
 
-  gbm_hyper_params <- list(ntrees = c(100, 200, 300, 500),
-                           learn_rate = c(0.005, 0.01, 0.03, 0.06),
+  gbm_hyper_params <- list(ntrees = c(10, 20, 30, 50),
+                           learn_rate = c(0.1, 0.3),
                            max_depth = c(3, 4, 5, 6, 9),
                            sample_rate = c(0.7, 0.8, 0.9, 1.0),
                            col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
                            balance_classes = c(TRUE, FALSE))
 
-  GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 500,
+  GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 20,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
-                         stopping_rounds = 10, stopping_metric = "MSE", score_each_iteration = TRUE, score_tree_interval = 1,
+                         stopping_rounds = 10, stopping_metric = "MSE",
                          param_grid = gbm_hyper_params, seed = 23) +
 
                 defModel(estimator = "h2o__glm", family = "gaussian",
-                          alpha = 0.3, nlambdas = 50, lambda_search = TRUE) +
+                          alpha = 0.3, nlambdas = 5, lambda_search = TRUE) +
 
                 defModel(estimator = "h2o__glm", family = "gaussian",
                          search_criteria = list(strategy = "Cartesian"),
                          param_grid = list(alpha = seq(0,1,0.1)),
-                         nlambdas = 50, lambda_search = TRUE) +
+                         nlambdas = 5, lambda_search = TRUE) +
 
                 defModel(estimator = "h2o__glm", family = "gaussian",
-                         search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
+                         search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
                          param_grid = list(alpha = alpha_opt, lambda = lambda_opt), seed = 23)
   # old early stop params for gbm:
   # stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10,
@@ -285,5 +253,5 @@ test.H2O_GRID_GBM_GLM <- function() {
                     data = cpp_folds, method = "cv", fold_column = "fold")
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(1)
+  Sys.sleep(3)
 }
