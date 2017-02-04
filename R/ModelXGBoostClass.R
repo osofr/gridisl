@@ -89,8 +89,11 @@ fit.xgb.train <- function(fit.class, params, train_data, model_contrl, ...) {
                            fitclass = "XGBoostmodel"))
 }
 
-fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomial",
-                                    model_contrl, fold_column = NULL, validation_data  = NULL, ...) {
+fit_single_xgboost_grid <- function(grid.algorithm,
+                                    train_data,
+                                    model_contrl,
+                                    fold_column = NULL,
+                                    validation_data  = NULL, ...) {
 
   ## ********************************************************************************
   ## These defaults can be over-ridden in model_contrl
@@ -110,6 +113,10 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
   mainArgs[["feature_names"]] <- attr(train_data, ".Dimnames")[[2]]
 
   if (is.null(mainArgs[["objective"]])) {
+
+    family <- model_contrl[["family"]]
+    if (is.null(family)) family <- "binomial"
+
     if (family %in% c("binomial", "quasibinomial")) {
       mainArgs[["objective"]] <- "reg:logistic"
     } else if (family %in% "gaussian") {
@@ -118,6 +125,14 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
       stop("family values other than 'binomial' and 'gaussian' are not yet supported for modeling with xgboost package")
     }
   }
+
+
+  ### *******************************************************
+  ### ADD OFFSET (setinfo on design data)
+  ### ADD WEIGHTS (setinfo on design data)
+  ### *******************************************************
+
+
 
   if (is.null(grid.algorithm)) grid.algorithm <- "gbm"
 
@@ -218,15 +233,11 @@ fit_single_xgboost_grid <- function(grid.algorithm, train_data, family = "binomi
 }
 
 fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_column, ...) {
-  family <- model_contrl[["family"]]
-  if (is.null(family)) family <- "binomial"
-
   grid.algorithm <- model_contrl[["grid.algorithm"]]
   if (is.null(grid.algorithm)) grid.algorithm <- model_contrl[["fit.algorithm"]]
 
   modelfits_grid <- fit_single_xgboost_grid(grid.algorithm = grid.algorithm[[1]],
                                             train_data = train_data,
-                                            family = family,
                                             model_contrl = model_contrl,
                                             fold_column = fold_column, ...)
 

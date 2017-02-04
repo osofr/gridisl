@@ -5,6 +5,7 @@ NOtest.xgb_parallel <- function() {
     library('foreach')
     library('doParallel')
     library('xgboost')
+
     Models <- function(seed){
         data(agaricus.train, package='xgboost')
         data(agaricus.test, package='xgboost')
@@ -28,6 +29,8 @@ NOtest.xgb_parallel <- function() {
     # registerDoParallel(cl)
     # cl <- makeForkCluster(32)
     # registerDoParallel(cl)
+
+
 }
 
 ## -----------------------------------------------------------------
@@ -40,17 +43,37 @@ NOtest.xgb_parallel_2 <- function() {
     library('xgboost')
     BootStrappedModels <- function(seed){
         data.table::setDTthreads(2)
-        x = data.table(x1 = rnorm(500), x2 = rnorm(500))
+        set.seed(123456)
+        x <- as.matrix(data.table(x1 = rnorm(500), x2 = rnorm(500)))
         # x = matrix(rnorm(1:1000),200,5)
-        target = sample(0:2,200,replace = TRUE)
+        target <- sample(0:1,500,replace = TRUE)
+        # target = sample(0:2,200,replace = TRUE)
+
+        offset <- runif(500)
 
         xgb_dat <- xgb.DMatrix(x, label = target)
 
-        param <- list("objective" = "multi:softprob",
-                      "eval_metric" = "mlogloss",
-                      "num_class" = 3,
+        # weight: to do a weight rescale ;
+        # setinfo(xgtrain, "weight", log(d$exposure))
+        # "base_margin: base margin is the base prediction Xgboost will boost from ;"
+        setinfo(xgb_dat, "base_margin", qlogis(offset))
+
+        param <- list("objective" = "reg:logistic", "booster" = "gbtree",
+                      # "objective" = "multi:softprob", "eval_metric" = "mlogloss", "num_class" = 3,
                       "nthread" = 1)
-        tempModel <- xgb.train(params=param, data=xgb_dat, nrounds=5)
+        tempModel <- xgb.train(params=param,
+                               data=xgb_dat, nrounds=50, verbose = 1,
+                               watchlist = list(train = xgb_dat)
+                               # callbacks = list(cb.print.evaluation(period = 1))
+                               )
+
+        p1 <- predict(tempModel, xgb_dat)
+        p1_logodds <- predict(tempModel, xgb_dat, outputmargin=TRUE)
+        sum(p1 - plogis(p1_logodds))
+
+
+        # [1]   train-rmse:0.546849
+        # [50]  train-rmse:0.331395
         return (tempModel)
     }
     registerDoParallel(cores = 4)
