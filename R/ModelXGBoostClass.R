@@ -107,7 +107,7 @@ fit_single_xgboost_grid <- function(grid.algorithm,
                    metrics = list("rmse"),
                    order_metric_name = "rmse",
                    maximize = FALSE,
-                   verbose = gvars$verbose,
+                   verbose = FALSE, # verbose = gvars$verbose,
                    seed = model_contrl[['seed']])
 
   mainArgs[["feature_names"]] <- attr(train_data, ".Dimnames")[[2]]
@@ -137,7 +137,7 @@ fit_single_xgboost_grid <- function(grid.algorithm,
   if (is.null(grid.algorithm)) grid.algorithm <- "gbm"
 
   if (is.null(mainArgs[["booster"]])) {
-    if (!is.character(grid.algorithm) || (!grid.algorithm %in% c("glm","gbm","drf"))) stop("'grid.algorithm' must be either 'glm', 'gbm' or 'drf'")
+    if (!is.character(grid.algorithm) || (!grid.algorithm %in% c("glm","gbm","drf"))) stop("'estimator' must be either 'glm', 'gbm' or 'drf'")
     if (grid.algorithm %in% "glm") {
       mainArgs[["booster"]] <- "gblinear"
       ## *** Enabling this callback implies that its no longer possible to use CV to find best params for regularized regression ***
@@ -547,9 +547,9 @@ XGBoostClass <- R6Class(classname = "XGBoost",
           fit_dmat <- xgboost::xgb.DMatrix(Xmat, label = Yvals)
           # attr(fit_dmat, 'ID') <- IDs
         })
-        if (gvars$verbose) {
-          print("time to create xgb.DMatrix: "); print(load_subset_t)
-        }
+        # if (gvars$verbose) {
+        #   print("time to create xgb.DMatrix: "); print(load_subset_t)
+        # }
       }
 
       return(fit_dmat)

@@ -139,7 +139,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       private$train_H2Oframe_ID <- h2o::h2o.getId(train_H2Oframe)
 
       if ((length(self$predvars) == 0L) || (length(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
-        message("unable to run " %+% self$fit.class %+% " with h2o for: intercept only models or designmat with zero rows or  constant outcome (y) ...")
+        message("...unable to run " %+% self$fit.class %+% " with h2o.grid for either: 1) intercept only models or 2) training data with zero rows or 3) constant outcome (y) ...")
         class(self$model.fit) <- "try-error"
         self$emptydata
         self$emptyY
@@ -157,15 +157,45 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
         valid_H2Oframe = NULL
       }
 
-      self$model.fit <- try(fit(self$fit.class, self$params, training_frame = train_H2Oframe, y = self$outvar, x = self$predvars,
-                                model_contrl = self$model_contrl, fold_column = self$fold_column, validation_frame = valid_H2Oframe, ...),
+      self$model.fit <- try(fit(self$fit.class,
+                                self$params,
+                                training_frame = train_H2Oframe,
+                                y = self$outvar,
+                                x = self$predvars,
+                                model_contrl = self$model_contrl,
+                                fold_column = self$fold_column,
+                                validation_frame = valid_H2Oframe, ...),
                           silent = FALSE)
 
+    if (inherits(self$model.fit, "try-error"))
+      message("All grid models for h2o.grid algorithm " %+% self$model_contrl[["grid.algorithm"]] %+% " have failed.
+This can be either a result of an error in model parameters or the outcome variable type not matching the distribution family.
+See https://0xdata.atlassian.net/browse/TN-2 for more info.
+If the algorithm requested was different from 'glm', the next step will attempt to run h2o.glm as a backup, otherwise will return an error.")
+
+      ## On first failure, try h2o.glm. This provides a chance to evalute the CV MSE (if using CV).
+      ## This way other models in the ensemble that did not fail might still be selected.
+      if (inherits(self$model.fit, "try-error") && (!self$model_contrl[["grid.algorithm"]] %in% "glm")) {
+        self$model_contrl[["grid.algorithm"]] <- "glm"
+        self$model.fit <- try(fit(self$fit.class,
+                                  self$params,
+                                  training_frame = train_H2Oframe,
+                                  y = self$outvar,
+                                  x = self$predvars,
+                                  model_contrl = self$model_contrl,
+                                  fold_column = self$fold_column,
+                                  validation_frame = valid_H2Oframe, ...),
+                          silent = FALSE)
+
+        if (!inherits(self$model.fit, "try-error")) message("...h2o.glm backup has succeeded after the initial failed run of h2o.grid...")
+      }
+
+      ## When everything fails, clean up and return
       if (inherits(self$model.fit, "try-error")) {
         self$emptydata
         self$emptyY
-        return(self$model.fit)
       }
+
       return(self$model.fit)
     },
 
@@ -263,7 +293,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
 
         if (missing(subset_idx)) subset_idx <- (1:data$nobs)
         load_subset_t <- system.time(subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[subset_idx, load_var_names, with = FALSE], destination_frame = destination_frame))
-        if (gvars$verbose) { print("time to subset and load data into H2OFRAME: "); print(load_subset_t) }
+        # if (gvars$verbose) { print("time to subset and load data into H2OFRAME: "); print(load_subset_t) }
       }
 
       self$outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))
@@ -357,7 +387,7 @@ h2oResidualModelClass  <- R6Class(classname = "h2oResidualModelClass",
       private$train_H2Oframe_ID <- h2o::h2o.getId(train_H2Oframe)
 
       if ((length(self$predvars) == 0L) || (length(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
-        message("unable to run " %+% self$fit.class %+% " with h2o for: intercept only models or designmat with zero rows or  constant outcome (y) ...")
+        message("...unable to run " %+% self$fit.class %+% " with h2o.grid for either: 1) intercept only models or 2) training data with zero rows or 3) constant outcome (y) ...")
         class(self$model.fit) <- "try-error"
         self$emptydata
         self$emptyY

@@ -142,7 +142,7 @@ add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed =
 #' @param OUTCOME Character name of the column containing outcomes.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
 #' @return An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
-#' @example tests/examples/1_gridisl_example.R
+# @example tests/examples/1_gridisl_example.R
 #' @export
 importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("gridisl.verbose")) {
   gvars$verbose <- verbose

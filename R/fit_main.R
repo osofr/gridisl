@@ -52,7 +52,7 @@ defModel <- function(estimator, x, search_criteria, param_grid, ...) {
   ## call outside fun that parses ... and checks all args are named
   sVar.exprs <- capture.exprs(...)
 
-  GRIDparams = list(fit.package = pkg, fit.algorithm = "grid", grid.algorithm = est)
+  GRIDparams = list(fit.package = pkg, fit.algorithm = "grid", grid.algorithm = est, estimator = estimator)
   if (!missing(x)) GRIDparams[["x"]] <- x
   if (!missing(search_criteria)) GRIDparams[["search_criteria"]] <- search_criteria
   if (!missing(param_grid)) {

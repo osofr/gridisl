@@ -125,10 +125,15 @@ fit_model <- function(ID,
 
   modelfits <- vector(mode = "list", length = length(models))
   for (learner_idx in seq_along(models)) {
+    model <- models[[learner_idx]]
+    estimator <- model[["estimator"]]
+    model[["estimator"]] <- NULL
     ## Define R6 regression class (specify subset_exprs to select only specific obs during fitting, e.g., only non-holdouts)
     regobj <- RegressionClass$new(Model_idx = learner_idx, outvar = y, predvars = x, runCV = runCV,
                                   subset_exprs = subset_exprs,
-                                  fold_column = fold_column, model_contrl = models[[learner_idx]])
+                                  fold_column = fold_column,
+                                  estimator = estimator,
+                                  model_contrl = model)
     ## Define a modeling object, perform fitting (real data is being passed for the first time here):
     modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)
     modelfit <- modelfit$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx)

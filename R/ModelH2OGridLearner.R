@@ -18,8 +18,8 @@ fit_single_h2o_grid <- function(grid.algorithm, training_frame, y, x, family = "
                     missing_values_handling = c("MeanImputation")
                   )
 
-  if (is.null(grid.algorithm)) stop("must specify 'grid.algorithm' name when running 'h2o.grid'")
-  if (!is.character(grid.algorithm)) stop("'grid.algorithm' must be a string naming the grid.algorithm for 'h2o.grid'")
+  if (is.null(grid.algorithm)) stop("must specify the 'algorithm' name when running 'h2o.grid'")
+  if (!is.character(grid.algorithm)) stop("'algorithm' must be a string naming the 'algorithm' for 'h2o.grid'")
   algo_fun_name <- "h2o."%+%grid.algorithm
   if (!exists(algo_fun_name, where='package:h2o', mode='function')) stop("could not locate the function " %+% grid.algorithm)
 
@@ -35,27 +35,19 @@ fit_single_h2o_grid <- function(grid.algorithm, training_frame, y, x, family = "
   # Is there a validation frame for model scoring?
   if (!is.null(validation_frame)) mainArgs[["validation_frame"]] <- validation_frame
 
+  if ("distribution" %in% names(model_contrl) && ("bernoulli" %in% model_contrl[["distribution"]])) {
+    mainArgs[["training_frame"]][[y]] <- h2o::as.factor(mainArgs[["training_frame"]][[y]])
+    if (!is.null(mainArgs[["validation_frame"]])) mainArgs[["validation_frame"]][[y]] <- h2o::as.factor(mainArgs[["validation_frame"]][[y]])
+  }
+
   ## doesn't work if h2o namespace is not loaded:
   # algo_fun <- get0(algo_fun_name, mode = "function", inherits = TRUE)
   algo_fun <- utils::getFromNamespace(algo_fun_name, ns='h2o')
-
   mainArgs <- keep_only_fun_args(mainArgs, fun = algo_fun)   # Keep only the relevant args in mainArgs list:
   mainArgs <- replace_add_user_args(mainArgs, model_contrl, fun = algo_fun) # Add user args that pertain to this specific learner:
   mainArgs[["algorithm"]] <- grid.algorithm
   mainArgs[["search_criteria"]] <- model_contrl[["search_criteria"]]
   mainArgs[["hyper_params"]] <- model_contrl[["param_grid"]]
-
-  # mainArgs[["hyper_params"]] <- model_contrl[[grid.algorithm]]
-  # if (is.null(mainArgs$hyper_params)) {
-
-  #   # stop("must specify hyper parameters for grid search with '" %+% algo_fun_name %+% "' by defining a SuperLearner params list item named '" %+% grid.algorithm %+% "'")
-  # }
-
-  # if (!is.null(mainArgs$hyper_params[["search_criteria"]])) {
-  #   mainArgs$search_criteria <- mainArgs$hyper_params[["search_criteria"]]
-  #   mainArgs$hyper_params[["search_criteria"]] <- NULL
-  # }
-  # if (is.null(mainArgs$search_criteria)) stop("must specify 'search_criteria' when running 'h2o.grid' for grid.algorithm " %+% grid.algorithm)
 
   # Remove any args from mainArgs that also appear in hyper_params:
   common_hyper_args <- intersect(names(mainArgs), names(mainArgs$hyper_params))
@@ -64,16 +56,14 @@ fit_single_h2o_grid <- function(grid.algorithm, training_frame, y, x, family = "
   if (("lambda_search" %in% names(mainArgs)))
     if (mainArgs[["lambda_search"]]) mainArgs[["lambda"]] <- NULL
 
-  if (gvars$verbose) print("running h2o.grid grid.algorithm: " %+% grid.algorithm)
+  if (gvars$verbose) print("running h2o.grid with algorithm: " %+% grid.algorithm)
 
   model_fit <- try(do.call(h2o::h2o.grid, mainArgs), silent = FALSE)
-  if (inherits(model_fit, "try-error"))
-    stop("All grid models for h2o.grid " %+% mainArgs$algorithm %+% " have failed. This suggests an error in model specification.")
 
+  if (inherits(model_fit, "try-error")) return(model_fit)
   ## sort the grid by increasing MSE:
   model_fit <- h2o::h2o.getGrid(model_fit@grid_id, sort_by = "mse", decreasing = FALSE)
   return(model_fit)
-
 }
 
 fit.h2ogrid <- function(fit.class, params, training_frame, y, x, model_contrl, fold_column, ...) {
@@ -90,6 +80,8 @@ fit.h2ogrid <- function(fit.class, params, training_frame, y, x, model_contrl, f
                                         family = family,
                                         model_contrl = model_contrl,
                                         fold_column = fold_column, ...)
+
+  if (inherits(modelfits_grid, "try-error")) return(modelfits_grid)
 
   ## Extract the top model (first on the list)
   topmodel_grid <- h2o::h2o.getModel(modelfits_grid@model_ids[[1]])

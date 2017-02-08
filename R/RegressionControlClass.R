@@ -19,6 +19,7 @@ RegressionClass <- R6Class("RegressionClass",
     subset_exprs = list(),         # Named LIST of subset expressions (as strings), one list item per outcome in outvar.
                                    # Each item is a vector of different subsetting expressions (form stratified models)
                                    # These expressions are evaluated in the envir of the data, must evaluate to a logical vector
+    estimator = character(),
     model_contrl = list(),
     initialize = function(Model_idx = 1,
                           ReplMisVal0 = TRUE,
@@ -28,6 +29,7 @@ RegressionClass <- R6Class("RegressionClass",
                           fold_column = NULL,
                           subset_vars = NULL,
                           subset_exprs = NULL,
+                          estimator = NULL,
                           model_contrl = list()) {
 
       ## Confirm the args are of the same type as the initials
@@ -63,10 +65,7 @@ RegressionClass <- R6Class("RegressionClass",
       if (length(model_contrl)>0) {
         if (!is.ModelStack(model_contrl) && (any(is.null(names(model_contrl))) || any(names(model_contrl) %in% ""))) stop("all items in list 'model_contrl' must be named")
       }
-
-      # if (!"fit.package" %in% names(self$model_contrl)) self$model_contrl[['fit.package']] <- getopt("fit.package")
-      # if (!"fit.algorithm" %in% names(self$model_contrl)) self$model_contrl[['fit.algorithm']] <- getopt("fit.algorithm")
-
+      self$estimator <- estimator
       self$model_contrl <- model_contrl
 
       return(self)

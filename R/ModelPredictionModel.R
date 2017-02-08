@@ -172,7 +172,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       self$ModelFitObject <- self$define_model_fit_object(self$fit.package, self$fit.algorithm, reg, self$useH2Oframe, ...)
 
-      if (gvars$verbose) { print("New instance of " %+% class(self)[1] %+% " :"); self$show() }
+      # if (gvars$verbose) { print("New instance of " %+% class(self)[1] %+% " :"); self$show() }
 
       invisible(self)
     },
@@ -189,9 +189,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     fit = function(overwrite = FALSE, data, validation_data = NULL, subset_exprs = NULL, ...) { # Move overwrite to a field? ... self$overwrite
-      if (gvars$verbose) print("fitting the model: "); self$show()
       if (!overwrite) assert_that(!self$is.fitted) # do not allow overwrite of prev. fitted model unless explicitely asked
-
       ## save a pointer to training data class used for fitting
       self$OData_train <- data
       self$nodes <- self$OData_train$nodes
@@ -206,6 +204,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       subset_idx <- data$evalsubst(subset_exprs = subset_exprs)
 
       self$n_obs_fit <- length(subset_idx)
+      if (gvars$verbose) { print("gridisl is fitting the model: "); self$show() }
       model.fit <- self$ModelFitObject$fit(data, subset_idx = subset_idx, validation_data = validation_data, ...)
 
       # **********************************************************************
@@ -213,7 +212,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       # Should be able to continue, after removing the failed models
       # **********************************************************************
       if (inherits(model.fit, "try-error")) {
-        stop("running " %+% self$ModelFitObject$fit.class %+% " resulted in error...")
+        stop("...error while fitting estimator: " %+% self$reg$estimator)
         # self$ModelFitObject <- glmModelClass$new(fit.algorithm = "GLM", fit.package = "speedglm", reg = reg, ...)
         # model.fit <- self$ModelFitObject$fit(data, subset_idx = subset_idx, ...)
       }
@@ -230,7 +229,6 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     refit_best_model = function(data, subset_exprs = NULL, ...) {
       expand.dots <- list(...)
 
-      if (gvars$verbose) print("refitting the best model: "); self$show()
       if (is.null(subset_exprs)) subset_exprs <- self$subset_exprs
       if ("subset_idx" %in% names(expand.dots)) {
         subset_idx <- data$evalsubst(subset_exprs = expand.dots[["subset_idx"]])
@@ -244,9 +242,11 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       self$BestModelFitObject <- self$define_model_fit_object(top_model_params$fit.package, top_model_params$fit.algorithm, best_reg, useH2Oframe = self$useH2Oframe)
 
       self$n_obs_fit <- length(subset_idx)
+      if (gvars$verbose) {print("refitting the best model: "); self$show()}
       model.fit <- self$BestModelFitObject$fit(data, subset_idx = subset_idx, destination_frame = "alldata_H2Oframe")
 
-      if (inherits(model.fit, "try-error")) stop("refitting of the best model failed")
+      if (inherits(model.fit, "try-error")) stop("...error while refitting the best model for estimator: " %+% self$reg$estimator)
+
       # **********************************************************************
       # to save RAM space when doing many stacked regressions wipe out all internal data:
       # **********************************************************************
@@ -490,12 +490,14 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE, model_stats = FALSE, all_fits = FALSE) {
       if (print_format) {
-        cat("model: E[" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% "]" %+% ";\\ Stratify: " %+% self$subset_exprs %+% "\n")
-        cat("fit.package: " %+% self$fit.package %+% "\n")
-        cat("fit.algorithm: " %+% self$fit.algorithm %+%"\n")
-        cat("grid.algorithm: " %+% self$grid.algorithm %+%"\n")
-        cat("N: " %+% self$n_obs_fit %+%"\n")
+        cat("model: E[" %+% self$outvar %+% "|" %+% paste(self$predvars, collapse=", ") %+% "]\n")
+        if (!is.null(self$subset_exprs) && (self$subset_exprs != "") ) cat("strata: " %+% self$subset_exprs %+% "\n")
+        cat("estimator: " %+% self$reg$estimator %+% "\n")
         cat("method: " %+% self$method %+%"\n")
+        # cat("fit.package: " %+% self$fit.package %+% "\n")
+        # cat("fit.algorithm: " %+% self$fit.algorithm %+%"\n")
+        # cat("grid.algorithm: " %+% self$grid.algorithm %+%"\n")
+        if (!is.na(self$n_obs_fit)) cat("N: " %+% self$n_obs_fit %+%"\n")
 
         if (self$is.fitted && model_stats) self$ModelFitObject$show(all_fits = all_fits)
 
