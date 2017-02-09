@@ -126,13 +126,10 @@ fit_single_xgboost_grid <- function(grid.algorithm,
     }
   }
 
-
   ### *******************************************************
   ### ADD OFFSET (setinfo on design data)
   ### ADD WEIGHTS (setinfo on design data)
   ### *******************************************************
-
-
 
   if (is.null(grid.algorithm)) grid.algorithm <- "gbm"
 
