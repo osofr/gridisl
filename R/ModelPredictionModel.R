@@ -243,7 +243,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       self$n_obs_fit <- length(subset_idx)
       if (gvars$verbose) {print("refitting the best model: "); self$show()}
-      model.fit <- self$BestModelFitObject$fit(data, subset_idx = subset_idx, destination_frame = "alldata_H2Oframe")
+
+      model.fit <- try(self$BestModelFitObject$fit(data, subset_idx = subset_idx, destination_frame = "alldata_H2Oframe"))
 
       if (inherits(model.fit, "try-error")) stop("...error while refitting the best model for estimator: " %+% self$reg$estimator)
 

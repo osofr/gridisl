@@ -59,6 +59,7 @@ fit.h2oglm <- function(fit.class, params, training_frame, y, x, fold_column, mod
 
   # h2o::h2o.glm(x = x, y = y, training_frame = training_frame, lambda = 0L, family = "gaussian")
   model.fit <- do.call(h2o::h2o.glm, mainArgs)
+  # predict(model.fit, newdata = mainArgs[["training_frame"]])
 
   # assign the fitted coefficients in correct order (same as predictor order in x)
   out_coef <- vector(mode = "numeric", length = length(x)+1)

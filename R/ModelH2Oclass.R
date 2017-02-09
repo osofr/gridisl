@@ -1,4 +1,10 @@
 predict_h2o_new <- function(model_id, frame_id, convertResToDT = TRUE) {
+  # predframe <- h2o::h2o.getFrame(frame_id)
+  # h2omodel <- h2o::h2o.getModel(model_id)
+  # str(h2omodel)
+  # predict(h2omodel, predframe)
+  # browser()
+
   # h2o::h2o.no_progress()
   # waitOnJob = FALSE,
   url <- paste0('Predictions/models/', model_id, '/frames/',  frame_id)
@@ -7,6 +13,7 @@ predict_h2o_new <- function(model_id, frame_id, convertResToDT = TRUE) {
   dest_key <- res$dest$name
 
   h2o:::.h2o.__waitOnJob(job_key, pollInterval = 0.01)
+
   newpreds <- h2o::h2o.getFrame(dest_key)
   if (ncol(newpreds) > 1) newpreds <- newpreds[["p1"]]
 
@@ -243,6 +250,8 @@ If the algorithm requested was different from 'glm', the next step will attempt 
     },
 
     get_best_model_params = function(model_names) {
+      # str(model_obj)
+      # str(model_obj@model)
       # model_obj <- self$model.fit$H2O.model.object
       model_obj <- self$getmodel_byname(model_names[1])[[1]]
 
@@ -262,6 +271,13 @@ If the algorithm requested was different from 'glm', the next step will attempt 
       top_params_tmp$nfolds <- NULL
       top_params_tmp$fold_column <- NULL
       top_params_tmp$fold_assignment <- NULL
+
+      if (!is.null(top_params_tmp[["lambda_search"]]) && top_params_tmp[["lambda_search"]]) {
+        top_params_tmp[["lambda_search"]] <- FALSE
+        top_params_tmp[["nlambdas"]] <- NULL
+        top_params_tmp[["lambda_min_ratio"]] <- NULL
+        top_params_tmp[["lambda"]] <- model_obj@model$lambda_best
+      }
 
       top_params_tmp$score_each_iteration <- NULL # deeplearning fails otherwise
       top_params <- c(top_params, top_params_tmp)
