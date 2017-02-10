@@ -132,6 +132,13 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       self$useH2Oframe <- useH2Oframe
       assert_that("h2o" %in% fit.package)
 
+      if (inherits(connectH2O <- try(h2o::h2o.getConnection(), silent = TRUE), "try-error")) {
+        message("No active connection to an H2O cluster has been detected.
+Will now attempt to initialize a local h2o cluster.
+In the future, please run `h2o::h2o.init()` prior to model training with h2o.")
+        h2o::h2o.init(nthreads=-1)
+      }
+
       self$fit.class <- fit.algorithm
       class(self$fit.class) <- c(class(self$fit.class), "h2o" %+% self$fit.class)
       invisible(self)
