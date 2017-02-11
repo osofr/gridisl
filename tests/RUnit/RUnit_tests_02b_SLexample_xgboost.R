@@ -96,6 +96,51 @@ test.XGBoost.simple <- function() {
 }
 
 ## ------------------------------------------------------------------------------------
+## test xgboost GBM, with CV
+## ------------------------------------------------------------------------------------
+test.XGBoost.simpleCV <- function() {
+  options(gridisl.verbose = TRUE)
+  # options(gridisl.verbose = FALSE)
+
+  data(cpp)
+  cpp <- cpp[!is.na(cpp[, "haz"]), ]
+  cpp <- data.table::data.table(cpp)
+  cpp <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+
+  covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
+  GRIDparams2 <-  defModel(estimator = "xgboost__gbm", family = "gaussian",
+                          nrounds = 50, early_stopping_rounds = 2,
+                          seed = 123456,
+                          search_criteria = list(
+                            strategy = "RandomDiscrete",
+                            max_models = 2),
+                          param_grid = list(
+                            eta = c(0.3, 0.1, 0.01),
+                            max_depth = c(4, 6, 8, 10),
+                            max_delta_step = c(0,1),
+                            subsample = 1,
+                            scale_pos_weight = 1
+                            )
+                          )
+  # cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  mfit_xgb <- fit(GRIDparams2, method = "cv", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
+                  data = cpp, fold_column = "fold")
+
+  ## can't predict from best model since no model selection method was specified (method = "none")
+  checkException(pred_alldat_best <- predict_SL(mfit_xgb, newdata = cpp_folds, add_subject_data = FALSE))
+  ## can't predict with xgboost when newdata is missing:
+  checkException(preds <- predict_generic(mfit_xgb, add_subject_data = TRUE, best_only = FALSE))
+
+  preds <- predict_generic(mfit_xgb, newdata = cpp, add_subject_data = TRUE, best_only = FALSE)
+  preds[]
+
+  ## out-of-sample / holdout predictions --- NEED A MORE INFORMATIVE ERROR
+  ## CURRENT ERROR: Error in model_obj$predict_out_of_sample(...) : attempt to apply non-function
+  checkException(preds <- predict_generic(mfit_xgb, add_subject_data = TRUE, best_only = FALSE, holdout = TRUE))
+}
+
+
+## ------------------------------------------------------------------------------------
 ## test xgboost glm, model scoring with CV
 ## ------------------------------------------------------------------------------------
 test.XGBoost.GLM <- function() {

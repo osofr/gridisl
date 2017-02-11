@@ -13,6 +13,9 @@ NOtest.xgb_parallel <- function() {
         dtrain <- xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
         dtest <- xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
 
+        xgboost::xgb.DMatrix.save(dtrain, file.path(getwd(), "xgb.DMatrix.dtrain"))
+        fit_dmat_external <- xgb.DMatrix(paste0(file.path(getwd(), "xgb.DMatrix.dtrain"), '#dtrain.cache'))
+
         watchlist <- list(eval = dtest, train = dtrain)
         param <- list(max_depth = 5, eta = 0.02, nthread = 1, silent = 1,
                       objective = "binary:logistic", eval_metric = "auc")
