@@ -129,7 +129,6 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
                                       callbacks = c(list(xgboost::cb.evaluation.log()), callbacks),
                                       eval_metric = metrics)
     } else {
-      verbose <- TRUE
       ## Test models via V-fold cross-validation
       model_fit <- xgboost::xgb.cv(params = params,
                                    data = data,

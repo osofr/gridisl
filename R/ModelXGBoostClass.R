@@ -542,11 +542,15 @@ XGBoostClass <- R6Class(classname = "XGBoost",
           if (is.integer(Xmat)) Xmat[,1] <- as.numeric(Xmat[,1])
           if (ncol(Xmat) == 0)
             stop("fitting intercept only model (with no covariates) is not supported with xgboost, use speedglm instead")
+
+          print("loading xgb.DMatrix")
           fit_dmat <- xgboost::xgb.DMatrix(Xmat, label = Yvals)
+          print("finished loading xgb.DMatrix")
+
           # attr(fit_dmat, 'ID') <- IDs
-          cat("writing the libsvm design matrix to file: ", file.path(getwd(), "xgb.DMatrix.dtrain"), "\n")
-          res <- xgboost::xgb.DMatrix.save(fit_dmat, file.path(getwd(), "xgb.DMatrix.dtrain"))
-          fit_dmat <- xgboost::xgb.DMatrix(file.path(getwd(), "xgb.DMatrix.dtrain") %+% '#dtrain.cache')
+          # cat("writing the libsvm design matrix to file: ", file.path(getwd(), "xgb.DMatrix.dtrain"), "\n")
+          # res <- xgboost::xgb.DMatrix.save(fit_dmat, file.path(getwd(), "xgb.DMatrix.dtrain"))
+          # fit_dmat <- xgboost::xgb.DMatrix(file.path(getwd(), "xgb.DMatrix.dtrain") %+% '#dtrain.cache')
         })
         # if (gvars$verbose) {
         #   print("time to create xgb.DMatrix: "); print(load_subset_t)

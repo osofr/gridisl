@@ -50,8 +50,8 @@ test.xgb.grid.printing <- function() {
 ## test xgboost GLM learner / GBM Grid, no model scoring (no cv or holdout), just fit all models
 ## ------------------------------------------------------------------------------------
 test.XGBoost.simple <- function() {
-  # options(gridisl.verbose = TRUE)
-  options(gridisl.verbose = FALSE)
+  options(gridisl.verbose = TRUE)
+  # options(gridisl.verbose = FALSE)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
