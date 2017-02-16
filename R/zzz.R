@@ -137,6 +137,7 @@ gvars$misfun <- testmisfun()
   op.gridisl <- list(
     gridisl.verbose = gvars$verbose,
     gridisl.file.path = tempdir(),
+    gridisl.temp.dir = tempdir(),
     # gridisl.file.name = 'gridisl-report-%T-%N-%n'
     gridisl.file.name = 'gridisl-report-'%+%Sys.Date()
   )

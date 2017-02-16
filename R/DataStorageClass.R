@@ -2,7 +2,9 @@
 # Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
 # -----------------------------------------------------------------------------
 fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DTfwrite = TRUE) {
-  tmpf <- tempfile(fileext = ".csv")
+  # tmpf <- tempfile(fileext = ".csv")
+  temp.dir <- options()[["gridisl.temp.dir"]]
+  tmpf <- tempfile(tmpdir = temp.dir, fileext = ".csv")
   assertthat::assert_that(is.data.table(dat.sVar))
 
   # devDTvs <- exists("fwrite", where = "package:data.table")
