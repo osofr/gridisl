@@ -6,24 +6,26 @@ NOtest.xgb_parallel <- function() {
     library('doParallel')
     library('xgboost')
 
-    Models <- function(seed){
+    run_test_xgb_Models <- function(seed){
         data(agaricus.train, package='xgboost')
         data(agaricus.test, package='xgboost')
-
+        # browser()
         dtrain <- xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
         dtest <- xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
-
-        xgboost::xgb.DMatrix.save(dtrain, file.path(getwd(), "xgb.DMatrix.dtrain"))
-        fit_dmat_external <- xgb.DMatrix(paste0(file.path(getwd(), "xgb.DMatrix.dtrain"), '#dtrain.cache'))
-
+        # xgboost::xgb.DMatrix.save(dtrain, file.path(getwd(), "xgb.DMatrix.dtrain"))
+        # fit_dmat_external <- xgb.DMatrix(paste0(file.path(getwd(), "xgb.DMatrix.dtrain"), '#dtrain.cache'))
         watchlist <- list(eval = dtest, train = dtrain)
         param <- list(max_depth = 5, eta = 0.02, nthread = 1, silent = 1,
                       objective = "binary:logistic", eval_metric = "auc")
-        bst <- xgb.train(param, dtrain, nrounds = 2, watchlist)
+        bst <- xgb.train(param, dtrain, nrounds = 500, watchlist)
         return(bst)
     }
-    registerDoParallel(cores = 20)
-    r <- foreach(n=seq.int(200), .packages=c('xgboost')) %dopar% {
+
+    # registerDoParallel(cores = 4)
+    cl <- makeForkCluster(4, outfile = "")
+    registerDoParallel(cl)
+
+    r <- foreach(n=seq.int(10), .packages=c('xgboost')) %dopar% {
         Models(n)
     }
     stopCluster(cl)
@@ -32,7 +34,6 @@ NOtest.xgb_parallel <- function() {
     # registerDoParallel(cl)
     # cl <- makeForkCluster(32)
     # registerDoParallel(cl)
-
 
 }
 
