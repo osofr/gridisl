@@ -21,7 +21,9 @@ fit_single_h2o_grid <- function(grid.algorithm, training_frame, y, x, family = "
   if (is.null(grid.algorithm)) stop("must specify the 'algorithm' name when running 'h2o.grid'")
   if (!is.character(grid.algorithm)) stop("'algorithm' must be a string naming the 'algorithm' for 'h2o.grid'")
   algo_fun_name <- "h2o."%+%grid.algorithm
-  if (!exists(algo_fun_name, where='package:h2o', mode='function')) stop("could not locate the function " %+% grid.algorithm)
+
+  if (!'package:h2o' %in% search()) stop("Could not locate h2o among loaded packages. Please run: 'library('h2o')'")
+  if (!exists(algo_fun_name, where='package:h2o', mode='function')) stop("Could not locate the function " %+% grid.algorithm)
 
   # Is there a fold_column for cross-validation based model scoring?
   if (!missing(fold_column)) {
