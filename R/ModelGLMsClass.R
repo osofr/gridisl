@@ -42,6 +42,8 @@ fit.glm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
 
 # S3 method for speedglm binomial family fit, takes BinDat data object:
 fit.speedglm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
+  # print(head(Xmat))
+
   if (gvars$verbose) print("calling speedglm.wfit...")
   if (nrow(Xmat) == 0L) {
     model.fit <- list()
@@ -85,6 +87,8 @@ predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
   # Set to default missing value for A[i] degenerate/degerministic/misval:
   # Alternative, set to default replacement val: pAout <- rep.int(gvars$misXreplace, newBinDatObject$n)
   # pAout <- rep.int(gvars$misval, max(subset_idx))
+  # print(head(Xmat))
+
   pAout <- rep.int(gvars$misval, length(subset_idx))
   if (length(subset_idx) > 0) {
     if (!all(is.na(m.fit$coef))) {
@@ -217,6 +221,19 @@ glmModelClass <- R6Class(classname = "glmModelClass",
     },
 
     define.Xmat = function(data, subset_idx) {
+      prod.matrix <- function(x) {
+        y <- x[,1]
+        for(i in 2:dim(x)[2])
+        y <- y*x[,i]
+        return(y)
+      }
+      prod.DT <- function(x) {
+        y <- x[[1]]
+        for(i in 2:ncol(x))
+        y <- y*x[[i]]
+        return(y)
+      }
+
       predvars <- self$predvars
       if (length(subset_idx) == 0L) {  # When nrow(Xmat) == 0L avoids exception (when nrow == 0L => prob(A=a) = 1)
         Xmat <- matrix(, nrow = 0L, ncol = (length(predvars) + 1))
@@ -224,11 +241,27 @@ glmModelClass <- R6Class(classname = "glmModelClass",
       } else {
         # *** THIS IS THE ONLY LOCATION IN THE PACKAGE WHERE CALL TO DataStorageClass$get.dat.sVar() IS MADE ***
         if (length(predvars)==0L) {
-          Xmat <- as.matrix(rep.int(1L, length(subset_idx)), ncol=1)
+          Xmat <- data.table(Intercept = rep.int(1L, length(subset_idx)))
+          # Xmat <- as.matrix(rep.int(1L, length(subset_idx)), ncol=1)
         } else {
-          Xmat <- as.matrix(cbind(Intercept = 1, data$get.dat.sVar(subset_idx, predvars)))
+          Xmat <- data$get.dat.sVar(subset_idx, predvars)
+          Xmat[, ("Intercept") := 1L]
+          data.table::setcolorder(Xmat, c("Intercept", predvars))
+          # Xmat <- cbind(Intercept = 1L, data$get.dat.sVar(subset_idx, predvars))
+          # Xmat <- as.matrix(cbind(Intercept = 1L, data$get.dat.sVar(subset_idx, predvars)))
         }
         colnames(Xmat)[1] <- "Intercept"
+        if (!is.null(self$model_contrl[["interactions"]])) {
+          interactions <- self$model_contrl[["interactions"]]
+          for (i in seq_along(interactions)) {
+            interact <- interactions[[i]]
+            name <- names(interactions)[i]
+            if (is.null(name)) name <- paste0(interact, collapse = "_")
+            if (all(interact %in% names(Xmat)))
+              Xmat[, (name) := prod.DT(.SD), .SD = interact]
+          }
+        }
+        Xmat <- as.matrix(Xmat)
         # To find and replace misvals in Xmat:
         if (self$ReplMisVal0) Xmat[gvars$misfun(Xmat)] <- gvars$misXreplace
       }

@@ -82,6 +82,7 @@ add_CVfolds_ind = function(data, ID, nfolds = 5, fold_column = "fold", seed = NU
   data.table::setnames(foldsDT, old = names(foldsDT), new = c(ID, fold_column))
   data.table::setkeyv(foldsDT, cols = ID)
   data <- merge(data, foldsDT, by = ID, all.x = TRUE)
+  if (!is.null(seed)) set.seed(NULL)  #If seed was specified, reset it to NULL
   return(data)
 }
 
