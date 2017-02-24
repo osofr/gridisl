@@ -26,6 +26,7 @@ add_interactions_toDT <- function(XmatDT, interactions) {
     if (all(interact %in% names(XmatDT)))
       XmatDT[, (name) := prod.DT(.SD), .SD = interact]
   }
+
   return(invisible(NULL))
 }
 

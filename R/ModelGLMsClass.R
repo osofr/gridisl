@@ -159,7 +159,6 @@ glmModelClass <- R6Class(classname = "glmModelClass",
       self$predvars <- reg$predvars
       self$model_contrl <- reg$model_contrl
       self$ReplMisVal0 <- reg$ReplMisVal0
-
       assert_that(any(c("glm", "speedglm") %in% fit.package))
       self$fit.class <- fit.package
       class(self$fit.class) <- c(class(self$fit.class), self$fit.class)
@@ -238,10 +237,17 @@ glmModelClass <- R6Class(classname = "glmModelClass",
         colnames(Xmat)[1] <- "Intercept"
 
         if (!is.null(self$model_contrl[["interactions"]])) {
-          print("adding interactions to Xmat in xgboost")
+          if (gvars$verbose) {
+            print("adding interactions in GLM:")
+            str(self$model_contrl[["interactions"]])
+          }
+          ## this is a hack to fix pointer allocation problem (so that Xmat can be modified by reference inside add_interactions_toDT())
+          ## see this for more: http://stackoverflow.com/questions/28078640/adding-new-columns-to-a-data-table-by-reference-within-a-function-not-always-wor
+          ## and this: http://stackoverflow.com/questions/36434717/adding-column-to-nested-r-data-table-by-reference
+          data.table::setDF(Xmat)
+          data.table::setDT(Xmat)
+
           add_interactions_toDT(Xmat, self$model_contrl[["interactions"]])
-          print("finished adding interactions to Xmat in xgboost")
-          print(Xmat)
         }
 
         Xmat <- as.matrix(Xmat)

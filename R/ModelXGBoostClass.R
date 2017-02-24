@@ -97,6 +97,8 @@ fit_single_xgboost_grid <- function(grid.algorithm,
                                     fold_column = NULL,
                                     validation_data  = NULL, ...) {
 
+  if ("interactions" %in% names(model_contrl)) model_contrl[["interactions"]] <- NULL
+
   ## ********************************************************************************
   ## These defaults can be over-ridden in model_contrl
   # ********************************************************************************
@@ -390,7 +392,6 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       self$runCV <- reg$runCV
       self$fold_column <- reg$fold_column
       self$model_contrl <- reg$model_contrl
-
       self$useDMatrix <- useDMatrix
       assert_that("xgboost" %in% fit.package)
 
@@ -505,6 +506,7 @@ XGBoostClass <- R6Class(classname = "XGBoost",
 
       top_params[["nrounds"]] <- gridmodelDT[["nrounds"]]
       top_params <- c(top_params, gridmodelDT[["glob_params"]][[1]])
+      top_params[["interactions"]] <- self$model_contrl[["interactions"]]
 
       return(top_params)
     },
@@ -529,10 +531,17 @@ XGBoostClass <- R6Class(classname = "XGBoost",
         stop("fitting intercept only model (with no covariates) is not supported with xgboost, use speedglm instead")
 
       if (!is.null(self$model_contrl[["interactions"]])) {
-        print("adding interactions to Xmat in xgboost")
+        if (gvars$verbose) {
+          print("adding interactions in xgboost:")
+          str(self$model_contrl[["interactions"]])
+        }
+        ## this is a hack to fix pointer allocation problem (so that Xmat can be modified by reference inside add_interactions_toDT())
+        ## see this for more: http://stackoverflow.com/questions/28078640/adding-new-columns-to-a-data-table-by-reference-within-a-function-not-always-wor
+        ## and this: http://stackoverflow.com/questions/36434717/adding-column-to-nested-r-data-table-by-reference
+        data.table::setDF(Xmat)
+        data.table::setDT(Xmat)
+
         add_interactions_toDT(Xmat, self$model_contrl[["interactions"]])
-        print("finished adding interactions to Xmat in xgboost")
-        print(Xmat)
       }
 
       Xmat <- as.matrix(Xmat)
