@@ -47,8 +47,7 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
   ## Grab the internallly stored h2o out of sample predictions for each CV model (cross-validation predictions are combined into a single vector of length n)
   if (missing(validation_data)) {
 
-    message("Obtaining pre-saved out-of-sample/holdout CV predictions for h2o")
-    # pAoutDT <- sapply(m.fit$modelfits_all, function(h2omodel) as.vector(h2o.cross_validation_holdout_predictions(h2omodel)))
+    if (gvars$verbose == 2) message("Obtaining pre-saved out-of-sample/holdout CV predictions for h2o")
 
     pAoutDT <- lapply(models_list, function(h2omodel) {
                                       preds <- h2o::h2o.cross_validation_holdout_predictions(h2omodel)
@@ -72,7 +71,7 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
     ##  **** Loads new h2o frame based on validation_data ****
     valid_H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, validation_data, subset_idx)
 
-    message("Obtaining out-of-sample/holdout CV predictions for h2o with newdata")
+    if (gvars$verbose == 2) message("Obtaining out-of-sample/holdout CV predictions for h2o with newdata")
     res <- check_out_of_sample_consistency(models_list, valid_H2Oframe, predvars, fold_column)
 
     ## hack to deal with latest h2o mod, requires internal cv weights column for prediction from CV models:
@@ -84,10 +83,11 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
     vfolds_cat_h2o <- sort(h2o::h2o.levels(fold_h2o)) # # vfolds_ncat_h2o <- h2o.nlevels(fold_h2o)
 
     pAoutMat_h2o <- NULL
-    CV_loop_t <- system.time({
+    # CV_loop_t <- system.time({
     for (vfold_idx in seq_along(vfolds_cat_h2o)) {
 
-      message("Obtaining out-of-sample CV predictions for all models and validation fold: " %+% vfolds_cat_h2o[vfold_idx])
+      if (gvars$verbose == 2) message("Obtaining out-of-sample CV predictions for all models and validation fold: " %+% vfolds_cat_h2o[vfold_idx])
+
       fold_CV_i_logical <- fold_h2o == vfolds_cat_h2o[vfold_idx]
       ## Define validation frame for this fold:
       valid_H2Oframe_CV.i <- valid_H2Oframe[fold_CV_i_logical, ]
@@ -137,8 +137,8 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
 
     pAoutMat_h2o <- h2o::h2o.arrange(pAoutMat_h2o, "C1")
     pAoutDT <- pAoutMat_h2o[, 2:ncol(pAoutMat_h2o)]
-    })
-    # print("CV_loop_t"); print(CV_loop_t)
+    # })
+
     names(pAoutDT) <- names(models_list)
     # if (convertResToDT) pAoutDT <- as.data.table(pAoutDT)
     # setnames(pAoutDT, names(models_list))

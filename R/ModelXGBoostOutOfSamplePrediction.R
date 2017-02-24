@@ -13,14 +13,14 @@ xgb_predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, s
 
   ## Grab the internallly stored h2o out of sample predictions for each CV model (cross-validation predictions are combined into a single vector of length n)
   if (missing(validation_data)) {
-    message("Obtaining pre-saved out-of-sample/holdout CV predictions for xgboost")
+    if (gvars$verbose == 2) message("Obtaining pre-saved out-of-sample/holdout CV predictions for xgboost")
     pAoutDT <- lapply(models_list, function(cv_xgb_model) cv_xgb_model[["pred"]])
     pAoutDT <- as.data.table(pAoutDT)
     names(pAoutDT) <- names(models_list)
     return(pAoutDT)
 
   } else {
-    message("Obtaining out-of-sample/holdout CV predictions for xgboost with newdata")
+    if (gvars$verbose == 2) message("Obtaining out-of-sample/holdout CV predictions for xgboost with newdata")
     # ## pre-saved out-of-sample preds for validation folds
     # models_list[[1]][["pred"]]
     # ## list of validation fold indices (rows in input data)
@@ -49,40 +49,36 @@ xgb_predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, s
     colnames(pAoutDT) <- names(models_list)
     pAoutDT <- data.table::data.table(pAoutDT)
 
-    CV_loop_t <- system.time({
-      for (vfold_idx in seq_along(vfolds_cat_xgb)) {
+    for (vfold_idx in seq_along(vfolds_cat_xgb)) {
 
-        message("Obtaining out-of-sample CV predictions for all models and validation fold: " %+% vfolds_cat_xgb[vfold_idx])
+      if (gvars$verbose == 2) message("Obtaining out-of-sample CV predictions for all models and validation fold: " %+% vfolds_cat_xgb[vfold_idx])
 
-        ## validation row indices for the current fold:
-        fold_CV_i_idx <- fold_xgb[[vfolds_cat_xgb[vfold_idx]]]
+      ## validation row indices for the current fold:
+      fold_CV_i_idx <- fold_xgb[[vfolds_cat_xgb[vfold_idx]]]
 
-        ## subset the validation data by the current validation fold indices (will do predict for this data)
-        valid_dmat_CV.i <- valid_dmat[fold_CV_i_idx, ]
-        attributes(valid_dmat)
-        attr(valid_dmat_CV.i, ".Dimnames") <- attr(valid_dmat, ".Dimnames")
+      ## subset the validation data by the current validation fold indices (will do predict for this data)
+      valid_dmat_CV.i <- valid_dmat[fold_CV_i_idx, ]
+      attributes(valid_dmat)
+      attr(valid_dmat_CV.i, ".Dimnames") <- attr(valid_dmat, ".Dimnames")
 
-        for (idx in seq_along(models_list)) {
-          ## grab the model among the list of all fits, by its index
-          xgb_model <- models_list[[idx]]
+      for (idx in seq_along(models_list)) {
+        ## grab the model among the list of all fits, by its index
+        xgb_model <- models_list[[idx]]
 
-          ## Use ntreelimit for prediction, if it was actually used during model training.
-          ## Use it only for gbtree (not for gblinear, i.e., glm, as it is not implemented)
-          ntreelimit <- 0
-          if (!is.null(xgb_model[["best_ntreelimit"]]) && !(xgb_model[["params"]][["booster"]] %in% "gblinear"))
-            ntreelimit <- xgb_model[["best_ntreelimit"]]
+        ## Use ntreelimit for prediction, if it was actually used during model training.
+        ## Use it only for gbtree (not for gblinear, i.e., glm, as it is not implemented)
+        ntreelimit <- 0
+        if (!is.null(xgb_model[["best_ntreelimit"]]) && !(xgb_model[["params"]][["booster"]] %in% "gblinear"))
+          ntreelimit <- xgb_model[["best_ntreelimit"]]
 
-          ## grab all the V-fold trained models and grab the relevant one for current fold index
-          xgb_model_fold <- xgb_model[["models"]][[vfold_idx]]
+        ## grab all the V-fold trained models and grab the relevant one for current fold index
+        xgb_model_fold <- xgb_model[["models"]][[vfold_idx]]
 
-          ## 1. obtain predictions for new validation data (fold-specific)
-          ## 2. save in the appropriate fold ID rows and appropriate model name column in final data.table:
-          pAoutDT[fold_CV_i_idx, names(models_list)[idx] := predict(xgb_model_fold, newdata = valid_dmat_CV.i, ntreelimit = ntreelimit)]
-        }
+        ## 1. obtain predictions for new validation data (fold-specific)
+        ## 2. save in the appropriate fold ID rows and appropriate model name column in final data.table:
+        pAoutDT[fold_CV_i_idx, names(models_list)[idx] := predict(xgb_model_fold, newdata = valid_dmat_CV.i, ntreelimit = ntreelimit)]
       }
-    })
-
-    print("CV_loop_t_xgb"); print(CV_loop_t)
+    }
 
     return(pAoutDT)
   }
