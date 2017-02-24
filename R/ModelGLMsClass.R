@@ -201,6 +201,7 @@ glmModelClass <- R6Class(classname = "glmModelClass",
     get_best_model_params = function(model_names) {
       top_params <- list(fit.package = self$model_contrl$fit.package,
                          fit.algorithm = self$model_contrl$fit.algorithm)
+      top_params[["interactions"]] <- self$model_contrl[["interactions"]]
       return(top_params)
     },
 
