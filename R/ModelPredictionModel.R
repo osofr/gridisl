@@ -154,7 +154,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
       if ("x" %in% names(self$model_contrl)) {
         new.x <- self$model_contrl[["x"]]
-        message("over-riding default predictors with new ones: " %+% paste0(new.x, collapse=","))
+        if (gvars$verbose) message("over-riding default predictors with new ones: " %+% paste0(new.x, collapse=","))
         assert_that(is.character(new.x))
         reg$predvars <- new.x
       }

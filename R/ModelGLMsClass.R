@@ -9,7 +9,7 @@ predictP1 <- function(m.fit, ...) UseMethod("predictP1")
 
 # S3 method for glm binomial family fit, takes BinDat data object:
 fit.glm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
-  if (gvars$verbose) print("calling glm.fit...")
+  if (gvars$verbose == 2) print("...calling glm.fit...")
   if (nrow(Xmat) == 0L) {
     model.fit <- list()
     model.fit$coef = rep.int(NA_real_, ncol(Xmat))
@@ -44,7 +44,7 @@ fit.glm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
 fit.speedglm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
   # print(head(Xmat))
 
-  if (gvars$verbose) print("calling speedglm.wfit...")
+  if (gvars$verbose == 2) print("...calling speedglm.wfit...")
   if (nrow(Xmat) == 0L) {
     model.fit <- list()
     model.fit$coef = rep.int(NA_real_, ncol(Xmat))
@@ -62,14 +62,12 @@ fit.speedglm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
     }, GetWarningsToSuppress())
   }
 
-  if (inherits(model.fit, "try-error")) { # if failed, fall back on stats::glm
+  if (inherits(model.fit, "try-error") && gvars$verbose) { # if failed, fall back on stats::glm
     message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", model.fit)
     return(fit.glm(fit.class, params, Xmat, Yvals, model_contrl, ...))
   }
 
-  if (gvars$verbose) {
-    print("glm fit:"); print(model.fit$coef)
-  }
+  if (gvars$verbose == 2) { print("glm fit:"); print(model.fit$coef) }
 
   return(create_fit_object(model.fit, model_alg = "glm", fitfunname = "speedglm", linkfun = "logit_linkinv",
                            params = params, coef = model.fit$coef, nobs = nrow(Xmat), model_contrl = model_contrl,

@@ -133,7 +133,7 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       assert_that("h2o" %in% fit.package)
 
       if (inherits(connectH2O <- try(h2o::h2o.getConnection(), silent = TRUE), "try-error")) {
-        message("No active connection to an H2O cluster has been detected.
+        if (gvars$verbose) message("No active connection to an H2O cluster has been detected.
 Will now attempt to initialize a local h2o cluster.
 In the future, please run `h2o::h2o.init()` prior to model training with h2o.")
         h2o::h2o.init(nthreads=-1)
@@ -201,7 +201,7 @@ If the algorithm requested was different from 'glm', the next step will attempt 
                                   validation_frame = valid_H2Oframe, ...),
                           silent = FALSE)
 
-        if (!inherits(self$model.fit, "try-error")) message("...h2o.glm backup has succeeded after the initial failed run of h2o.grid...")
+        if (!inherits(self$model.fit, "try-error") && gvars$verbose) message("...h2o.glm backup has succeeded after the initial failed run of h2o.grid...")
       }
 
       ## When everything fails, clean up and return
@@ -306,7 +306,7 @@ If the algorithm requested was different from 'glm', the next step will attempt 
           subsetH2Oframe <- data$H2Oframe
         } else {
           subset_t <- system.time(subsetH2Oframe <- data$H2Oframe[subset_idx, ])
-          if (gvars$verbose) { print("time to subset H2OFRAME: "); print(subset_t) }
+          if (gvars$verbose == 2) { print("time to subset H2OFRAME: "); print(subset_t) }
         }
 
       } else {

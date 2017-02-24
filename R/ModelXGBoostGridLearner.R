@@ -227,7 +227,7 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
   ## Sort the data.table with grid model fits by user-supplied test/train metric value (lowest to highest)
   if (!is.null(order_metric_name)) data.table::setkeyv(gs, cols = order_metric_type %+% "_" %+% order_metric_name %+% ifelse(runCV, "_mean", ""))
 
-  print("grid fits ordered by test metric (lowest to highest):"); print(gs)
+  if (gvars$verbose) { print("grid fits ordered by test metric (lowest to highest):"); print(gs) }
 
   return(gs)
 }

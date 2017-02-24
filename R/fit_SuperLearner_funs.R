@@ -156,7 +156,7 @@ fit_model <- function(ID,
     modelfit_stack$score_models(subset_exprs = subset_idx)
   }
 
-  if (!is.null(valid_data) || runCV) {
+  if ((!is.null(valid_data) || runCV) && verbose) {
     print("Internally evaluated holdout / CV metrics: "); print(modelfit_stack$getMSEtab)
   }
 
@@ -206,7 +206,7 @@ predict_generic <- function(modelfit,
                                            x = modelfit$predvars, y = modelfit$outvar,
                                            useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
 
-  if (!best_only) message("obtaining predictions for all models...")
+  if (!best_only && verbose) message("obtaining predictions for all models...")
 
   if (!holdout) {
     preds <- modelfit$predict(newdata, subset_exprs = subset_idx, best_only = best_only, convertResToDT = force_data.table)
@@ -305,7 +305,7 @@ predict_nonholdouts <- function(modelfit,
     newdata <- validate_convert_input_data(newdata, ID = nodes$IDnode, t_name = nodes$tnode,
                                            x = modelfit$predvars, y = modelfit$outvar,
                                            useH2Oframe = modelfit$useH2Oframe, dest_frame = "prediction_H2Oframe")
-  if (!best_only) message("obtaining predictions for all models...")
+  if (!best_only && verbose) message("obtaining predictions for all models...")
   preds <- modelfit$predict_within_sample(newdata, subset_exprs = subset_idx, best_only = best_only, convertResToDT = TRUE)
 
   preds <- data.table::as.data.table(preds)
