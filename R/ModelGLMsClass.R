@@ -219,19 +219,6 @@ glmModelClass <- R6Class(classname = "glmModelClass",
     },
 
     define.Xmat = function(data, subset_idx) {
-      prod.matrix <- function(x) {
-        y <- x[,1]
-        for(i in 2:dim(x)[2])
-        y <- y*x[,i]
-        return(y)
-      }
-      prod.DT <- function(x) {
-        y <- x[[1]]
-        for(i in 2:ncol(x))
-        y <- y*x[[i]]
-        return(y)
-      }
-
       predvars <- self$predvars
       if (length(subset_idx) == 0L) {  # When nrow(Xmat) == 0L avoids exception (when nrow == 0L => prob(A=a) = 1)
         Xmat <- matrix(, nrow = 0L, ncol = (length(predvars) + 1))
@@ -249,16 +236,14 @@ glmModelClass <- R6Class(classname = "glmModelClass",
           # Xmat <- as.matrix(cbind(Intercept = 1L, data$get.dat.sVar(subset_idx, predvars)))
         }
         colnames(Xmat)[1] <- "Intercept"
+
         if (!is.null(self$model_contrl[["interactions"]])) {
-          interactions <- self$model_contrl[["interactions"]]
-          for (i in seq_along(interactions)) {
-            interact <- interactions[[i]]
-            name <- names(interactions)[i]
-            if (is.null(name)) name <- paste0(interact, collapse = "_")
-            if (all(interact %in% names(Xmat)))
-              Xmat[, (name) := prod.DT(.SD), .SD = interact]
-          }
+          print("adding interactions to Xmat in xgboost")
+          add_interactions_toDT(Xmat, self$model_contrl[["interactions"]])
+          print("finished adding interactions to Xmat in xgboost")
+          print(Xmat)
         }
+
         Xmat <- as.matrix(Xmat)
         # To find and replace misvals in Xmat:
         if (self$ReplMisVal0) Xmat[gvars$misfun(Xmat)] <- gvars$misXreplace

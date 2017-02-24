@@ -1,4 +1,5 @@
 
+
 ## ******************************
 ## GLMs ('glm' / 'gblinear')
 ## ******************************
@@ -277,31 +278,22 @@ fit.xgb.grid <- function(fit.class, params, train_data, model_contrl, fold_colum
 ## ----------------------------------------------------------------
 getPredictXGBDMat <- function(m.fit, ParentObject, DataStorageObject, subset_idx) {
   # assert_that(!is.null(subset_idx))
-  if (missing(DataStorageObject)) {
+  if (missing(DataStorageObject)) stop("prediction with missing input data is not implemented for xgboost")
 
-    # return(h2o::h2o.getFrame(ParentObject$get_train_H2Oframe_ID))
-    stop("prediction with missing input data is not implemented for xgboost")
+  if (ParentObject$useDMatrix) stop("prediction with pre-saved DMatrix is not implemented for xgboost")
+  # pred_dmat <- DataStorageObject$xgb.DMatrix[subset_idx, ]
 
-  } else {
+  pred_dmat <- ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE)
 
-    if (ParentObject$useDMatrix) {
+  # newXmat <- as.matrix(DataStorageObject$dat.sVar[subset_idx, m.fit$params$predvars, with = FALSE])
+  # if (is.integer(newXmat)) newXmat[,1] <- as.numeric(newXmat[,1])
+  # pred_dmat <- xgboost::xgb.DMatrix(newXmat)
 
-      stop("prediction with pre-saved DMatrix is not implemented for xgboost")
-      # pred_dmat <- DataStorageObject$xgb.DMatrix[subset_idx, ]
-
-    } else {
-
-      newXmat <- as.matrix(DataStorageObject$dat.sVar[subset_idx, m.fit$params$predvars, with = FALSE])
-      if (is.integer(newXmat)) newXmat[,1] <- as.numeric(newXmat[,1])
-      pred_dmat <- xgboost::xgb.DMatrix(newXmat)
-
-      ## fails if is.integer(mat)
-      # pred_dmat <- xgboost::xgb.DMatrix(as.matrix(newXmat))
-      # Yvals <- DataStorageObject$get.outvar(subset_idx, self$outvar) # Always a vector (or m.fit$params$outvar)
-      # pred_dmat <- xgb.DMatrix(as.matrix(newXmat), label = Yvals)
-    }
-    return(pred_dmat)
-  }
+  ## fails if is.integer(mat)
+  # pred_dmat <- xgboost::xgb.DMatrix(as.matrix(newXmat))
+  # Yvals <- DataStorageObject$get.outvar(subset_idx, self$outvar) # Always a vector (or m.fit$params$outvar)
+  # pred_dmat <- xgb.DMatrix(as.matrix(newXmat), label = Yvals)
+  return(pred_dmat)
 }
 
 predictP1.XGBoostgrid <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
@@ -517,45 +509,47 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       return(top_params)
     },
 
-    setdata = function(data, subset_idx, ...) {
+    setdata = function(data, subset_idx, getoutvar = TRUE, ...) {
       outvar <- self$outvar
       predvars <- self$predvars
       assert_that(is.DataStorageClass(data))
 
-      if (self$useDMatrix) {
+      if (self$useDMatrix) stop("fitting with pre-saved DMatrix is not implemented for xgboost")
 
-        stop("fitting with pre-saved DMatrix is not implemented for xgboost")
+      if (missing(subset_idx)) subset_idx <- (1:data$nobs)
 
-      } else {
-        if (missing(subset_idx)) subset_idx <- (1:data$nobs)
-        load_subset_t <- system.time({
-          IDs <- data$get.outvar(subset_idx, data$nodes$IDnode)
-          Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
+      ## gives an error when all columns happen to be integer type:
+      # fit_dmat <- xgboost::xgb.DMatrix(as.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE]), label = Yvals)
+      ## still gives the same error:
+      # fit_dmat <- xgboost::xgb.DMatrix(data.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE]), label = Yvals)
+      # Another option is to stop at data.matrix and pass it directly to xgboost, passing Y's as separate arg
 
-          ## gives an error when all columns happen to be integer type:
-          # fit_dmat <- xgboost::xgb.DMatrix(as.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE]), label = Yvals)
-          ## still gives the same error:
-          # fit_dmat <- xgboost::xgb.DMatrix(data.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE]), label = Yvals)
-          # Another option is to stop at data.matrix and pass it directly to xgboost, passing Y's as separate arg
+      Xmat <- data$dat.sVar[subset_idx, predvars, with = FALSE]
+      if (ncol(Xmat) == 0)
+        stop("fitting intercept only model (with no covariates) is not supported with xgboost, use speedglm instead")
 
-          Xmat <- as.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE])
-          if (is.integer(Xmat)) Xmat[,1] <- as.numeric(Xmat[,1])
-          if (ncol(Xmat) == 0)
-            stop("fitting intercept only model (with no covariates) is not supported with xgboost, use speedglm instead")
-
-          fit_dmat <- xgboost::xgb.DMatrix(Xmat, label = Yvals)
-          # print("loading xgb.DMatrix")
-          # print("finished loading xgb.DMatrix")
-
-          # attr(fit_dmat, 'ID') <- IDs
-          # cat("writing the libsvm design matrix to file: ", file.path(getwd(), "xgb.DMatrix.dtrain"), "\n")
-          # res <- xgboost::xgb.DMatrix.save(fit_dmat, file.path(getwd(), "xgb.DMatrix.dtrain"))
-          # fit_dmat <- xgboost::xgb.DMatrix(file.path(getwd(), "xgb.DMatrix.dtrain") %+% '#dtrain.cache')
-        })
-        # if (gvars$verbose) {
-        #   print("time to create xgb.DMatrix: "); print(load_subset_t)
-        # }
+      if (!is.null(self$model_contrl[["interactions"]])) {
+        print("adding interactions to Xmat in xgboost")
+        add_interactions_toDT(Xmat, self$model_contrl[["interactions"]])
+        print("finished adding interactions to Xmat in xgboost")
+        print(Xmat)
       }
+
+      Xmat <- as.matrix(Xmat)
+      if (is.integer(Xmat)) Xmat[,1] <- as.numeric(Xmat[,1])
+
+      if (getoutvar) {
+        Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
+        fit_dmat <- xgboost::xgb.DMatrix(Xmat, label = Yvals)
+      } else {
+        fit_dmat <- xgboost::xgb.DMatrix(Xmat)
+      }
+
+      # IDs <- data$get.outvar(subset_idx, data$nodes$IDnode)
+      # attr(fit_dmat, 'ID') <- IDs
+      # cat("writing the libsvm design matrix to file: ", file.path(getwd(), "xgb.DMatrix.dtrain"), "\n")
+      # res <- xgboost::xgb.DMatrix.save(fit_dmat, file.path(getwd(), "xgb.DMatrix.dtrain"))
+      # fit_dmat <- xgboost::xgb.DMatrix(file.path(getwd(), "xgb.DMatrix.dtrain") %+% '#dtrain.cache')
 
       return(fit_dmat)
     },

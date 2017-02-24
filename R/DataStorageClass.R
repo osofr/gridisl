@@ -1,6 +1,37 @@
-# -----------------------------------------------------------------------------
-# Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
-# -----------------------------------------------------------------------------
+
+## -----------------------------------------------------------------------------
+## add interactions (by reference) to input design matrix (data.table) that is about to be used for fitting or predictions
+## (this will not modify the observed data stored in DataStorageClass in any way)
+## The function purposefully returns nothing (NULL), since the input data.table is being modified by REFERENCE.
+## -----------------------------------------------------------------------------
+add_interactions_toDT <- function(XmatDT, interactions) {
+  prod.matrix <- function(x) {
+    y <- x[,1]
+    for(i in 2:dim(x)[2])
+      y <- y*x[,i]
+    return(y)
+  }
+
+  prod.DT <- function(x) {
+    y <- x[[1]]
+    for(i in 2:ncol(x))
+      y <- y*x[[i]]
+    return(y)
+  }
+
+  for (i in seq_along(interactions)) {
+    interact <- interactions[[i]]
+    name <- names(interactions)[i]
+    if (is.null(name)) name <- paste0(interact, collapse = "_")
+    if (all(interact %in% names(XmatDT)))
+      XmatDT[, (name) := prod.DT(.SD), .SD = interact]
+  }
+  return(invisible(NULL))
+}
+
+## -----------------------------------------------------------------------------
+## Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
+## -----------------------------------------------------------------------------
 fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DTfwrite = TRUE) {
   # tmpf <- tempfile(fileext = ".csv")
   temp.dir <- options()[["gridisl.temp.dir"]]
@@ -44,9 +75,9 @@ fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DT
   return(invisible(H2O.dat.sVar))
 }
 
-#-----------------------------------------------------------------------------
-# DataStorageClass CLASS:
-#-----------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
+##  DataStorageClass CLASS:
+## -----------------------------------------------------------------------------
 #' @importFrom assertthat assert_that is.count is.flag
 DataStorageClass <- R6Class(classname = "DataStorageClass",
   portable = TRUE,

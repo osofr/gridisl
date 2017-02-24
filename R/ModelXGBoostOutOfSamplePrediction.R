@@ -32,7 +32,7 @@ xgb_predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, s
     # models_list[[1]][["models"]]
     # fold_model <- models_list[[1]][["models"]][[1]]
 
-    valid_dmat <- getPredictXGBDMat (m.fit, ParentObject, validation_data, subset_idx)
+    valid_dmat <- getPredictXGBDMat(m.fit, ParentObject, validation_data, subset_idx)
 
     # outvar <- m.fit$params$outvar
     # predvars <- m.fit$params$predvars
