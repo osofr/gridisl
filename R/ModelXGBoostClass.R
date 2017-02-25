@@ -319,7 +319,6 @@ predictP1.XGBoostmodel <- function(m.fit, ParentObject, DataStorageObject, subse
       if (!is.null(models_list[[idx]][["best_ntreelimit"]]) && !(models_list[[idx]][["params"]][["booster"]] %in% "gblinear")) {
         ntreelimit <- models_list[[idx]][["best_ntreelimit"]]
       }
-      browser()
       ## will generally return a vector, needs to be put into a corresponding column of a data.table
       pAoutDT[[names(models_list)[idx]]] <- predict(models_list[[idx]], newdata = pred_dmat, ntreelimit = ntreelimit)
     }
