@@ -238,7 +238,7 @@ glmModelClass <- R6Class(classname = "glmModelClass",
         colnames(Xmat)[1] <- "Intercept"
 
         if (!is.null(self$model_contrl[["interactions"]])) {
-          if (gvars$verbose) {
+          if (gvars$verbose == 2) {
             print("adding interactions in GLM:")
             str(self$model_contrl[["interactions"]])
           }

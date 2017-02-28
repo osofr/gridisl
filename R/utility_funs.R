@@ -148,7 +148,8 @@ add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed =
 importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("gridisl.verbose")) {
   gvars$verbose <- verbose
 
-  if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
+  ## define time-varing covars (L) as everything else in data besides these vars
+  if (missing(covars)) {
     covars <- setdiff(colnames(data), c(ID, OUTCOME))
   }
 

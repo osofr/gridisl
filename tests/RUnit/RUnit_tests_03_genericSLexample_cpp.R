@@ -24,8 +24,9 @@ test.genericSL.subset <- function() {
                                                        t_name = "agedays",
                                                        x = c("agedays", covars),
                                                        y = "haz",
-                                                       useH2Oframe = TRUE,
-                                                       dest_frame = "all_train_H2Oframe")
+                                                       # useH2Oframe = TRUE,
+                                                       # dest_frame = "all_train_H2Oframe"
+                                                       )
 
   ## ----------------------------------------------------------------
   ## Define learners (glm, grid glm and grid gbm)

@@ -350,11 +350,11 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
 
       ## 1. Evaluate the empirical loss at each person-time prediction (apply loss function to each row):
-      resid_predsDT <- as.data.table(predsDT)[, lapply(.SD, loss_fun_MSE, test_values)][, ("subjID") := IDs]
-      NA_predictions <- resid_predsDT[, lapply(.SD, function(x) any(is.na(x)))]
-      nNA_predictions <- resid_predsDT[, lapply(.SD, function(x) sum(is.na(x)))]
-      # system.time(resid_predsDT2 <- as.data.table(private$probA1[, ] - test_values)[, ("subjID") := IDs])
-      setkeyv(resid_predsDT, cols = "subjID")
+      sqresid_preds <- as.data.table(predsDT)[, lapply(.SD, loss_fun_MSE, test_values)][, ("subjID") := IDs]
+      NA_predictions <- sqresid_preds[, lapply(.SD, function(x) any(is.na(x)))]
+      nNA_predictions <- sqresid_preds[, lapply(.SD, function(x) sum(is.na(x)))]
+      # system.time(sqresid_preds2 <- as.data.table(private$probA1[, ] - test_values)[, ("subjID") := IDs])
+      setkeyv(sqresid_preds, cols = "subjID")
 
 
       ## 2. Evaluate the average loss for each person (average loss by rows within each subject)
@@ -364,11 +364,10 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       # fold_idx2 <- self$ModelFitObject$model.fit$modelfits_all[[2]]$folds
       # fold_idx3 <- self$ModelFitObject$model.fit$modelfits_all[[3]]$folds
       # fold_idx4 <- self$ModelFitObject$model.fit$modelfits_all[[4]]$folds
-      # for (fold_i in seq_along(fold_idx)) resid_predsDT[fold_idx[[fold_i]], ("fold") := fold_i]
-
+      # for (fold_i in seq_along(fold_idx)) sqresid_preds[fold_idx[[fold_i]], ("fold") := fold_i]
 
       # 3A. Evaluate the mean, var, sd loss averaging at the subject level first, then averaging across subjects
-      # mean_bysubj <- resid_predsDT[, lapply(.SD, mean, na.rm = TRUE), by = subjID]
+      # mean_bysubj <- sqresid_preds[, lapply(.SD, mean, na.rm = TRUE), by = subjID]
       # mean_bysubj[, subjID := NULL]
       # n <- nrow(mean_bysubj)
       # MSE_mean <- as.list(mean_bysubj[, lapply(.SD, mean, na.rm = TRUE)])
@@ -378,13 +377,12 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
 
 
       # 3B. Evaluate the mean, var, SD loss averaging across all rows of the data
-      resid_predsDT[, subjID := NULL]
-      n <- nrow(resid_predsDT)
-      MSE_mean <- as.list(resid_predsDT[, lapply(.SD, mean, na.rm = TRUE)])
+      sqresid_preds[, subjID := NULL]
+      n <- nrow(sqresid_preds)
+      MSE_mean <- as.list(sqresid_preds[, lapply(.SD, mean, na.rm = TRUE)])
       RMSE_mean <- lapply(MSE_mean, sqrt)
-      MSE_var <- as.list(resid_predsDT[, lapply(.SD, var, na.rm = TRUE)])
-      MSE_sd <- as.list(resid_predsDT[, lapply(.SD, sd, na.rm = TRUE)] * (1 / sqrt(n)))
-
+      MSE_var <- as.list(sqresid_preds[, lapply(.SD, var, na.rm = TRUE)])
+      MSE_sd <- as.list(sqresid_preds[, lapply(.SD, sd, na.rm = TRUE)] * (1 / sqrt(n)))
 
       if (any(as.logical(NA_predictions)))
           warning("Some of the test set predictions of the following model fits were missing (NA) and hence were excluded from MSE evaluation.
@@ -395,6 +393,22 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
                    )
 
       return(list(MSE_mean = MSE_mean, RMSE_mean = RMSE_mean, MSE_var = MSE_var, MSE_sd = MSE_sd))
+    },
+
+    reassignMSEs = function(sqresid_preds) {
+      # cat("re-assigning MSEs to new values in \n"); print(sqresid_preds[])
+      model_names <- names(self$getmodel_ids)
+      n <- nrow(sqresid_preds)
+      MSE_mean <- as.list(sqresid_preds[, lapply(.SD, mean, na.rm = TRUE)])
+      RMSE_mean <- lapply(MSE_mean, sqrt)
+      MSE_var <- as.list(sqresid_preds[, lapply(.SD, var, na.rm = TRUE)])
+      MSE_sd <- as.list(sqresid_preds[, lapply(.SD, sd, na.rm = TRUE)] * (1 / sqrt(n)))
+
+      private$MSE <- list(MSE_mean = MSE_mean[model_names],
+                          RMSE_mean = RMSE_mean[model_names],
+                          MSE_var = MSE_var[model_names],
+                          MSE_sd = MSE_sd[model_names])
+      return(invisible(NULL))
     },
 
     ## ------------------------------------------------------------------------------
@@ -465,7 +479,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       if (is.null(top_model_ids)) top_model_ids <- rep.int(NA, length(top_MSE_CV))
 
       ## switch to data.table::data.table:
-      datMSE <- data.table::data.table(model = names(self$getmodel_ids[top_model_pos]),
+      datMSE <- data.table::data.table(
+                           model = names(self$getmodel_ids[top_model_pos]),
                            algorithm = unlist(self$getmodel_algorithms[top_model_pos]),
                            MSE = unlist(self$getMSE[top_model_pos]),
                            RMSE = unlist(self$getRMSE[top_model_pos]),

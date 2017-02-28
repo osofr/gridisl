@@ -99,7 +99,8 @@ fit_model <- function(ID,
          "To perform V fold cross-validation use the corresponding arguments 'nfolds' or 'fold_column' of this function.")
 
   train_data <- validate_convert_input_data(train_data, ID = ID, t_name = t_name, x = x, y = y, useH2Oframe = useH2Oframe, dest_frame = "all_train_H2Oframe")
-  CheckVarNameExists(train_data$dat.sVar, y)
+
+  # CheckVarNameExists(train_data$dat.sVar, y)
 
   nodes <- train_data$nodes ## Extract nodes list
 
@@ -111,7 +112,9 @@ fit_model <- function(ID,
   ## Define R6 object with validation data:
   if (!missing(valid_data)) {
     valid_data <- validate_convert_input_data(valid_data, ID = ID, t_name = t_name, x = x, y = y, useH2Oframe = useH2Oframe, dest_frame = "all_valid_H2Oframe")
-    CheckVarNameExists(valid_data$dat.sVar, y)
+
+    # CheckVarNameExists(valid_data$dat.sVar, y)
+
   } else {
     valid_data <- NULL
   }
@@ -128,12 +131,14 @@ fit_model <- function(ID,
     model <- models[[learner_idx]]
     estimator <- model[["estimator"]]
     model[["estimator"]] <- NULL
+
     ## Define R6 regression class (specify subset_exprs to select only specific obs during fitting, e.g., only non-holdouts)
     regobj <- RegressionClass$new(Model_idx = learner_idx, outvar = y, predvars = x, runCV = runCV,
                                   subset_exprs = subset_exprs,
                                   fold_column = fold_column,
                                   estimator = estimator,
                                   model_contrl = model)
+
     ## Define a modeling object, perform fitting (real data is being passed for the first time here):
     modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)
     modelfit <- modelfit$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx)
@@ -151,8 +156,8 @@ fit_model <- function(ID,
     modelfit_stack$score_models(validation_data = valid_data, subset_exprs = subset_idx)
   } else if (runCV) {
     ## If CV was used and no validation data provided,
-    ## then score the models based on pre-saved out-of-sample predictions
-    ## (CV model predictions from validation folds)
+    ## then score the models based on pre-saved out-of-sample predictions.
+    ## CV model predictions from validation folds.
     modelfit_stack$score_models(subset_exprs = subset_idx)
   }
 
@@ -235,6 +240,10 @@ predict_generic <- function(modelfit,
   return(preds)
 }
 
+
+#' @export
+predict_SL <- function(modelfit, newdata, ...) { UseMethod("predict_SL") }
+
 # ---------------------------------------------------------------------------------------
 #' Predict from SuperLearner fit
 #'
@@ -256,7 +265,7 @@ predict_generic <- function(modelfit,
 #' @return A data.table of subject level predictions (subject are rows, columns are different models)
 #' or a data.table with subject level covariates added along with model-based predictions.
 #' @export
-predict_SL <- function(modelfit,
+predict_SL.PredictionStack <- function(modelfit,
                        newdata,
                        add_subject_data = FALSE,
                        subset_idx = NULL,
@@ -290,6 +299,71 @@ predict_SL <- function(modelfit,
 
   return(preds)
 }
+
+
+#' @export
+predict_SL.splitCVfits <- function(modelfit,
+                       newdata,
+                       add_subject_data = FALSE,
+                       subset_idx = NULL,
+                       holdout = FALSE,
+                       verbose = getOption("gridisl.verbose")) {
+
+  predict_new <- function(modelfit, newdata) {
+    predict_SL(modelfit, newdata = newdata, add_subject_data = add_subject_data, subset_idx = subset_idx, verbose = verbose)
+  }
+
+  # browser()
+
+  if (missing(newdata) && holdout) {
+    ## For holdout predictions with holdoutSL the default is to use the previous validation data
+   SL_preds <- modelfit %>%
+      dplyr::mutate(idx = purrr::map(test, ~ gridisl:::as.integer.ResampleDataClass(.x))) %>%
+      dplyr::mutate(preds = purrr::map2(fit, test, ~ predict_new(.x, newdata = .y))) %>%
+      tidyr::unnest(idx, preds) %>%
+      dplyr::select(-.id) %>%
+      as.data.table
+
+    setkeyv(SL_preds, cols = "idx")
+    # print("SL holdout preds"); print(SL_preds)
+    SL_preds[, ("idx") := NULL]
+
+    # SL_preds <- modelfit %>%
+    #   unnest(purrr::map(fit, ~ predict_SL(.x, holdout = TRUE))) %>%
+    #   dplyr::select(-.id)
+    # print("holdout SL_preds"); print(SL_preds)
+
+  } else if (missing(newdata) && !holdout) {
+    ## Use the training data:
+    SL_preds <- modelfit %>%
+      dplyr::mutate(idx = purrr::map(train, ~ gridisl:::as.integer.ResampleDataClass(.x))) %>%
+      dplyr::mutate(preds = purrr::map2(fit, train, ~ predict_new(.x, newdata = .y))) %>%
+      tidyr::unnest(idx, preds) %>%
+      dplyr::select(-.id) %>%
+      as.data.table
+
+    setkeyv(SL_preds, cols = "idx")
+    # print("SL train preds"); print(SL_preds)
+    SL_preds <- SL_preds[, list("preds" = mean(preds)), by = idx][, ("idx") := NULL]
+
+  } else {
+    ## SL predictions for new data. Averages the predictions across all V models.
+    SL_preds <- modelfit %>%
+      dplyr::mutate(preds = purrr::map(fit, ~ predict_new(.x, newdata = newdata))) %>%
+      dplyr::mutate(idx = purrr::map(preds, ~ seq.int(nrow(.x)))) %>%
+      tidyr::unnest(idx, preds) %>%
+      as.data.table
+
+    setkeyv(SL_preds, cols = "idx")
+    SL_preds <- SL_preds[, list("preds" = mean(preds)), by = idx][, ("idx") := NULL]
+
+    # print("SL train preds for new data"); print(SL_preds[])
+
+  }
+
+  return(SL_preds)
+}
+
 
 # ---------------------------------------------------------------------------------------
 # Predict for new dataset for models trained on non-holdouts only

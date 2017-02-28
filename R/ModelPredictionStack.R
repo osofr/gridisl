@@ -80,10 +80,12 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     predict = function(best_only, ...) {
       ## obtain prediction from the best refitted model only
       if (best_only) {
-
         best_Model_idx <- self$best_Model_idx
         best_pred_model <- self$PredictionModels[[best_Model_idx]]
+
         # newdata, subset_exprs, predict_model_names = NULL, , convertResToDT,
+        if (gvars$verbose) print("obtaining predictions for the best model..."); print(best_pred_model)
+
         preds <- best_pred_model$predict(..., best_refit_only = TRUE)
         return(preds)
 
@@ -184,6 +186,11 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
       # best_models <- unlist(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$get_best_models(K = K)))
       # best_models <- best_models[names(self$get_best_MSEs(K))]
       return(best_models)
+    },
+
+    reassignMSEs = function(sqresid_preds) {
+      lapply(self$PredictionModels, function(PredictionModel) PredictionModel$reassignMSEs(sqresid_preds))
+      return(invisible(NULL))
     },
 
     # ------------------------------------------------------------------------------

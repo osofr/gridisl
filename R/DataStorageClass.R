@@ -76,6 +76,81 @@ fast.load.to.H2O = function(dat.sVar, destination_frame = "H2O.dat.sVar", use_DT
   return(invisible(H2O.dat.sVar))
 }
 
+ResampleDataClass <- R6Class(classname = "ResampleDataClass",
+  portable = TRUE,
+  class = TRUE,
+  inherit = DataStorageClass,
+  public = list(
+    data = NULL,
+    fold_idx = NULL, ## original fold assignments (rows)
+    idx = NULL,      ## the actual rows used, this can be a subset of self$fold_idx if "subset_idx" is provided
+    # subset_idx = NULL,
+
+    initialize = function(data, idx, subset_idx = NULL, ...) {
+      self$data <- data
+      self$fold_idx <- idx
+      self$define_subset_idx(subset_idx)
+      # self$idx <- idx
+      # self$subset_idx <- subset_idx
+      invisible(self)
+    },
+
+    define_subset_idx = function(subset_idx = NULL) {
+      self$idx <- self$fold_idx
+      if (!is.null(subset_idx)) self$idx <- intersect(self$idx, subset_idx)
+      invisible(self$idx)
+    },
+
+    evalsubst = function(subset_vars, subset_exprs = NULL) {
+      # browser()
+      x <- intersect(self$data$evalsubst(subset_vars, subset_exprs), self$idx)
+      # if (!is.null(self$subset_idx)) x <- intersect(x, self$subset_idx)
+    },
+
+    get.outvar = function(rowsubset = TRUE, var) {
+      if (!is.logical(rowsubset)) {
+        rowsubset <- intersect(rowsubset, self$idx)
+      } else {
+        rowsubset <- self$idx
+      }
+      # if (!is.null(self$subset_idx)) rowsubset <- intersect(rowsubset, self$subset_idx)
+      # browser()
+      self$data$get.outvar(rowsubset, var)
+    },
+
+    get.dat.sVar = function(rowsubset = TRUE, covars) {
+      if (!is.logical(rowsubset)) {
+        rowsubset <- intersect(rowsubset, self$idx)
+      } else {
+        rowsubset <- self$idx
+      }
+      # if (!is.null(self$subset_idx)) rowsubset <- intersect(rowsubset, self$subset_idx)
+      # browser()
+      self$data$get.dat.sVar(rowsubset, covars)
+    }
+  ),
+  active = list(
+    dat.sVar = function(dat.sVar) {
+      if (missing(dat.sVar)) {
+        rowsubset <- self$idx
+        # if (!is.null(self$subset_idx)) rowsubset <- intersect(rowsubset, self$subset_idx)
+        return(self$data$dat.sVar[rowsubset, ])
+      } else {
+        assert_that(is.matrix(dat.sVar) | is.data.table(dat.sVar))
+        self$data$dat.sVar <- dat.sVar
+      }
+    },
+
+    nodes = function() {
+      self$data$nodes
+    },
+
+    as.integer = function() {
+      self$idx
+    }
+  )
+)
+
 ## -----------------------------------------------------------------------------
 ##  DataStorageClass CLASS:
 ## -----------------------------------------------------------------------------
@@ -143,10 +218,10 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       if (!missing(subset_vars)) {
         assert_that(is.character(subset_vars))
         for (subsetvar in subset_vars) {
-          # (*) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
+          ## (*) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
           sVar.vec <- self$get.outvar(var = subsetvar)
           assert_that(!is.null(sVar.vec))
-          # (*) reconstruct correct expression that tests for missing values
+          ## (*) reconstruct correct expression that tests for missing values
           res <- res & (!gvars$misfun(sVar.vec))
         }
       }

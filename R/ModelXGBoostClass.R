@@ -518,7 +518,8 @@ XGBoostClass <- R6Class(classname = "XGBoost",
 
       if (self$useDMatrix) stop("fitting with pre-saved DMatrix is not implemented for xgboost")
 
-      if (missing(subset_idx)) subset_idx <- (1:data$nobs)
+      # if (missing(subset_idx)) subset_idx <- (1:data$nobs)
+      if (missing(subset_idx)) subset_idx <- TRUE
 
       ## gives an error when all columns happen to be integer type:
       # fit_dmat <- xgboost::xgb.DMatrix(as.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE]), label = Yvals)
@@ -526,12 +527,16 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       # fit_dmat <- xgboost::xgb.DMatrix(data.matrix(data$dat.sVar[subset_idx, predvars, with = FALSE]), label = Yvals)
       # Another option is to stop at data.matrix and pass it directly to xgboost, passing Y's as separate arg
 
-      Xmat <- data$dat.sVar[subset_idx, predvars, with = FALSE]
+      # browser()
+
+      Xmat <- data$get.dat.sVar(subset_idx, covars = predvars)
+      # Xmat <- data$dat.sVar[subset_idx, predvars, with = FALSE]
+
       if (ncol(Xmat) == 0)
         stop("fitting intercept only model (with no covariates) is not supported with xgboost, use speedglm instead")
 
       if (!is.null(self$model_contrl[["interactions"]])) {
-        if (gvars$verbose) {
+        if (gvars$verbose == 2) {
           print("adding interactions in xgboost:")
           str(self$model_contrl[["interactions"]])
         }
@@ -547,9 +552,16 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       Xmat <- as.matrix(Xmat)
       if (is.integer(Xmat)) Xmat[,1] <- as.numeric(Xmat[,1])
 
+      # browser()
+
       if (getoutvar) {
-        Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
-        fit_dmat <- xgboost::xgb.DMatrix(Xmat, label = Yvals)
+        # Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
+        Yvals <- data$get.outvar(subset_idx, var = outvar) # Always a vector
+        fit_dmat <- try(xgboost::xgb.DMatrix(Xmat, label = Yvals))
+        if (inherits(fit_dmat, "try-error")) {
+          browser()
+        }
+
       } else {
         fit_dmat <- xgboost::xgb.DMatrix(Xmat)
       }

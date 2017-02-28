@@ -314,9 +314,11 @@ If the algorithm requested was different from 'glm', the next step will attempt 
         load_var_names <- c(outvar, predvars)
         if (!is.null(data$fold_column)) load_var_names <- c(load_var_names, data$fold_column)
 
-        if (missing(subset_idx)) subset_idx <- (1:data$nobs)
-        load_subset_t <- system.time(subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[subset_idx, load_var_names, with = FALSE], destination_frame = destination_frame))
-        # if (gvars$verbose) { print("time to subset and load data into H2OFRAME: "); print(load_subset_t) }
+        # if (missing(subset_idx)) subset_idx <- (1:data$nobs)
+        if (missing(subset_idx)) subset_idx <- TRUE
+
+        subsetH2Oframe <- fast.load.to.H2O(data$get.dat.sVar(subset_idx, covars = load_var_names), destination_frame = destination_frame)
+        # subsetH2Oframe <- fast.load.to.H2O(data$dat.sVar[subset_idx, load_var_names, with = FALSE], destination_frame = destination_frame)
       }
 
       self$outfactors <- as.vector(h2o::h2o.unique(subsetH2Oframe[, outvar]))

@@ -136,7 +136,8 @@ fit.ModelStack <- function(models,
   gvars$method <- method
   gvars$verbose <- verbose
 
-  if (!is.ModelStack(models)) stop("argument models must be of class 'ModelStack'")
+  # if (!is.ModelStack(models)) stop("argument models must be of class 'ModelStack'")
+
   if (!(method %in% c("none", "cv", "holdout")))
     stop("argument method must be one of: 'none', 'cv', 'holdout'")
   if (!data.table::is.data.table(data) && !is.DataStorageClass(data))
