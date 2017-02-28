@@ -62,8 +62,8 @@ fit.speedglm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
     }, GetWarningsToSuppress())
   }
 
-  if (inherits(model.fit, "try-error") && gvars$verbose) { # if failed, fall back on stats::glm
-    message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", model.fit)
+  if (inherits(model.fit, "try-error")) { # if failed, fall back on stats::glm
+    if (gvars$verbose) message("speedglm::speedglm.wfit failed, falling back on stats:glm.fit; ", model.fit)
     return(fit.glm(fit.class, params, Xmat, Yvals, model_contrl, ...))
   }
 
