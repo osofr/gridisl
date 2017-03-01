@@ -157,6 +157,8 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
         if (gvars$verbose) message("over-riding default predictors with new ones: " %+% paste0(new.x, collapse=","))
         assert_that(is.character(new.x))
         reg$predvars <- new.x
+        self$model_contrl[["x"]] <- NULL
+        reg$model_contrl[["x"]] <- NULL
       }
 
       self$outvar <- reg$outvar
@@ -242,7 +244,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       self$BestModelFitObject <- self$define_model_fit_object(top_model_params$fit.package, top_model_params$fit.algorithm, best_reg, useH2Oframe = self$useH2Oframe)
 
       self$n_obs_fit <- length(subset_idx)
-      if (gvars$verbose) {print("refitting the best model: "); self$show()}
+      if (gvars$verbose) { print("refitting the best model: "); self$show() }
 
       model.fit <- try(self$BestModelFitObject$fit(data, subset_idx = subset_idx, destination_frame = "alldata_H2Oframe"))
 
