@@ -98,6 +98,7 @@ fit_single_xgboost_grid <- function(grid.algorithm,
                                     validation_data  = NULL, ...) {
 
   if ("interactions" %in% names(model_contrl)) model_contrl[["interactions"]] <- NULL
+  if ("remove_const_cols" %in% names(model_contrl)) model_contrl[["remove_const_cols"]] <- NULL
 
   ## ********************************************************************************
   ## These defaults can be over-ridden in model_contrl
@@ -413,7 +414,13 @@ XGBoostClass <- R6Class(classname = "XGBoost",
     fit = function(data, subset_idx, validation_data = NULL, ...) {
       assert_that(is.DataStorageClass(data))
 
-      train_dmat <- self$setdata(data, subset_idx, ...)
+      if (!is.null(self$model_contrl[["remove_const_cols"]]) && self$model_contrl[["remove_const_cols"]]) {
+        remove_const_cols <- TRUE
+      } else {
+        remove_const_cols <- FALSE
+      }
+
+      train_dmat <- self$setdata(data, subset_idx = subset_idx, remove_const_cols = remove_const_cols, ...)
 
       if ( (length(self$predvars) == 0L) || (length(subset_idx) == 0L) ) {
       # if ((length(self$predvars) == 0L) || (length(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
@@ -510,11 +517,12 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       top_params[["nrounds"]] <- gridmodelDT[["nrounds"]]
       top_params <- c(top_params, gridmodelDT[["glob_params"]][[1]])
       top_params[["interactions"]] <- self$model_contrl[["interactions"]]
+      top_params[["remove_const_cols"]] <- self$model_contrl[["remove_const_cols"]]
 
       return(top_params)
     },
 
-    setdata = function(data, subset_idx, getoutvar = TRUE, ...) {
+    setdata = function(data, subset_idx, getoutvar = TRUE, remove_const_cols = FALSE, ...) {
       outvar <- self$outvar
       predvars <- self$predvars
       assert_that(is.DataStorageClass(data))
@@ -533,7 +541,6 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       # browser()
 
       Xmat <- data$get.dat.sVar(subset_idx, covars = predvars)
-      # Xmat <- data$dat.sVar[subset_idx, predvars, with = FALSE]
 
       if (ncol(Xmat) == 0)
         stop("fitting intercept only model (with no covariates) is not supported with xgboost, use speedglm instead")
@@ -548,19 +555,28 @@ XGBoostClass <- R6Class(classname = "XGBoost",
         ## and this: http://stackoverflow.com/questions/36434717/adding-column-to-nested-r-data-table-by-reference
         data.table::setDF(Xmat)
         data.table::setDT(Xmat)
-
         add_interactions_toDT(Xmat, self$model_contrl[["interactions"]])
       }
+
+      if (remove_const_cols) {
+        data.table::setDF(Xmat)
+        data.table::setDT(Xmat)
+        const_cols <- test_remove_const_cols(Xmat)
+        if (length(const_cols) > 0) {
+          if (gvars$verbose) print("removing constant column(s) in xgboost: " %+% paste0(const_cols, collapse=","))
+          self$predvars <- self$predvars[!(self$predvars %in% const_cols)]
+        }
+      }
+
+      # browser()
+      # self$predvars
+      # Xmat[["TI.tminus1"]]
 
       Xmat <- as.matrix(Xmat)
       if (is.integer(Xmat)) Xmat[,1] <- as.numeric(Xmat[,1])
 
-      # browser()
-      # data$dat.sVar[]
-      # unique(data$dat.sVar[, fold_ID])
-
       if (getoutvar) {
-        # Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
+
         Yvals <- data$get.outvar(subset_idx, var = outvar) # Always a vector
         fit_dmat <- try(xgboost::xgb.DMatrix(Xmat, label = Yvals))
 

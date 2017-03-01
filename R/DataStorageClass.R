@@ -30,6 +30,19 @@ add_interactions_toDT <- function(XmatDT, interactions) {
   return(invisible(NULL))
 }
 
+
+## -----------------------------------------------------------------------------
+## Remove const cols from data.table. Return the names of constant columns
+## -----------------------------------------------------------------------------
+test_remove_const_cols <- function(XmatDT) {
+  constFlag <- as.list(XmatDT[, lapply(.SD, function(x) length(unique(x)) == 1L)])
+  const_cols <- names(constFlag)[unlist(constFlag)]
+  for (col in const_cols) {
+    XmatDT[, (col) := NULL]
+  }
+  return(const_cols)
+}
+
 ## -----------------------------------------------------------------------------
 ## Create an H2OFrame and save a pointer to it as a private field (using faster data.table::fwrite)
 ## -----------------------------------------------------------------------------
