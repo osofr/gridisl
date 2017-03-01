@@ -116,6 +116,7 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
     #                                                  verbose = verbose)
 
     if (!runCV) {
+      # browser()
       model_fit <- xgboost::xgb.train(params = params,
                                       data = data,
                                       nrounds = nrounds,
@@ -123,6 +124,7 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
                                       obj = obj,
                                       feval = feval,
                                       verbose = verbose,
+                                      # verbose = TRUE,
                                       # print_every_n,
                                       early_stopping_rounds = early_stopping_rounds,
                                       maximize = maximize,

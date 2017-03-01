@@ -213,3 +213,64 @@ fit.splitCVStack <- function(models,
   return(cv_fit)
 }
 
+
+
+#' @export
+predict_SL.splitCVfits <- function(modelfit,
+                       newdata,
+                       add_subject_data = FALSE,
+                       subset_idx = NULL,
+                       holdout = FALSE,
+                       verbose = getOption("gridisl.verbose")) {
+
+  predict_new <- function(modelfit, newdata) {
+    predict_SL(modelfit, newdata = newdata, add_subject_data = add_subject_data, subset_idx = subset_idx, verbose = verbose)
+  }
+
+  if (missing(newdata) && holdout) {
+    ## For holdout predictions with holdoutSL the default is to use the previous validation data
+   SL_preds <- modelfit %>%
+      dplyr::mutate(idx = purrr::map(test, ~ gridisl:::as.integer.ResampleDataClass(.x))) %>%
+      dplyr::mutate(preds = purrr::map2(fit, test, ~ predict_new(.x, newdata = .y))) %>%
+      tidyr::unnest(idx, preds) %>%
+      dplyr::select(-.id) %>%
+      as.data.table
+
+    setkeyv(SL_preds, cols = "idx")
+    # print("SL holdout preds"); print(SL_preds)
+    SL_preds[, ("idx") := NULL]
+
+    # SL_preds <- modelfit %>%
+    #   unnest(purrr::map(fit, ~ predict_SL(.x, holdout = TRUE))) %>%
+    #   dplyr::select(-.id)
+    # print("holdout SL_preds"); print(SL_preds)
+
+  } else if (missing(newdata) && !holdout) {
+    ## Use the training data:
+    SL_preds <- modelfit %>%
+      dplyr::mutate(idx = purrr::map(train, ~ gridisl:::as.integer.ResampleDataClass(.x))) %>%
+      dplyr::mutate(preds = purrr::map2(fit, train, ~ predict_new(.x, newdata = .y))) %>%
+      tidyr::unnest(idx, preds) %>%
+      dplyr::select(-.id) %>%
+      as.data.table
+
+    setkeyv(SL_preds, cols = "idx")
+    # print("SL train preds"); print(SL_preds)
+    SL_preds <- SL_preds[, list("preds" = mean(preds)), by = idx][, ("idx") := NULL]
+
+  } else {
+    ## SL predictions for new data. Averages the predictions across all V models.
+    SL_preds <- modelfit %>%
+      dplyr::mutate(preds = purrr::map(fit, ~ predict_new(.x, newdata = newdata))) %>%
+      dplyr::mutate(idx = purrr::map(preds, ~ seq.int(nrow(.x)))) %>%
+      tidyr::unnest(idx, preds) %>%
+      as.data.table
+
+    setkeyv(SL_preds, cols = "idx")
+    SL_preds <- SL_preds[, list("preds" = mean(preds)), by = idx][, ("idx") := NULL]
+
+  }
+
+  return(SL_preds)
+}
+

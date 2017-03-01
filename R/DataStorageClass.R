@@ -90,8 +90,6 @@ ResampleDataClass <- R6Class(classname = "ResampleDataClass",
       self$data <- data
       self$fold_idx <- idx
       self$define_subset_idx(subset_idx)
-      # self$idx <- idx
-      # self$subset_idx <- subset_idx
       invisible(self)
     },
 
@@ -102,9 +100,7 @@ ResampleDataClass <- R6Class(classname = "ResampleDataClass",
     },
 
     evalsubst = function(subset_vars, subset_exprs = NULL) {
-      # browser()
       x <- intersect(self$data$evalsubst(subset_vars, subset_exprs), self$idx)
-      # if (!is.null(self$subset_idx)) x <- intersect(x, self$subset_idx)
     },
 
     get.outvar = function(rowsubset = TRUE, var) {
@@ -113,8 +109,6 @@ ResampleDataClass <- R6Class(classname = "ResampleDataClass",
       } else {
         rowsubset <- self$idx
       }
-      # if (!is.null(self$subset_idx)) rowsubset <- intersect(rowsubset, self$subset_idx)
-      # browser()
       self$data$get.outvar(rowsubset, var)
     },
 
@@ -124,16 +118,14 @@ ResampleDataClass <- R6Class(classname = "ResampleDataClass",
       } else {
         rowsubset <- self$idx
       }
-      # if (!is.null(self$subset_idx)) rowsubset <- intersect(rowsubset, self$subset_idx)
-      # browser()
       self$data$get.dat.sVar(rowsubset, covars)
     }
   ),
+
   active = list(
     dat.sVar = function(dat.sVar) {
       if (missing(dat.sVar)) {
         rowsubset <- self$idx
-        # if (!is.null(self$subset_idx)) rowsubset <- intersect(rowsubset, self$subset_idx)
         return(self$data$dat.sVar[rowsubset, ])
       } else {
         assert_that(is.matrix(dat.sVar) | is.data.table(dat.sVar))

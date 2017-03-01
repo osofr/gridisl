@@ -107,9 +107,10 @@ fit_single_xgboost_grid <- function(grid.algorithm,
                    # nrounds = 1000,
                    # early_stopping_rounds = 10,
                    # metrics = list(evalMSEerror),
-                   # order_metric_name = "RMSE",
                    metrics = list("rmse"),
-                   order_metric_name = "rmse",
+                   # order_metric_name = "RMSE",
+                   # order_metric_name = "rmse",
+                   order_metric_name = NULL,
                    maximize = FALSE,
                    verbose = FALSE, # verbose = gvars$verbose,
                    seed = model_contrl[['seed']])
@@ -284,9 +285,11 @@ getPredictXGBDMat <- function(m.fit, ParentObject, DataStorageObject, subset_idx
 
   if (ParentObject$useDMatrix) stop("prediction with pre-saved DMatrix is not implemented for xgboost")
   # pred_dmat <- DataStorageObject$xgb.DMatrix[subset_idx, ]
+  # DataStorageObject$dat.sVar[subset_idx, ]
 
   pred_dmat <- ParentObject$setdata(DataStorageObject, subset_idx = subset_idx, getoutvar = FALSE)
 
+  # browser()
   # newXmat <- as.matrix(DataStorageObject$dat.sVar[subset_idx, m.fit$params$predvars, with = FALSE])
   # if (is.integer(newXmat)) newXmat[,1] <- as.numeric(newXmat[,1])
   # pred_dmat <- xgboost::xgb.DMatrix(newXmat)
@@ -321,6 +324,16 @@ predictP1.XGBoostmodel <- function(m.fit, ParentObject, DataStorageObject, subse
       }
       ## will generally return a vector, needs to be put into a corresponding column of a data.table
       pAoutDT[[names(models_list)[idx]]] <- predict(models_list[[idx]], newdata = pred_dmat, ntreelimit = ntreelimit)
+      # # 1-mean(pAoutDT[[1]])
+      # str(models_list[[idx]])
+      # preds2 <- predict(models_list[[idx]], newdata = pred_dmat, ntreelimit = ntreelimit)
+      # preds2 <- predict(models_list[[idx]], newdata = pred_dmat, ntreelimit = 0)
+      # preds2 <- predict(models_list[[idx]], newdata = pred_dmat, ntreelimit = 15)
+      # 1 - mean(preds2) # 0.9698491
+      # 1 - mean(preds2) # 0.9159224 ntreelimit = 10
+      # 1 - mean(pAoutDT[[1]]) # 0.9690474
+      # 1-mean(predict(models_list[[idx]], newdata = pred_dmat, ntreelimit = NULL))
+      # browser()
     }
     setDT(pAoutDT)
     # pAoutDT <- as.data.table(pAoutDT)
@@ -328,6 +341,147 @@ predictP1.XGBoostmodel <- function(m.fit, ParentObject, DataStorageObject, subse
   }
   return(pAoutDT)
 }
+
+
+# GLM MSE:
+# 0.01941948
+
+# sqrt((0.01705346 + 0.01345008 + 0.02245469 + 0.010317565 + 0.03218079)/5)
+
+# OVERALL XGB MSE:
+# 0.01933671
+
+# training and scoring for fold:  1
+#    nrounds alpha lambda nthread learning_rate max_depth colsample_bytree subsample       xgb_fit glob_params niter
+#      <num> <num>  <num>   <num>         <num>     <num>            <num>     <num>        <list>      <list> <num>
+# 1:      20   0.5      2       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 2:      20   0.0      2       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 3:      20   0.5      0       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 4:      20   0.0      0       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+#    ntreelimit params  iter train_rmse test_rmse
+#         <num> <list> <num>      <num>     <num>
+# 1:         NA <list>    20   0.139918  0.131442
+# 2:         NA <list>    20   0.139785  0.131827
+# 3:         NA <list>    20   0.139705  0.131882
+# 4:         NA <list>    20   0.139702  0.132477
+
+#           MSE      MSE.sd      RMSE              model Model_idx order
+#         <num>       <num>     <num>             <char>     <int> <int>
+# 1: 0.01705346 0.007850568 0.1305889            m.2.glm         2     1
+# 2: 0.01727702 0.007724664 0.1314421 m.1.xgb.gbm.grid.1         1     1
+# 3: 0.01737845 0.007760565 0.1318274 m.1.xgb.gbm.grid.2         1     2
+# 4: 0.01739277 0.007768585 0.1318817 m.1.xgb.gbm.grid.3         1     3
+# 5: 0.01748861 0.008460416 0.1322445            m.3.glm         3     1
+# 6: 0.01755016 0.007773418 0.1324770 m.1.xgb.gbm.grid.4         1     4
+
+
+# training and scoring for fold:  2
+#    nrounds alpha lambda nthread learning_rate max_depth colsample_bytree subsample       xgb_fit glob_params niter
+#      <num> <num>  <num>   <num>         <num>     <num>            <num>     <num>        <list>      <list> <num>
+# 1:      20   0.5      2       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 2:      20   0.5      0       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 3:      20   0.0      2       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 4:      20   0.0      0       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+#    ntreelimit params  iter train_rmse test_rmse
+#         <num> <list> <num>      <num>     <num>
+# 1:         NA <list>    20   0.143030  0.116695
+# 2:         NA <list>    20   0.142811  0.117463
+# 3:         NA <list>    20   0.142849  0.117472
+# 4:         NA <list>    20   0.142670  0.117620
+
+#           MSE      MSE.sd      RMSE              model Model_idx order
+#         <num>       <num>     <num>             <char>     <int> <int>
+# 1: 0.01345008 0.007039469 0.1159745            m.2.glm         2     1
+# 2: 0.01361141 0.007555488 0.1166679            m.3.glm         3     1
+# 3: 0.01361766 0.006962566 0.1166947 m.1.xgb.gbm.grid.1         1     1
+# 4: 0.01379744 0.006897335 0.1174625 m.1.xgb.gbm.grid.2         1     2
+# 5: 0.01379970 0.006909970 0.1174721 m.1.xgb.gbm.grid.3         1     3
+# 6: 0.01383439 0.006981146 0.1176197 m.1.xgb.gbm.grid.4         1     4
+
+
+
+# training and scoring for fold:  3
+#    nrounds alpha lambda nthread learning_rate max_depth colsample_bytree subsample       xgb_fit glob_params niter
+#      <num> <num>  <num>   <num>         <num>     <num>            <num>     <num>        <list>      <list> <num>
+# 1:      20   0.0      2       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 2:      20   0.5      0       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 3:      20   0.5      2       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 4:      20   0.0      0       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+#    ntreelimit params  iter train_rmse test_rmse
+#         <num> <list> <num>      <num>     <num>
+# 1:         NA <list>    20   0.134951  0.149997
+# 2:         NA <list>    20   0.134968  0.150164
+# 3:         NA <list>    20   0.135004  0.150420
+# 4:         NA <list>    20   0.134771  0.150567
+
+# [1] "Internally evaluated holdout / CV metrics: "
+#           MSE      MSE.sd      RMSE              model Model_idx order
+#         <num>       <num>     <num>             <char>     <int> <int>
+# 1: 0.02245469 0.008709345 0.1498489            m.2.glm         2     1
+# 2: 0.02249920 0.008558385 0.1499973 m.1.xgb.gbm.grid.1         1     1
+# 3: 0.02254934 0.008518500 0.1501644 m.1.xgb.gbm.grid.2         1     2
+# 4: 0.02262609 0.008649600 0.1504197 m.1.xgb.gbm.grid.3         1     3
+# 5: 0.02267051 0.008651476 0.1505673 m.1.xgb.gbm.grid.4         1     4
+# 6: 0.02362510 0.009397382 0.1537046            m.3.glm         3     1
+
+
+# training and scoring for fold:  4
+#    nrounds alpha lambda nthread learning_rate max_depth colsample_bytree subsample       xgb_fit glob_params niter
+#      <num> <num>  <num>   <num>         <num>     <num>            <num>     <num>        <list>      <list> <num>
+# 1:      20   0.5      0       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 2:      20   0.0      0       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 3:      20   0.5      2       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 4:      20   0.0      2       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+#    ntreelimit params  iter train_rmse test_rmse
+#         <num> <list> <num>      <num>     <num>
+# 1:         NA <list>    20   0.145003  0.102412
+# 2:         NA <list>    20   0.144937  0.102565
+# 3:         NA <list>    20   0.145162  0.103332
+# 4:         NA <list>    20   0.145131  0.103843
+
+# [1] "Internally evaluated holdout / CV metrics: "
+#            MSE      MSE.sd       RMSE              model Model_idx order
+#          <num>       <num>      <num>             <char>     <int> <int>
+# 1: 0.009825713 0.006532666 0.09912474            m.3.glm         3     1
+# 2: 0.010317565 0.006061711 0.10157541            m.2.glm         2     1
+# 3: 0.010488220 0.005953113 0.10241201 m.1.xgb.gbm.grid.1         1     1
+# 4: 0.010519590 0.005984131 0.10256505 m.1.xgb.gbm.grid.2         1     2
+# 5: 0.010677560 0.005935693 0.10333228 m.1.xgb.gbm.grid.3         1     3
+# 6: 0.010783304 0.005922302 0.10384269 m.1.xgb.gbm.grid.4         1     4
+
+
+# training and scoring for fold:  5
+#    nrounds alpha lambda nthread learning_rate max_depth colsample_bytree subsample       xgb_fit glob_params niter
+#      <num> <num>  <num>   <num>         <num>     <num>            <num>     <num>        <list>      <list> <num>
+# 1:      20   0.0      0       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 2:      20   0.5      2       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 3:      20   0.0      2       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+# 4:      20   0.5      0       1           0.2         5              0.8       0.8 <xgb.Booster>      <list>    20
+#    ntreelimit params  iter train_rmse test_rmse
+#         <num> <list> <num>      <num>     <num>
+# 1:         NA <list>    20   0.126058  0.176649
+# 2:         NA <list>    20   0.126378  0.176689
+# 3:         NA <list>    20   0.126238  0.177377
+# 4:         NA <list>    20   0.126177  0.177877
+
+#           MSE     MSE.sd      RMSE              model Model_idx order
+#         <num>      <num>     <num>             <char>     <int> <int>
+# 1: 0.03120494 0.01056364 0.1766492 m.1.xgb.gbm.grid.1         1     1
+# 2: 0.03121903 0.01046812 0.1766891 m.1.xgb.gbm.grid.2         1     2
+# 3: 0.03146276 0.01060858 0.1773774 m.1.xgb.gbm.grid.3         1     3
+# 4: 0.03164021 0.01068403 0.1778770 m.1.xgb.gbm.grid.4         1     4
+# 5: 0.03218079 0.01095935 0.1793900            m.2.glm         2     1
+# 6: 0.03352829 0.01157675 0.1831073            m.3.glm         3     1
+
+# #           MSE      MSE.sd      RMSE              model Model_idx order
+# #         <num>       <num>     <num>             <char>     <int> <int>
+# # 1: 0.01933671 0.003687355 0.1390565 m.1.xgb.gbm.grid.1         1     1
+# # 2: 0.01941129 0.003671469 0.1393244 m.1.xgb.gbm.grid.2         1     2
+# # 3: 0.01941948 0.003774463 0.1393538            m.2.glm         2     1
+# # 4: 0.01951037 0.003702009 0.1396795 m.1.xgb.gbm.grid.3         1     3
+# # 5: 0.01961401 0.003716043 0.1400500 m.1.xgb.gbm.grid.4         1     4
+# # 6: 0.01998090 0.004038404 0.1413538            m.3.glm         3     1
+
 
 ## ---------------------------------------------------------------------
 #' R6 class model fitting with xgboost R package
@@ -553,19 +707,18 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       if (is.integer(Xmat)) Xmat[,1] <- as.numeric(Xmat[,1])
 
       # browser()
+      # data$dat.sVar[]
+      # unique(data$dat.sVar[, fold_ID])
 
       if (getoutvar) {
         # Yvals <- data$get.outvar(subset_idx, outvar) # Always a vector
         Yvals <- data$get.outvar(subset_idx, var = outvar) # Always a vector
         fit_dmat <- try(xgboost::xgb.DMatrix(Xmat, label = Yvals))
-        if (inherits(fit_dmat, "try-error")) {
-          browser()
-        }
 
       } else {
         fit_dmat <- xgboost::xgb.DMatrix(Xmat)
       }
-
+      # browser()
       # IDs <- data$get.outvar(subset_idx, data$nodes$IDnode)
       # attr(fit_dmat, 'ID') <- IDs
       # cat("writing the libsvm design matrix to file: ", file.path(getwd(), "xgb.DMatrix.dtrain"), "\n")
