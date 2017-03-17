@@ -1,3 +1,66 @@
+
+NOtest.xgb_parallel_QLL <- function() {
+    library('foreach')
+    library('doParallel')
+    library('xgboost')
+
+    # logregobj <- function(preds, dtrain) {
+    #   labels <- getinfo(dtrain, "label")
+    #   preds <- 1 / (1 + exp(-preds))
+    #   grad <- preds - labels
+    #   hess <- preds * (1 - preds)
+    #   return(list(grad = grad, hess = hess))
+    # }
+
+    # evalerror <- function(preds, dtrain) {
+    #   labels <- getinfo(dtrain, "label")
+    #   # err <- as.numeric(sum(labels != (preds > 0))) / length(labels)
+    #   # err <- as.numeric(sum(labels - preds)^2) / length(labels)
+    #   err <- sqrt(mean((labels - preds)^2))
+    #   return(list(metric = "error", value = err))
+    # }
+
+
+    # run_test_xgb_Models <- function(seed){
+        data(agaricus.train, package='xgboost')
+        data(agaricus.test, package='xgboost')
+        # browser()
+        new_train_lab <- agaricus.train$label + 0.01
+        new_test_lab <- agaricus.test$label + 0.01
+        dtrain <- xgb.DMatrix(agaricus.train$data, label = new_train_lab)
+        dtest <- xgb.DMatrix(agaricus.test$data, label = new_test_lab)
+        watchlist <- list(eval = dtest, train = dtrain)
+        param <- list(max_depth = 5, eta = 0.02, nthread = 1, silent = 1,
+                      objective = "reg:logistic")
+        bst <- xgb.train(param, dtrain, nrounds = 500, watchlist)
+
+        # param <- list(max_depth = 5, eta = 0.02, nthread = 1, silent = 1,
+        #               objective=logregobj, eval_metric=evalerror)
+                      # , eval_metric = "mse"
+                      # objective = "reg:logistic"
+        # bst <- xgb.train(param, dtrain, nrounds = 500, watchlist)
+        preds_shiftYplus_0.01 <- predict(bst, dtrain)
+        # return(bst)
+    # }
+
+        dtrain <- xgb.DMatrix(agaricus.train$data, label = agaricus.train$label)
+        dtest <- xgb.DMatrix(agaricus.test$data, label = agaricus.test$label)
+        watchlist <- list(eval = dtest, train = dtrain)
+        param <- list(max_depth = 5, eta = 0.02, nthread = 1, silent = 1,
+                      objective = "reg:logistic")
+        bst <- xgb.train(param, dtrain, nrounds = 500, watchlist)
+        preds_binaryY <- predict(bst, dtrain)
+
+        cbind(preds_shiftYplus_0.01, preds_binaryY)
+
+    # registerDoParallel(cores = 4)
+    # cl <- makeCluster(20)
+    # registerDoParallel(cl)
+    # cl <- makeForkCluster(32)
+    # registerDoParallel(cl)
+
+}
+
 ## ---------------------------------------------
 ## THIS runs fine on AWS linux
 ## ---------------------------------------------

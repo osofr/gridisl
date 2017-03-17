@@ -1,3 +1,18 @@
+#' @export
+make_kfold_from_column <- function(data, id = ".id", fold_column = "fold") {
+  n <- nrow(data)
+  folds <- data[[fold_column]]
+  k <- length(unique(folds))
+
+  idx <- seq_len(n)
+  fold_idx <- split(idx, folds)
+
+  fold <- function(v, test) {
+      origami:::make_fold(v, setdiff(idx, test), test)
+  }
+  purrr::map2((1:k), fold_idx, fold)
+}
+
 ## ----------------------------------------------------------------
 ## TO DO TO FINISH external CV for using with stremr:
 ##
@@ -116,9 +131,6 @@ resample.DataStorageClass <- function(data, idx, subset_idx) {
 }
 
 crossv_kfold <- function(data, id = ".id", fold_column = "fold", subset_idx) {
-  # if (!is.numeric(k) || length(k) != 1) {
-  #   stop("`k` must be a single integer.", call. = FALSE)
-  # }
 
   n <- nrowS3(data)
   folds <- data[[fold_column]]

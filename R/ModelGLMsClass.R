@@ -9,6 +9,23 @@ predictP1 <- function(m.fit, ...) UseMethod("predictP1")
 
 # S3 method for glm binomial family fit, takes BinDat data object:
 fit.glm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
+  if ("family" %in% names(model_contrl)) {
+    family <- model_contrl[["family"]]
+    if (is.character(family)) {
+      family <- get(family, mode = "function", envir = parent.frame())
+      family <- family()
+    }
+    if (!class(family) %in% "family") stop("family arg must be of an object of class 'family'")
+  } else {
+    family <- stats::quasibinomial()
+  }
+  family_name <- family[["family"]]
+  if (family_name %in% c("quasibinomial", "binomial")) {
+    linkinv_fun <- logit_linkinv
+  } else {
+    linkinv_fun <- family[["linkinv"]]
+  }
+
   if (gvars$verbose == 2) print("...calling glm.fit...")
   if (nrow(Xmat) == 0L) {
     model.fit <- list()
@@ -19,7 +36,7 @@ fit.glm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
     SuppressGivenWarnings({
       model.fit <- stats::glm.fit(x = Xmat,
                                   y = Yvals,
-                                  family = stats::quasibinomial() ,
+                                  family = family,
                                   control = ctrl)
     }, GetWarningsToSuppress())
   }
@@ -35,14 +52,32 @@ fit.glm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
 
   # print(object.size(model.fit), units = "Kb")
 
-  return(create_fit_object(model.fit, model_alg = "glm", fitfunname = "glm", linkfun = "logit_linkinv",
+  return(create_fit_object(model.fit, model_alg = "glm", fitfunname = "glm",
+                           linkfun = "logit_linkinv",
+                           linkinv_fun = linkinv_fun,
                            params = params, coef = model.fit$coef, nobs = nrow(Xmat), model_contrl = model_contrl,
                            fitclass = "GLMmodel"))
 }
 
 # S3 method for speedglm binomial family fit, takes BinDat data object:
 fit.speedglm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
-  # print(head(Xmat))
+  if ("family" %in% names(model_contrl)) {
+    family <- model_contrl[["family"]]
+    if (is.character(family)) {
+      family <- get(family, mode = "function", envir = parent.frame())
+      family <- family()
+    }
+    if (!class(family) %in% "family") stop("family arg must be of an object of class 'family'")
+  } else {
+    family <- stats::quasibinomial()
+  }
+
+  family_name <- family[["family"]]
+  if (family_name %in% c("quasibinomial", "binomial")) {
+    linkinv_fun <- logit_linkinv
+  } else {
+    linkinv_fun <- family[["linkinv"]]
+  }
 
   if (gvars$verbose == 2) print("...calling speedglm.wfit...")
   if (nrow(Xmat) == 0L) {
@@ -56,7 +91,7 @@ fit.speedglm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
     model.fit <- try(speedglm::speedglm.wfit(X = Xmat,
                                              y = Yvals,
                                              method = 'Cholesky',
-                                             family = stats::quasibinomial(),
+                                             family = family,
                                              trace = FALSE),
                     silent = TRUE)
     }, GetWarningsToSuppress())
@@ -69,7 +104,9 @@ fit.speedglm <- function(fit.class, params, Xmat, Yvals, model_contrl, ...) {
 
   if (gvars$verbose == 2) { print("glm fit:"); print(model.fit$coef) }
 
-  return(create_fit_object(model.fit, model_alg = "glm", fitfunname = "speedglm", linkfun = "logit_linkinv",
+  return(create_fit_object(model.fit, model_alg = "glm", fitfunname = "speedglm",
+                           linkfun = "logit_linkinv",
+                           linkinv_fun = linkinv_fun,
                            params = params, coef = model.fit$coef, nobs = nrow(Xmat), model_contrl = model_contrl,
                            fitclass = "GLMmodel"))
 
@@ -91,11 +128,10 @@ predictP1.GLMmodel <- function(m.fit, ParentObject, DataStorageObject, subset_id
   if (length(subset_idx) > 0) {
     if (!all(is.na(m.fit$coef))) {
       eta <- Xmat[,!is.na(m.fit$coef), drop = FALSE] %*% m.fit$coef[!is.na(m.fit$coef)]
-      pAout <- match.fun(FUN = m.fit$linkfun)(eta)
-      # pAout[subset_idx] <- match.fun(FUN = m.fit$linkfun)(eta)
+      # pAout <- match.fun(FUN = m.fit$linkfun)(eta)
+      pAout <- m.fit$linkinv_fun(eta)
     } else {
       pAout <- NaN
-      # pAout[subset_idx] <- NaN
     }
   }
   return(pAout)
