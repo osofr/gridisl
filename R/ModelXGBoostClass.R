@@ -426,7 +426,7 @@ XGBoostClass <- R6Class(classname = "XGBoost",
       # if ((length(self$predvars) == 0L) || (length(subset_idx) == 0L) || (length(self$outfactors) < 2L)) {
         message("unable to run " %+%
           self$fit.class %+%
-          " with h2o for: intercept only models or designmat with zero rows or  constant outcome (y) ...")
+          " with xgboost for: intercept only models or designmat with zero rows or  constant outcome (y) ...")
         class(self$model.fit) <- "try-error"
         self$emptydata
         self$emptyY
