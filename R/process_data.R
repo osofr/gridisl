@@ -20,8 +20,7 @@ recover_true_type <- function(data, check_type_f, want_type_f, make_type_f) {
   update_cols <- update_cols_idx[(update_cols_idx & !(unlist(lapply(data, want_type_f)))) %in% TRUE]
   update_cols <- names(update_cols)
   if (length(update_cols) > 0) {
-    cat("\nchanging the character type to something that is more acceptible for Machine Learning for following columns:", paste(update_cols, collapse=","),"\n")
-    # data <- to_int(data, update_cols)
+    cat("\nChanging the type of the following columns from 'character' to 'integer' or 'numeric':", paste(update_cols, collapse=","),"\n")
     data <- make_type_f(data, update_cols)
   }
   return(data)
