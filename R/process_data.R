@@ -9,7 +9,7 @@ is.numericish <- function (x) {
   (is.character(x[!is.na(x)]) && x[!is.na(x)] == as.numeric(x[!is.na(x)]))
 }
 
-convert_it_from_obscure <- function(check_type_f, want_type_f, make_type_f) {
+convert_from_obscure <- function(data, check_type_f, want_type_f, make_type_f) {
   ## these columns are really integers/numerics, but were coded as either numeric or characters
   update_cols_idx <- unlist(lapply(data, check_type_f))
   update_cols <- update_cols_idx[(update_cols_idx & !(unlist(lapply(data, want_type_f)))) %in% TRUE]
@@ -75,11 +75,9 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars)
     data <- as.int(data, vars_to_int)
   }
 
-  data <- convert_it_from_obscure(is.integerish, is.integer, as.int)
-  data <- convert_it_from_obscure(is.numericish, is.numeric, as.num)
-
+  data <- convert_from_obscure(data, is.integerish, is.integer, as.int)
+  data <- convert_from_obscure(data, is.numericish, is.numeric, as.num)
   data <- logical_to_int(data, skip_vars)
-
   data <- char_to_factor(data, skip_vars)
   data <- factor_to_dummy(data, skip_vars)
 
