@@ -84,7 +84,7 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, skip_vars) {
   }
 
   ## these columns are really integers, but were coded as either numeric or characters
-  integer_cols <- unlist(lapply(data, is.integerish))
+  integer_cols <- unlist(lapply(data, gridisl:::is.integerish))
   vars_to_int <- integer_cols[(integer_cols & !(unlist(lapply(data, is.integer)))) %in% TRUE]
   if (length(vars_to_int) > 0) {
     cat("\nconverting the following columns to integer type:", paste(vars_to_int, collapse=","))
@@ -257,6 +257,7 @@ factor_to_dummy <- function(data, skip_vars) {
     message("...converting the following factor(s) to binary dummies (and droping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
   for (factor.varnm in factor.Ls) {
     factor.levs <- levels(data[[factor.varnm]])
+
     ## only define new dummies for factors with > 2 levels
     if (length(factor.levs) > 2) {
       factor.levs <- factor.levs[-1] # remove the first level (reference class)
@@ -307,7 +308,6 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
 ## General utilities / Global Vars
 ## -----------------------------------------------------------------------------
 `%+%` <- function(a, b) paste0(a, b)
-is.integerish <- function (x) is.integer(x) || (is.numeric(x) && all(x == as.integer(x)))
 
 # Return the left hand side variable of formula f as a character
 LhsVars <- function(f) {
