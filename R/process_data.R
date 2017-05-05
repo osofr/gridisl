@@ -20,7 +20,7 @@ recover_true_type <- function(data, check_type_f, want_type_f, make_type_f) {
   update_cols <- update_cols_idx[(update_cols_idx & !(unlist(lapply(data, want_type_f)))) %in% TRUE]
   update_cols <- names(update_cols)
   if (length(update_cols) > 0) {
-    cat("\nChanging the type of the following columns from 'character' to 'integer' or 'numeric':", paste(update_cols, collapse=","),"\n")
+    cat("\nchanging the type of the following columns from 'character' to 'integer' or 'numeric':", paste(update_cols, collapse=","),"\n")
     data <- make_type_f(data, update_cols)
   }
   return(data)
@@ -62,9 +62,9 @@ as.num <- function(data, vars) {
 #' @param vars_to_numeric Column name(s) that should be converted to numeric type.
 #' @param vars_to_int Column name(s) that should be converted to integer type.
 #' @param skip_vars These columns will not be converted into other types
-#' @param drop_factor Drop the factor variables that were re-coded into binary dummies from the resulting analytic dataset?
+#' @param drop_vars Drop the variables in skip_vars and drop the factor variables that were re-coded into binary dummies from the resulting analytic dataset?
 #' @export
-prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars, drop_factor = FALSE) {
+prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars, drop_vars = FALSE) {
   data <- data.table::data.table(data)
   data <- drop_NA_y(data, OUTCOME)
 
@@ -80,10 +80,15 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars,
 
   data <- logical_to_int(data, skip_vars)
   data <- char_to_factor(data, skip_vars)
-  data <- factor_to_dummy(data, skip_vars, drop_factor)
+  data <- factor_to_dummy(data, skip_vars, drop_vars)
 
   cat("\ndefined the following new dummy columns:\n")
   print(unlist(attributes(data)$new.factor.names))
+
+  if (drop_vars && !missing(skip_vars)) {
+    cat("\ndropping the following columns: ", paste(skip_vars, collapse=","))
+    for (var in skip_vars) set(data, j = var, value = NULL)
+  }
 
   return(data)
 }
@@ -154,7 +159,10 @@ factor_to_dummy <- function(data, skip_vars, drop_factor = FALSE) {
       # use levels to define cat indicators:
       data[,(factor.varnm %+% "_" %+% factor.levs.code) := lapply(factor.levs, function(x) as.integer(levels(get(factor.varnm))[get(factor.varnm)] %in% x))]
       # Remove the original factor var:
-      if (drop_factor) data[,(factor.varnm) := NULL]
+      if (drop_factor) {
+        cat("dropping the following factor: ", factor.varnm,"\n")
+        data[,(factor.varnm) := NULL]
+      }
       new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs.code
 
     ## Convert existing factor variable to integer
