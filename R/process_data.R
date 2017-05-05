@@ -68,12 +68,14 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars,
   data <- data.table::data.table(data)
   data <- drop_NA_y(data, OUTCOME)
 
-  if (!missing(vars_to_numeric)){
-    data <- as.num(data, vars_to_numeric)
-  }
-  if (!missing(vars_to_int)){
-    data <- as.int(data, vars_to_int)
-  }
+  ## convert all non-integers, non-characters & non-numerics to numeric type by default
+  unknown_types <- unlist(lapply(data, function(x) !is.numeric(x) && !is.integer(x) && !is.character(x)))
+  vars_to_num <- names(unknown_types)[unknown_types]
+  if (!missing(vars_to_numeric)) vars_to_num <- unique(c(vars_to_num, vars_to_numeric))
+
+  if (length(vars_to_num) > 0) data <- as.num(data, vars_to_num)
+
+  if (!missing(vars_to_int)) data <- as.int(data, vars_to_int)
 
   data <- recover_true_type(data, is.integerish, is.integer, as.int)
   data <- recover_true_type(data, is.numericish, is.numeric, as.num)
@@ -87,7 +89,7 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars,
 
   if (drop_vars && !missing(skip_vars)) {
     really_skip_vars <- names(data)[names(data) %in% skip_vars]
-    cat("\ndropping the following columns: ", paste(really_skip_vars, collapse=","))
+    cat("\ndropping the following columns: ", paste(really_skip_vars, collapse=","),"\n")
     for (var in really_skip_vars) set(data, j = var, value = NULL)
   }
 
