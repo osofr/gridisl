@@ -1,12 +1,17 @@
 is.integerish <- function (x) {
-  is.integer(x[!is.na(x)]) ||
-  (is.numeric(x[!is.na(x)]) && all(x[!is.na(x)] == as.integer(x[!is.na(x)]))) ||
-  (is.character(x[!is.na(x)]) && x[!is.na(x)] == as.integer(x[!is.na(x)]))
+  suppressWarnings(
+    is.integer(x[!is.na(x)]) ||
+    (is.numeric(x) && all(x[!is.na(x)] == as.integer(x[!is.na(x)]))) ||
+    (is.character(x) && x[!is.na(x)] == as.integer(x[!is.na(x)]))
+  )
 }
 
 is.numericish <- function (x) {
-  is.numeric(x[!is.na(x)]) ||
-  (is.character(x[!is.na(x)]) && x[!is.na(x)] == as.numeric(x[!is.na(x)]))
+  suppressWarnings(
+    is.numeric(x[!is.na(x)]) ||
+    (is.character(x) && x[!is.na(x)] == as.numeric(x[!is.na(x)])) ||
+    (is.character(x) && all(!is.na(as.numeric(x[!is.na(x)]))))
+  )
 }
 
 recover_true_type <- function(data, check_type_f, want_type_f, make_type_f) {
