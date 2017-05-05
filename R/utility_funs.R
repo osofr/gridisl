@@ -79,7 +79,10 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, skip_vars) {
   data <- logical_to_int(data, skip_vars)
   data <- char_to_factor(data, skip_vars)
   data <- factor_to_dummy(data, skip_vars)
-  print(unlist(attributes(cpp)$new.factor.names))
+
+  cat("\ndefined the following new dummy columns:\n")
+  print(unlist(attributes(data)$new.factor.names))
+
   return(data)
 }
 
