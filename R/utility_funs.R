@@ -19,6 +19,12 @@ is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(Predi
 is.ModelStack <- function(obj) "ModelStack" %in% class(obj)
 is.H2OFrame <- function(fr)  base::`&&`(!missing(fr), class(fr)[1]=="H2OFrame")
 
+is.integerish <- function (x) {
+  is.integer(x[!is.na(x)]) ||
+  (is.numeric(x[!is.na(x)]) && all(x[!is.na(x)] == as.integer(x[!is.na(x)]))) ||
+  (is.character(x[!is.na(x)]) && x[!is.na(x)] == as.integer(x[!is.na(x)]))
+}
+
 #-----------------------------------------------------------------------------
 # Capture the arguments passed on as ... in a list
 #-----------------------------------------------------------------------------
@@ -72,8 +78,17 @@ save_best_model <- function(modelfit, file.path = getOption('gridisl.file.path')
 prepare_data <- function(data, OUTCOME, vars_to_numeric, skip_vars) {
   data <- data.table::data.table(data)
   data <- drop_NA_y(data, OUTCOME)
+
   if (!missing(vars_to_numeric)){
     data <- to_numeric(data, vars_to_numeric)
+  }
+
+  ## these columns are really integers, but were coded as either numeric or characters
+  integer_cols <- unlist(lapply(data, is.integerish))
+  vars_to_int <- integer_cols[(integer_cols & !(unlist(lapply(data, is.integer)))) %in% TRUE]
+  if (length(vars_to_int) > 0) {
+    cat("\nconverting the following columns to integer type:", paste(vars_to_int, collapse=","))
+    data <- to_int(data, vars_to_int)
   }
 
   data <- logical_to_int(data, skip_vars)
@@ -179,6 +194,17 @@ drop_NA_y <- function(data, OUTCOME) data[!is.na(data[[OUTCOME]]),]
 to_numeric <- function(data, vars) {
   for (var in vars)
     data[, (var) := as.numeric(get(var))]
+  return(data)
+}
+
+#' Convert specific columns in \code{vars} to integers
+#'
+#' @param data Input dataset, as \code{data.table}.
+#' @param vars Column name(s) that should be converted to numeric type.
+#' @export
+to_int <- function(data, vars) {
+  for (var in vars)
+    data[, (var) := as.integer(get(var))]
   return(data)
 }
 
