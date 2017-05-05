@@ -19,12 +19,6 @@ is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(Predi
 is.ModelStack <- function(obj) "ModelStack" %in% class(obj)
 is.H2OFrame <- function(fr)  base::`&&`(!missing(fr), class(fr)[1]=="H2OFrame")
 
-is.integerish <- function (x) {
-  is.integer(x[!is.na(x)]) ||
-  (is.numeric(x[!is.na(x)]) && all(x[!is.na(x)] == as.integer(x[!is.na(x)]))) ||
-  (is.character(x[!is.na(x)]) && x[!is.na(x)] == as.integer(x[!is.na(x)]))
-}
-
 #-----------------------------------------------------------------------------
 # Capture the arguments passed on as ... in a list
 #-----------------------------------------------------------------------------
@@ -59,47 +53,6 @@ save_best_model <- function(modelfit, file.path = getOption('gridisl.file.path')
     h2o::h2o.saveModel(best_model_alldat[[1]], file.path, force = TRUE)
 
   return(invisible(NULL))
-}
-
-#' Wrapper for several data processing functions.
-#'
-#' Clean up the input data by dropping observations with missing outcomes \code{OUTCOME},
-#' convert desired columns into numerics (\code{vars_to_numeric}),
-#' convert all logical columns into binary integers
-#' convert all character columns into factors
-#' convert all factors into integers,
-#' by defining additional dummy variables for every factor with > 2 levels.
-#'
-#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
-#' @param OUTCOME Character name of the column of outcomes.
-#' @param vars_to_numeric Column name(s) that should be converted to numeric type.
-#' @param skip_vars These columns will not be converted into other types
-#' @export
-prepare_data <- function(data, OUTCOME, vars_to_numeric, skip_vars) {
-  data <- data.table::data.table(data)
-  data <- drop_NA_y(data, OUTCOME)
-
-  if (!missing(vars_to_numeric)){
-    data <- to_numeric(data, vars_to_numeric)
-  }
-
-  ## these columns are really integers, but were coded as either numeric or characters
-  integer_cols <- unlist(lapply(data, gridisl:::is.integerish))
-  vars_to_int <- integer_cols[(integer_cols & !(unlist(lapply(data, is.integer)))) %in% TRUE]
-  vars_to_int <- names(vars_to_int)
-  if (length(vars_to_int) > 0) {
-    cat("\nconverting the following columns to integer type:", paste(vars_to_int, collapse=","),"\n")
-    data <- to_int(data, vars_to_int)
-  }
-
-  data <- logical_to_int(data, skip_vars)
-  data <- char_to_factor(data, skip_vars)
-  data <- factor_to_dummy(data, skip_vars)
-
-  cat("\ndefined the following new dummy columns:\n")
-  print(unlist(attributes(data)$new.factor.names))
-
-  return(data)
 }
 
 # ---------------------------------------------------------------------------------------
@@ -177,104 +130,6 @@ add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed =
   }
   # self$hold_column <- hold_column
 
-  return(data)
-}
-
-#' Drop all observation rows with missing outcomes
-#'
-#' @param data Input dataset, as \code{data.table}.
-#' @param OUTCOME Character name of the column of outcomes.
-#' @export
-drop_NA_y <- function(data, OUTCOME) data[!is.na(data[[OUTCOME]]),]
-
-#' Convert specific columns in \code{vars} to numeric
-#'
-#' @param data Input dataset, as \code{data.table}.
-#' @param vars Column name(s) that should be converted to numeric type.
-#' @export
-to_numeric <- function(data, vars) {
-  for (var in vars)
-    data[, (var) := as.numeric(get(var))]
-  return(data)
-}
-
-#' Convert specific columns in \code{vars} to integers
-#'
-#' @param data Input dataset, as \code{data.table}.
-#' @param vars Column name(s) that should be converted to numeric type.
-#' @export
-to_int <- function(data, vars) {
-  for (var in vars)
-    data[, (var) := as.integer(get(var))]
-  return(data)
-}
-
-## generic function for converting from one column type to another
-fromtype_totype <- function(data, fromtypefun, totypefun, skip_vars) {
-  assert_that(data.table::is.data.table(data))
-  # Convert all logical vars to binary integers
-  vars <- unlist(lapply(data, fromtypefun))
-  vars <- names(vars)[vars]
-  if (!missing(skip_vars) && length(vars) > 0) {
-    assert_that(is.character(skip_vars))
-    vars <- vars[!(vars %in% skip_vars)]
-  }
-  for (varnm in vars) {
-    data[,(varnm) := totypefun(get(varnm))]
-  }
-  return(data)
-}
-
-#' Convert logical covariates to integers
-#' @param data Input dataset, as \code{data.table}.
-#' @param skip_vars These columns will not be converted to integer
-#' @export
-logical_to_int <- function(data, skip_vars) fromtype_totype(data, is.logical, as.integer, skip_vars)
-
-#' Convert all character columns to factors
-#'
-#' @param data Input dataset, as \code{data.table}.
-#' @param skip_vars These columns will not be converted to factor
-#' @export
-char_to_factor <- function(data, skip_vars) fromtype_totype(data, is.character, as.factor, skip_vars)
-
-#' Convert factors to binary indicators, for factors with > 2 levels drop the first factor level and define several dummy variables for the rest of the levels
-#' @param data Input dataset, as \code{data.table}.
-#' @param skip_vars These columns will not be converted
-#' @export
-factor_to_dummy <- function(data, skip_vars) {
-  verbose <- gvars$verbose
-
-  # Create dummies for each factor in the data
-  factor.Ls <- as.character(CheckExistFactors(data))
-  if (!missing(skip_vars) && length(factor.Ls) > 0) {
-    assert_that(is.character(skip_vars))
-    factor.Ls <- factor.Ls[!(factor.Ls %in% skip_vars)]
-  }
-
-  new.factor.names <- vector(mode="list", length=length(factor.Ls))
-  names(new.factor.names) <- factor.Ls
-  if (length(factor.Ls)>0 && verbose)
-    message("...converting the following factor(s) to binary dummies (and droping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
-  for (factor.varnm in factor.Ls) {
-    factor.levs <- levels(data[[factor.varnm]])
-
-    ## only define new dummies for factors with > 2 levels
-    if (length(factor.levs) > 2) {
-      factor.levs <- factor.levs[-1] # remove the first level (reference class)
-      factor.levs.code <- seq_along(factor.levs)
-      # use levels to define cat indicators:
-      data[,(factor.varnm %+% "_" %+% factor.levs.code) := lapply(factor.levs, function(x) as.integer(levels(get(factor.varnm))[get(factor.varnm)] %in% x))]
-      # to remove the original factor var: # data[,(factor.varnm):=NULL]
-      new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs.code
-
-    ## Convert existing factor variable to integer
-    } else {
-      data[, (factor.varnm) := as.integer(levels(get(factor.varnm))[get(factor.varnm)] %in% factor.levs[2])]
-      new.factor.names[[factor.varnm]] <- factor.varnm
-    }
-  }
-  data.table::setattr(data,"new.factor.names",new.factor.names)
   return(data)
 }
 

@@ -51,6 +51,8 @@ test.dataconvert <- function() {
   cpp[, ("logic_test") := sample(c(TRUE,FALSE), nrow(cpp), replace = TRUE)]
 
   cpp2 <- prepare_data(cpp, OUTCOME = "haz", vars_to_numeric = c("char_num_test1", "char_num_test2"), skip_vars = "sex")
+
+
   cpp2
   attributes(cpp2)$new.factor.names
 
