@@ -86,8 +86,9 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, skip_vars) {
   ## these columns are really integers, but were coded as either numeric or characters
   integer_cols <- unlist(lapply(data, gridisl:::is.integerish))
   vars_to_int <- integer_cols[(integer_cols & !(unlist(lapply(data, is.integer)))) %in% TRUE]
+  vars_to_int <- names(vars_to_int)
   if (length(vars_to_int) > 0) {
-    cat("\nconverting the following columns to integer type:", paste(vars_to_int, collapse=","))
+    cat("\nconverting the following columns to integer type:", paste(vars_to_int, collapse=","),"\n")
     data <- to_int(data, vars_to_int)
   }
 
