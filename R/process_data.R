@@ -86,8 +86,9 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars,
   print(unlist(attributes(data)$new.factor.names))
 
   if (drop_vars && !missing(skip_vars)) {
-    cat("\ndropping the following columns: ", paste(skip_vars, collapse=","))
-    for (var in skip_vars) set(data, j = var, value = NULL)
+    really_skip_vars <- names(data)[names(data) %in% skip_vars]
+    cat("\ndropping the following columns: ", paste(really_skip_vars, collapse=","))
+    for (var in really_skip_vars) set(data, j = var, value = NULL)
   }
 
   return(data)
