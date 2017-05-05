@@ -4,7 +4,8 @@
 \alias{prepare_data}
 \title{Wrapper for several data processing functions.}
 \usage{
-prepare_data(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars)
+prepare_data(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars,
+  drop_factor = FALSE)
 }
 \arguments{
 \item{data}{Input dataset, can be a \code{data.frame} or a \code{data.table}.}
@@ -16,6 +17,8 @@ prepare_data(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars)
 \item{vars_to_int}{Column name(s) that should be converted to integer type.}
 
 \item{skip_vars}{These columns will not be converted into other types}
+
+\item{drop_factor}{Drop the factor variables that were re-coded into binary dummies from the resulting analytic dataset?}
 }
 \description{
 Clean up the input data by dropping observations with missing outcomes \code{OUTCOME},
