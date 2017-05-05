@@ -1,3 +1,62 @@
+test.dataconvert <- function() {
+  library("data.table")
+  options(gridisl.verbose = TRUE)
+  data(cpp)
+  setDT(cpp)
+  cpp <- drop_NA_y(cpp, "haz")
+
+  ## ---------------------------------------------------------------------------
+  ## Testing various data conversion functions
+  ## ---------------------------------------------------------------------------
+  cpp[,
+  c("char_num_test1", "char_num_test2") :=
+    list(sample(c("1","2", "3.1"), nrow(cpp), replace = TRUE),
+         sample(c("1","2", "3.1"), nrow(cpp), replace = TRUE))]
+  cpp[,
+  c("yesno_test1", "yesno_test2") :=
+    list(sample(c("yes","no"), nrow(cpp), replace = TRUE),
+         sample(factor(c("yes","no")), nrow(cpp), replace = TRUE))]
+  cpp[, ("logic_test") := sample(c(TRUE,FALSE), nrow(cpp), replace = TRUE)]
+
+  class(cpp[["char_num_test1"]]); class(cpp[["char_num_test2"]])
+  cpp <- to_numeric(cpp, c("char_num_test1", "char_num_test2"))
+  class(cpp[["char_num_test1"]]); class(cpp[["char_num_test2"]])
+
+  names(cpp)[unlist(lapply(cpp, is.logical))]
+  cpp <- logical_to_int(cpp)
+  names(cpp)[unlist(lapply(cpp, is.logical))]
+
+  names(cpp)[unlist(lapply(cpp, is.character))]
+  cpp <- char_to_factor(cpp, "sex")
+  names(cpp)[unlist(lapply(cpp, is.character))]
+
+  cpp <- factor_to_dummy(cpp)
+  print(cpp)
+  attributes(cpp)$new.factor.names
+
+
+  ## ---------------------------------------------------------------------------
+  ## Same as above but with one function call
+  ## ---------------------------------------------------------------------------
+  data(cpp)
+  setDT(cpp)
+  cpp[,
+  c("char_num_test1", "char_num_test2") :=
+    list(sample(c("1","2", "3.1"), nrow(cpp), replace = TRUE),
+         sample(c("1","2", "3.1"), nrow(cpp), replace = TRUE))]
+  cpp[,
+  c("yesno_test1", "yesno_test2") :=
+    list(sample(c("yes","no"), nrow(cpp), replace = TRUE),
+         sample(factor(c("yes","no")), nrow(cpp), replace = TRUE))]
+  cpp[, ("logic_test") := sample(c(TRUE,FALSE), nrow(cpp), replace = TRUE)]
+
+  cpp2 <- prepare_data(cpp, OUTCOME = "haz", vars_to_numeric = c("char_num_test1", "char_num_test2"), skip_vars = "sex")
+  cpp2
+  attributes(cpp2)$new.factor.names
+
+}
+
+
 ## ------------------------------------------------------------------------------------
 ## face / brokenstick based on random holdouts
 ## ------------------------------------------------------------------------------------

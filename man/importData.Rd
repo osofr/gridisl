@@ -2,8 +2,7 @@
 % Please edit documentation in R/utility_funs.R
 \name{importData}
 \alias{importData}
-\title{---------------------------------------------------------------------------------------
-Import data, define nodes (columns), define dummies for factor columns and define input data R6 object}
+\title{Import data, define nodes (columns) and define input data R6 object}
 \usage{
 importData(data, ID = "Subject_ID", t_name = "time_period", covars,
   OUTCOME = "Y", verbose = getOption("gridisl.verbose"))
@@ -25,7 +24,6 @@ importData(data, ID = "Subject_ID", t_name = "time_period", covars,
 An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
 }
 \description{
----------------------------------------------------------------------------------------
-Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
+Import data, define nodes (columns) and define input data R6 object
 }
 

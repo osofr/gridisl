@@ -55,6 +55,34 @@ save_best_model <- function(modelfit, file.path = getOption('gridisl.file.path')
   return(invisible(NULL))
 }
 
+#' Wrapper for several data processing functions.
+#'
+#' Clean up the input data by dropping observations with missing outcomes \code{OUTCOME},
+#' convert desired columns into numerics (\code{vars_to_numeric}),
+#' convert all logical columns into binary integers
+#' convert all character columns into factors
+#' convert all factors into integers,
+#' by defining additional dummy variables for every factor with > 2 levels.
+#'
+#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+#' @param OUTCOME Character name of the column of outcomes.
+#' @param vars_to_numeric Column name(s) that should be converted to numeric type.
+#' @param skip_vars These columns will not be converted into other types
+#' @export
+prepare_data <- function(data, OUTCOME, vars_to_numeric, skip_vars) {
+  data <- data.table::data.table(data)
+  data <- drop_NA_y(data, OUTCOME)
+  if (!missing(vars_to_numeric)){
+    data <- to_numeric(data, vars_to_numeric)
+  }
+
+  data <- logical_to_int(data, skip_vars)
+  data <- char_to_factor(data, skip_vars)
+  data <- factor_to_dummy(data, skip_vars)
+  print(unlist(attributes(cpp)$new.factor.names))
+  return(data)
+}
+
 # ---------------------------------------------------------------------------------------
 #' Define and fit growth models evaluated on holdout observations.
 #'
@@ -133,8 +161,94 @@ add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed =
   return(data)
 }
 
-#' ---------------------------------------------------------------------------------------
-#' Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
+#' Drop all observation rows with missing outcomes
+#'
+#' @param data Input dataset, as \code{data.table}.
+#' @param OUTCOME Character name of the column of outcomes.
+#' @export
+drop_NA_y <- function(data, OUTCOME) data[!is.na(data[[OUTCOME]]),]
+
+#' Convert specific columns in \code{vars} to numeric
+#'
+#' @param data Input dataset, as \code{data.table}.
+#' @param vars Column name(s) that should be converted to numeric type.
+#' @export
+to_numeric <- function(data, vars) {
+  for (var in vars)
+    data[, (var) := as.numeric(get(var))]
+  return(data)
+}
+
+## generic function for converting from one column type to another
+fromtype_totype <- function(data, fromtypefun, totypefun, skip_vars) {
+  assert_that(data.table::is.data.table(data))
+  # Convert all logical vars to binary integers
+  vars <- unlist(lapply(data, fromtypefun))
+  vars <- names(vars)[vars]
+  if (!missing(skip_vars) && length(vars) > 0) {
+    assert_that(is.character(skip_vars))
+    vars <- vars[!(vars %in% skip_vars)]
+  }
+  for (varnm in vars) {
+    data[,(varnm) := totypefun(get(varnm))]
+  }
+  return(data)
+}
+
+#' Convert logical covariates to integers
+#' @param data Input dataset, as \code{data.table}.
+#' @param skip_vars These columns will not be converted to integer
+#' @export
+logical_to_int <- function(data, skip_vars) fromtype_totype(data, is.logical, as.integer, skip_vars)
+
+#' Convert all character columns to factors
+#'
+#' @param data Input dataset, as \code{data.table}.
+#' @param skip_vars These columns will not be converted to factor
+#' @export
+char_to_factor <- function(data, skip_vars) fromtype_totype(data, is.character, as.factor, skip_vars)
+
+#' Convert factors to binary indicators, for factors with > 2 levels drop the first factor level and define several dummy variables for the rest of the levels
+#' @param data Input dataset, as \code{data.table}.
+#' @param skip_vars These columns will not be converted
+#' @export
+factor_to_dummy <- function(data, skip_vars) {
+  verbose <- gvars$verbose
+
+  # Create dummies for each factor in the data
+  factor.Ls <- as.character(CheckExistFactors(data))
+  if (!missing(skip_vars) && length(factor.Ls) > 0) {
+    assert_that(is.character(skip_vars))
+    factor.Ls <- factor.Ls[!(factor.Ls %in% skip_vars)]
+  }
+
+  new.factor.names <- vector(mode="list", length=length(factor.Ls))
+  names(new.factor.names) <- factor.Ls
+  if (length(factor.Ls)>0 && verbose)
+    message("...converting the following factor(s) to binary dummies (and droping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
+  for (factor.varnm in factor.Ls) {
+    factor.levs <- levels(data[[factor.varnm]])
+    ## only define new dummies for factors with > 2 levels
+    if (length(factor.levs) > 2) {
+      factor.levs <- factor.levs[-1] # remove the first level (reference class)
+      factor.levs.code <- seq_along(factor.levs)
+      # use levels to define cat indicators:
+      data[,(factor.varnm %+% "_" %+% factor.levs.code) := lapply(factor.levs, function(x) as.integer(levels(get(factor.varnm))[get(factor.varnm)] %in% x))]
+      # to remove the original factor var: # data[,(factor.varnm):=NULL]
+      new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs.code
+
+    ## Convert existing factor variable to integer
+    } else {
+      data[, (factor.varnm) := as.integer(levels(get(factor.varnm))[get(factor.varnm)] %in% factor.levs[2])]
+      new.factor.names[[factor.varnm]] <- factor.varnm
+    }
+  }
+  data.table::setattr(data,"new.factor.names",new.factor.names)
+  return(data)
+}
+
+# ---------------------------------------------------------------------------------------
+#' Import data, define nodes (columns) and define input data R6 object
 #'
 #' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
 #' @param ID A character string name of the column that contains the unique subject identifiers.
@@ -213,6 +327,16 @@ CheckExistFactors <- function(data) {
     return(NULL)
   }
 }
+
+# # returns NULL if no character columns found, otherwise return the names of character column(s)
+# CheckExistChar <- function(data) {
+#   testvec <- unlist(lapply(data, is.character))
+#   if (any(testvec)) {
+#     return(names(data)[which(testvec)])
+#   } else {
+#     return(NULL)
+#   }
+# }
 
 # throw exception if 1) varname doesn't exist; 2) more than one varname is matched
 CheckVarNameExists <- function(data, varname) {

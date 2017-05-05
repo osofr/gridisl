@@ -35,6 +35,19 @@ get_out_of_sample_predictions <- function(modelfit) {
   return(modelfit$get_out_of_sample_preds)
 }
 
+validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Oframe = FALSE, dest_frame = "all_train_H2Oframe") {
+  if (is.DataStorageClass(input_data)) {
+    OData_input <- input_data
+    # if (useH2Oframe && is.null(OData_input$H2Oframe)) stop("fatal error: useH2Oframe was set to TRUE, but the H2Oframe could not be located in the input data.")
+  } else if (is.data.frame(input_data) || data.table::is.data.table(input_data)) {
+    OData_input <- importData(data = input_data, ID = ID, t_name = t_name, covars = x, OUTCOME = y) ## Import input data into R6 object, define nodes
+  } else {
+    stop("input training / validation data must be either data.frame, data.table or DataStorageClass object")
+  }
+  if (useH2Oframe && is.null(OData_input$H2Oframe)) OData_input$fast.load.to.H2O(saveH2O = TRUE, destination_frame = dest_frame)
+  return(OData_input)
+}
+
 # ---------------------------------------------------------------------------------------
 #' Generic modeling function for longitudinal data.
 #'
