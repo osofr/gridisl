@@ -19,6 +19,7 @@ convert_from_obscure <- function(data, check_type_f, want_type_f, make_type_f) {
     # data <- to_int(data, update_cols)
     data <- make_type_f(data, update_cols)
   }
+  return(data)
 }
 
 # as.numeric <- function(data, vars, ...) { UseMethod("as.numeric") }
@@ -68,7 +69,6 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars)
   data <- drop_NA_y(data, OUTCOME)
 
   if (!missing(vars_to_numeric)){
-    browser()
     data <- as.num(data, vars_to_numeric)
   }
   if (!missing(vars_to_int)){
@@ -77,14 +77,13 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars)
 
   data <- convert_from_obscure(data, is.integerish, is.integer, as.int)
   data <- convert_from_obscure(data, is.numericish, is.numeric, as.num)
+
   data <- logical_to_int(data, skip_vars)
   data <- char_to_factor(data, skip_vars)
   data <- factor_to_dummy(data, skip_vars)
 
   cat("\ndefined the following new dummy columns:\n")
   print(unlist(attributes(data)$new.factor.names))
-
-# browser()
 
   return(data)
 }
