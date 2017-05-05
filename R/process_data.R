@@ -9,8 +9,8 @@ is.numericish <- function (x) {
   (is.character(x[!is.na(x)]) && x[!is.na(x)] == as.numeric(x[!is.na(x)]))
 }
 
-convert_from_obscure <- function(data, check_type_f, want_type_f, make_type_f) {
-  ## these columns are really integers/numerics, but were coded as either numeric or characters
+recover_true_type <- function(data, check_type_f, want_type_f, make_type_f) {
+  ## these columns are really integers/numerics, but are coded as character
   update_cols_idx <- unlist(lapply(data, check_type_f))
   update_cols <- update_cols_idx[(update_cols_idx & !(unlist(lapply(data, want_type_f)))) %in% TRUE]
   update_cols <- names(update_cols)
@@ -22,15 +22,11 @@ convert_from_obscure <- function(data, check_type_f, want_type_f, make_type_f) {
   return(data)
 }
 
-# as.numeric <- function(data, vars, ...) { UseMethod("as.numeric") }
-# as.integer <- function(data, vars, ...) { UseMethod("as.integer") }
-
 #' Convert specific columns in \code{vars} to numeric
 #'
 #' @param data Input dataset, as \code{data.table}.
 #' @param vars Column name(s) that should be converted to numeric type.
 #' @export
-# as.numeric.data.table <- function(data, vars) {
 as.int <- function(data, vars) {
   for (var in vars)
     data[, (var) := as.numeric(get(var))]
@@ -42,7 +38,6 @@ as.int <- function(data, vars) {
 #' @param data Input dataset, as \code{data.table}.
 #' @param vars Column name(s) that should be converted to numeric type.
 #' @export
-# as.integer.data.table <- function(data, vars) {
 as.num <- function(data, vars) {
   for (var in vars)
     data[, (var) := as.integer(get(var))]
@@ -75,8 +70,8 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars)
     data <- as.int(data, vars_to_int)
   }
 
-  data <- convert_from_obscure(data, is.integerish, is.integer, as.int)
-  data <- convert_from_obscure(data, is.numericish, is.numeric, as.num)
+  data <- recover_true_type(data, is.integerish, is.integer, as.int)
+  data <- recover_true_type(data, is.numericish, is.numeric, as.num)
 
   data <- logical_to_int(data, skip_vars)
   data <- char_to_factor(data, skip_vars)
@@ -95,8 +90,6 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars)
 #' @param OUTCOME Character name of the column of outcomes.
 #' @export
 drop_NA_y <- function(data, OUTCOME) data[!is.na(data[[OUTCOME]]),]
-
-
 
 ## generic function for converting from one column type to another
 fromtype_totype <- function(data, fromtypefun, totypefun, skip_vars) {
