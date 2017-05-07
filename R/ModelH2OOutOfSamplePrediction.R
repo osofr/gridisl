@@ -113,7 +113,7 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
       Sys.sleep(1)
       for (idx in seq_along(dest_key_LIST)) {
         iter <- 0
-        while (iter <= 10) {
+        while (iter <= 100) {
           newpreds <- try(h2o::h2o.getFrame(dest_key_LIST[[idx]]), silent = TRUE)
           if (inherits(newpreds, "try-error")) {
             Sys.sleep(0.1)
