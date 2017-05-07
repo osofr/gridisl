@@ -84,9 +84,7 @@ fit.h2ogrid <- function(fit.class, params, training_frame, y, x, model_contrl, f
                                         fold_column = fold_column, ...)
 
   if (inherits(modelfits_grid, "try-error")) return(modelfits_grid)
-  if (!"model_ids" %in% names(modelfits_grid)) {
-    message("...all h2o.grid models have failed...")
-    print(modelfits_grid)
+  if (length(modelfits_grid@model_ids)<1) {
     stop("...all h2o.grid models have failed...")
   }
 
