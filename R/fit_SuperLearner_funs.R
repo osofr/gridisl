@@ -140,6 +140,8 @@ fit_model <- function(ID,
     if (!is.integer(subset_idx)) stop("subset_idx must be an integer vector, current class: " %+% class(subset_idx))
 
   modelfits <- vector(mode = "list", length = length(models))
+  modelFAILED <- vector(mode = "logical", length = length(models))
+
   for (learner_idx in seq_along(models)) {
     model <- models[[learner_idx]]
     estimator <- model[["estimator"]]
@@ -154,8 +156,21 @@ fit_model <- function(ID,
 
     ## Define a modeling object, perform fitting (real data is being passed for the first time here):
     modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)
-    modelfit <- modelfit$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx)
-    modelfits[[learner_idx]] <- modelfit
+    # modelfit <- modelfit$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx)
+    modelfit <- try(modelfit$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx), silent = FALSE)
+
+    if (inherits(modelfit, "try-error")) {
+      message("learner number " %+% learner_idx %+% " has failed and will be removed: ")
+      print(str(models[[learner_idx]]))
+      modelfits[[learner_idx]] <- NULL
+      modelFAILED[learner_idx] <- TRUE
+    } else {
+      modelfits[[learner_idx]] <- modelfit
+    }
+  }
+
+  if (any(modelFAILED)) {
+    modelfits[modelFAILED] <- NULL
   }
 
   modelfit_stack <- do.call(make_PredictionStack, modelfits)

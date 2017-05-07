@@ -128,6 +128,12 @@ predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, s
 
     setkeyv(new.dat, cols = "subject")
     bs.predict <- utils::getFromNamespace("predict.brokenstick", "brokenstick")
+    # bs.predict <- function(object, y, x, output, ...) {
+    #   bs.predict.fun <- utils::getFromNamespace("predict.brokenstick", "brokenstick")
+    #   res <- bs.predict.fun(object, y = y, x = x, output = output, ...)
+    #   return(res)
+    # }
+
     new.dat[, yhat := bs.predict(model.object, y = y, x = x, output = "vector"), by = subject]
     new.preds <- new.dat[new_vals_ind == TRUE, yhat]
     pAout[subset_idx] <- as.vector(new.preds)

@@ -84,6 +84,11 @@ fit.h2ogrid <- function(fit.class, params, training_frame, y, x, model_contrl, f
                                         fold_column = fold_column, ...)
 
   if (inherits(modelfits_grid, "try-error")) return(modelfits_grid)
+  if (!"model_ids" %in% names(modelfits_grid)) {
+    message("...all h2o.grid models have failed...")
+    print(modelfits_grid)
+    stop("...all h2o.grid models have failed...")
+  }
 
   ## Extract the top model (first on the list)
   topmodel_grid <- h2o::h2o.getModel(modelfits_grid@model_ids[[1]])

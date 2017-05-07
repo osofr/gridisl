@@ -119,6 +119,7 @@ test.holdoutfit_all <- function() {
 
   # res_GLM1 <- run_algo("speedglm", "glm")
   # res_GLM2 <- run_algo("glm", "glm")
+  res_BS <- run_algo("brokenstick", "brokenstick")
 
   res_GLM3 <- run_algo("h2o", "glm")
   res_GBM <- run_algo("h2o", "gbm")
