@@ -336,6 +336,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       }
 
       private$MSE <- self$evalMSE_byID(out_of_sample_preds_DT, test_values, IDs)
+      private$MSE_bysubj <- self$evalMSE_byID(out_of_sample_preds_DT, test_values, IDs, bysubj = TRUE)
 
       ## save out of sample CV predictions for the best model
       private$out_of_sample_preds <- out_of_sample_preds_DT[, self$get_best_model_names(K = 1), with = FALSE]
@@ -344,12 +345,11 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
     },
 
     # First evaluate the empirical loss by subject. Then average that loss across subjects
-    evalMSE_byID = function(predsDT, test_values, IDs) {
+    evalMSE_byID = function(predsDT, test_values, IDs, bysubj = FALSE) {
       loss_fun_MSE <- function(yhat, y0) (yhat - y0)^2
 
       if (!self$is.fitted) stop("Please fit the model prior to evaluating MSE.")
       if (!is.vector(test_values)) stop("test_values must be a vector of outcomes.")
-
 
       ## 1. Evaluate the empirical loss at each person-time prediction (apply loss function to each row):
       sqresid_preds <- as.data.table(predsDT)[, lapply(.SD, loss_fun_MSE, test_values)][, ("subjID") := IDs]
@@ -358,33 +358,28 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       # system.time(sqresid_preds2 <- as.data.table(private$probA1[, ] - test_values)[, ("subjID") := IDs])
       setkeyv(sqresid_preds, cols = "subjID")
 
+      if (bysubj) {
+        ## 2. Evaluate the average loss for each person (average loss by rows within each subject)
+        ## 3A. Evaluate the mean, var, sd loss averaging at the subject level first, then averaging across subjects
+        # browser()
+        MSE_mean <- sqresid_preds[, lapply(.SD, mean, na.rm = TRUE), by = subjID]
+        setnames(MSE_mean, "subjID", self$nodes$IDnode)
+        # mean_bysubj[, subjID := NULL]
+        # n <- nrow(mean_bysubj)
+        # MSE_mean <- as.list(mean_bysubj[, lapply(.SD, mean, na.rm = TRUE)])
+        RMSE_mean <- NA
+        MSE_var <- NA
+        MSE_sd <- NA
 
-      ## 2. Evaluate the average loss for each person (average loss by rows within each subject)
-      # str(self$ModelFitObject$model.fit$modelfits_all[[1]])
-      # self$ModelFitObject$model.fit$grid_objects
-      # fold_idx <- self$ModelFitObject$model.fit$modelfits_all[[1]]$folds
-      # fold_idx2 <- self$ModelFitObject$model.fit$modelfits_all[[2]]$folds
-      # fold_idx3 <- self$ModelFitObject$model.fit$modelfits_all[[3]]$folds
-      # fold_idx4 <- self$ModelFitObject$model.fit$modelfits_all[[4]]$folds
-      # for (fold_i in seq_along(fold_idx)) sqresid_preds[fold_idx[[fold_i]], ("fold") := fold_i]
-
-      # 3A. Evaluate the mean, var, sd loss averaging at the subject level first, then averaging across subjects
-      # mean_bysubj <- sqresid_preds[, lapply(.SD, mean, na.rm = TRUE), by = subjID]
-      # mean_bysubj[, subjID := NULL]
-      # n <- nrow(mean_bysubj)
-      # MSE_mean <- as.list(mean_bysubj[, lapply(.SD, mean, na.rm = TRUE)])
-      # RMSE_mean <- lapply(MSE_mean, sqrt)
-      # MSE_var <- as.list(mean_bysubj[, lapply(.SD, var, na.rm = TRUE)])
-      # MSE_sd <- as.list(mean_bysubj[, lapply(.SD, sd, na.rm = TRUE)] * (1 / sqrt(n)))
-
-
-      # 3B. Evaluate the mean, var, SD loss averaging across all rows of the data
-      sqresid_preds[, subjID := NULL]
-      n <- nrow(sqresid_preds)
-      MSE_mean <- as.list(sqresid_preds[, lapply(.SD, mean, na.rm = TRUE)])
-      RMSE_mean <- lapply(MSE_mean, sqrt)
-      MSE_var <- as.list(sqresid_preds[, lapply(.SD, var, na.rm = TRUE)])
-      MSE_sd <- as.list(sqresid_preds[, lapply(.SD, sd, na.rm = TRUE)] * (1 / sqrt(n)))
+      } else {
+        # 3B. Evaluate the mean, var, SD loss averaging across all rows of the data
+        sqresid_preds[, subjID := NULL]
+        n <- nrow(sqresid_preds)
+        MSE_mean <- as.list(sqresid_preds[, lapply(.SD, mean, na.rm = TRUE)])
+        RMSE_mean <- lapply(MSE_mean, sqrt)
+        MSE_var <- as.list(sqresid_preds[, lapply(.SD, var, na.rm = TRUE)])
+        MSE_sd <- as.list(sqresid_preds[, lapply(.SD, sd, na.rm = TRUE)] * (1 / sqrt(n)))
+      }
 
       if (any(as.logical(NA_predictions)))
           warning("Some of the test set predictions of the following model fits were missing (NA) and hence were excluded from MSE evaluation.
@@ -582,6 +577,13 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
       )
     },
 
+    getMSE_bysubj = function() {
+      sel_cols <- c(self$nodes$IDnode, self$get_best_model_names())
+      MSEdat <- private$MSE_bysubj[["MSE_mean"]][, sel_cols, with = FALSE]
+      setnames(MSEdat, self$get_best_model_names(), "MSE")
+      MSEdat
+    },
+
     getMSE = function() { private$MSE[["MSE_mean"]] },
     getRMSE = function() { private$MSE[["RMSE_mean"]] },
     getMSEvar = function() { private$MSE[["MSE_var"]] },
@@ -594,6 +596,7 @@ PredictionModel  <- R6Class(classname = "PredictionModel",
   private = list(
     # model.fit = list(),   # the model fit (either coefficients or the model fit object)
     MSE = list(),
+    MSE_bysubj = list(),
     probA1 = NULL,    # Predicted probA^s=1 conditional on Xmat
     out_of_sample_preds = NULL,
     probAeqa = NULL   # Likelihood of observing a particular value A^s=a^s conditional on Xmat

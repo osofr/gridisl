@@ -260,6 +260,10 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     },
 
     getMSE = function() { return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$getMSE)) },
+    getMSE_bysubj = function() {
+      best_Model_idx <- self$best_Model_idx
+      return(self$PredictionModels[[best_Model_idx]]$getMSE_bysubj)
+    },
     getRMSE = function() { return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$getRMSE)) },
 
     best_Model_idx = function() {

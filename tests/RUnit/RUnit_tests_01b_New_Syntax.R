@@ -55,6 +55,12 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
   mfit_cv <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                     data = cpp_folds, method = "cv", fold_column = "fold")
 
+  # str(mfit_cv)
+  # mfit_cv$getMSE
+  # mfit_cv$getMSEtab
+  # mfit_cv$get_best_MSE_table()
+  mfit_cv$getMSE_bysubj
+
   h2o::h2o.shutdown(prompt = FALSE)
   Sys.sleep(1)
 }
