@@ -59,7 +59,7 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
   # mfit_cv$getMSE
   # mfit_cv$getMSEtab
   # mfit_cv$get_best_MSE_table()
-  mfit_cv$getMSE_bysubj
+  # mfit_cv$getMSE_bysubj
 
   h2o::h2o.shutdown(prompt = FALSE)
   Sys.sleep(1)
