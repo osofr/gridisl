@@ -125,7 +125,7 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
 
         if (inherits(newpreds, "try-error")) {
           message(attr(newpreds, "condition")$message)
-          stop("predictions from some of h2o models could not be obtained after 10 attempts and wait time of 1 sec")
+          stop("predictions from some of h2o models could not be obtained after 100 attempts and wait time of 10 sec")
         }
 
         if (ncol(newpreds) > 1) newpreds <- newpreds[["p1"]]
