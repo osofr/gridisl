@@ -89,6 +89,23 @@ predictP1.H2Ogrid <- function(m.fit, ParentObject, DataStorageObject, subset_idx
     for (idx in seq_along(models_list)) {
       # res <- lapply(models_list, function(model) predict_h2o_new(model@model_id, frame_id = h2o::h2o.getId(H2Oframe), convertResToDT = FALSE)[["predict"]])
       # pAout_h2o <- h2o::h2o.cbind(res)
+      # browser()
+      # predict(models_list[[idx]], H2Oframe[1:5, ])
+      # predict(models_list[[idx]], H2Oframe[100, ])
+      # predict(models_list[[idx]], H2Oframe[95, ])
+
+      # str(models_list[[idx]])
+      # alldata_H2Oframe
+      # predict(models_list[[idx]], h2o.getFrame("alldata_H2Oframe"))
+      # predict(models_list[[idx]], H2Oframe)
+      # h2o.unique(H2Oframe[, "CVD"])
+      # h2o.unique(H2Oframe[, "highA1c"])
+      # h2o.unique(H2Oframe[, "N.tminus1"])
+      # H2Oframe[1, "N.tminus1"] <- 1
+      # H2Oframe[1, "TI"] <- 1
+      # H2Oframe[, "TI"] <- 0
+      # as.h2o(as.data.frame(cbind(H2Oframe, fold_ID = 0)))
+      # predict(models_list[[idx]], as.h2o(as.data.frame(H2Oframe[4:10,]))[, c("CVD", "highA1c")])
 
       pAout_h2o <- h2o::h2o.cbind(pAout_h2o,
                         predict_h2o_new(models_list[[idx]]@model_id, frame_id = h2o::h2o.getId(H2Oframe), convertResToDT = FALSE)) # [["predict"]]

@@ -12,10 +12,33 @@
 # Validate your .travis.yml file at http://lint.travis-ci.org/
 #----------------------------------------------------------------
 
+# r_binary_packages:
+#   - assertthat
+#   - doParallel
+#   - data.table
+#   - dplyr
+#   - foreach
+#   - ggplot2
+#   - magrittr
+#   - knitr
+#   - R6
+#   - Rcpp
+#   - rmarkdown
+#   - RUnit
+#   - speedglm
+#   - tibble
+#   - tidyr
+#   - pander
+#   - purrr
+# before_install:
+#   - sudo apt-get -qq update
+#   - sudo apt-get install -y libicu-dev
+#   - sudo apt-get install -y pandoc
+
 language: r
+sudo: false
 cache: packages
 warnings_are_errors: false
-sudo: required
 # r_build_args: "--compact-vignettes"
 # r_check_args: "--as-cran"
 r_build_args: "--no-build-vignettes --no-manual"
@@ -29,40 +52,16 @@ os:
   - linux
   # - osx
 
-before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y libicu-dev
-  - sudo apt-get install -y pandoc
-
-r_binary_packages:
-  - assertthat
-  - doParallel
-  - data.table
-  - dplyr
-  - foreach
-  - ggplot2
-  - magrittr
-  - knitr
-  - R6
-  - Rcpp
-  - rmarkdown
-  - RUnit
-  - speedglm
-  - tibble
-  - tidyr
-  - pander
-  - purrr
+# - davidgohel/ggiraph
 
 r_github_packages:
   - jimhester/covr
-  - davidgohel/ggiraph
   - schloerke/travisDrat
 
 r_packages:
-  - h2o
   - brokenstick
   - face
-  - xgboost
+  - ggiraph
 
 env:
  global:

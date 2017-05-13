@@ -8,7 +8,7 @@ make_kfold_from_column <- function(data, id = ".id", fold_column = "fold") {
   fold_idx <- split(idx, folds)
 
   fold <- function(v, test) {
-      origami:::make_fold(v, setdiff(idx, test), test)
+      origami::make_fold(v, setdiff(idx, test), test)
   }
   purrr::map2((1:k), fold_idx, fold)
 }
