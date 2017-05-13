@@ -84,7 +84,7 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
         best_pred_model <- self$PredictionModels[[best_Model_idx]]
 
         # newdata, subset_exprs, predict_model_names = NULL, , convertResToDT,
-        if (gvars$verbose) print("obtaining predictions for the best model..."); print(best_pred_model)
+        if (gvars$verbose) { print("obtaining predictions for the best model..."); print(best_pred_model) }
 
         preds <- best_pred_model$predict(..., best_refit_only = TRUE)
         return(preds)

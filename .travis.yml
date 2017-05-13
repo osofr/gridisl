@@ -63,6 +63,12 @@ r_packages:
   - face
   - ggiraph
 
+addons:
+  apt:
+    packages:
+      - libicu-dev
+      - pandoc
+
 env:
  global:
    - CRAN: http://cran.rstudio.com
