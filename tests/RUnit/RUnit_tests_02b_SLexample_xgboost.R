@@ -16,8 +16,8 @@ test.xgb.grid.printing <- function() {
                       subsample = 1,
                       scale_pos_weight = 1)
 
-  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 50, nthreads = 1) +
-                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 50, nthreads = 1,
+  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nthread = 1) +
+                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 5, nthread = 1,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
                          param_grid = hyper_params, seed = 123456)
 
@@ -58,13 +58,14 @@ test.XGBoost.simple <- function() {
   cpp <- data.table::data.table(cpp)
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
-  params <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 50, early_stopping_rounds = 2)
+  params <- defModel(estimator = "xgboost__glm", family = "gaussian", nthread = 1)
   mfit_xgb1 <- fit(params, method = "none", ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                   data = cpp)
 
-  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 50) +
+  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nthread = 1) +
                  defModel(estimator = "xgboost__gbm", family = "gaussian",
-                          nrounds = 50, early_stopping_rounds = 2,
+                          nthread = 1,
+                          nrounds = 5, early_stopping_rounds = 2,
                           seed = 123456,
                           search_criteria = list(
                             strategy = "RandomDiscrete",
@@ -109,7 +110,8 @@ test.XGBoost.simpleCV <- function() {
 
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
   GRIDparams2 <-  defModel(estimator = "xgboost__gbm", family = "gaussian",
-                          nrounds = 50, early_stopping_rounds = 2,
+                          nthread = 1,
+                          nrounds = 5, early_stopping_rounds = 2,
                           seed = 123456,
                           search_criteria = list(
                             strategy = "RandomDiscrete",
@@ -149,13 +151,14 @@ test.XGBoost.GLM <- function() {
 
   require("h2o")
   Sys.sleep(3)
-  h2o::h2o.init(nthreads = 2)
+  h2o::h2o.init(nthreads = 1)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
   params_glm <- defModel(estimator = "xgboost__glm", family = "gaussian",
+                         nthread = 1,
                          eta = 1.7,
                          early_stopping_rounds = 2,
                          nrounds = 50,
@@ -167,7 +170,8 @@ test.XGBoost.GLM <- function() {
                  data = cpp_folds, fold_column = "fold")
 
   params_glm <- defModel(estimator = "xgboost__glm", family = "gaussian",
-                           eta = 1.7, nrounds = 50, early_stopping_rounds = 2,
+                         nthread = 1,
+                         eta = 1.7,
                            alpha = 0.3, lambda = 0.1,
                            seed = 123456) +
                 defModel(estimator = "h2o__glm", family = "gaussian",
@@ -208,7 +212,7 @@ test.XGBoost.regularizedGLM_grid <- function() {
 
   require("h2o")
   Sys.sleep(3)
-  h2o::h2o.init(nthreads = 2)
+  h2o::h2o.init(nthreads = 1)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -218,11 +222,10 @@ test.XGBoost.regularizedGLM_grid <- function() {
   lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1, 0.5, 0.9, 1.1, 1.5, 2)
 
   params_glm <- defModel(estimator = "xgboost__glm", family = "gaussian",
-                        eta = 1.3,
-                        nrounds = 50,
-                        early_stopping_rounds = 2,
-                        search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
-                        param_grid = list(alpha = alpha_opt,
+                         nthread = 1,
+                         eta = 1.3,
+                         search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
+                         param_grid = list(alpha = alpha_opt,
                                           lambda = lambda_opt),
                         seed = 123456) +
                 defModel(estimator = "h2o__glm", family = "gaussian",
@@ -260,16 +263,17 @@ test.XGBoost.drfs <- function() {
 
   require("h2o")
   Sys.sleep(3)
-  h2o::h2o.init(nthreads = 2)
+  h2o::h2o.init(nthreads = 1)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
   params_drf <- defModel(estimator = "xgboost__drf", family = "gaussian",
-                           eta = 1.3,
-                           nrounds = 10,
-                           seed = 123456) +
+                         ntrhead = 1,
+                         eta = 1.3,
+                         nrounds = 10,
+                         seed = 123456) +
                 defModel(estimator = "h2o__randomForest", distribution = "gaussian",
                            ntrees = 10,
                            seed = 123456)
@@ -307,8 +311,8 @@ test.holdout.XGBoost <- function() {
                       subsample = 1,
                       scale_pos_weight = 1)
 
-  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 50, nthreads = 1) +
-                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 50, nthreads = 1,
+  GRIDparams2 <- defModel(estimator = "xgboost__glm", family = "gaussian", nthreads = 1) +
+                 defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 5, nthreads = 1,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
                          param_grid = hyper_params, seed = 123456)
 
@@ -374,10 +378,10 @@ test.CV.SL.XGBoost <- function() {
                       subsample = 1,
                       scale_pos_weight = 1)
 
-  GRIDparams <- defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 50,
-                         early_stopping_rounds = 10) +
+  GRIDparams <- defModel(estimator = "xgboost__glm", family = "gaussian", nthread = 1) +
 
-                defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 50,
+                defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 5,
+                         nthread = 1,
                          early_stopping_rounds = 2,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
                          param_grid = hyper_params, seed = 123456)

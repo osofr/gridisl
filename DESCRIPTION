@@ -16,6 +16,7 @@ Imports:
     data.table,
     dplyr,
     ggplot2,
+    ggiraph,
     h2o,
     magrittr,
     methods,
@@ -35,7 +36,6 @@ Suggests:
     face (>= 0.1-2),
     doParallel,
     foreach,
-    ggiraph,
     knitr,
     RUnit,
 License: MIT + file LICENSE

@@ -7,7 +7,7 @@ test.genericSL.subset <- function() {
 
   require("h2o")
   Sys.sleep(3)
-  h2o::h2o.init(nthreads = 2)
+  h2o::h2o.init(nthreads = 1)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]

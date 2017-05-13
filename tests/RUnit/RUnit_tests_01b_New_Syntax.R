@@ -4,7 +4,7 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
 
   library("h2o")
   Sys.sleep(3)
-  h2o::h2o.init(nthreads = 2)
+  h2o::h2o.init(nthreads = 1)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -79,7 +79,8 @@ test.GBM_xgboost_onelearner <- function() {
   ## Single GBM w/ h2o vs. xgboost
   ## ------------------------------------------------------------------------------------------------------
   GRIDparams <- defModel(estimator = "xgboost__gbm", family = "gaussian",
-                           nrounds = 500,
+                          nthread = 1,
+                          nrounds = 5,
                            eta = 0.01, # (learning_rate alias)
                            # min_split_loss = , # default 0 (gamma alias)
                            max_depth = 5,
@@ -122,7 +123,7 @@ test.GBM_xgboost_vs_H2O <- function() {
 
   require("h2o")
   Sys.sleep(3)
-  h2o::h2o.init(nthreads = 2)
+  h2o::h2o.init(nthreads = 1)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -134,7 +135,7 @@ test.GBM_xgboost_vs_H2O <- function() {
   ## Single GBM w/ h2o vs. xgboost with (roughly) equivalent parameter settings as evaluated by holdout MSE & CV-MSE
   ## ------------------------------------------------------------------------------------------------------
   GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian",
-                           ntrees = 50,
+                           ntrees = 5,
                            learn_rate = 0.5,
                            max_depth = 5,
                            min_rows = 10, # [default=10]
@@ -143,7 +144,8 @@ test.GBM_xgboost_vs_H2O <- function() {
                            seed = 23) +
 
                 defModel(estimator = "xgboost__gbm", family = "gaussian",
-                           nrounds = 50,
+                         nthread = 1,
+                         nrounds = 5,
                            learning_rate = 0.5, # (alias eta), try around 5 in range (0.01-0.1)
                            max_depth = 5,
                            min_child_weight = 10, # [default=1, range: [0,∞]]
@@ -166,9 +168,9 @@ test.GBM_xgboost_vs_H2O <- function() {
   ## ------------------------------------------------------------------------------------------------------
   ## Note: when ntrees (or nrounds) is part of param_grid, the param_grid values over-ride any other.
   GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian",
-                          ntrees = 25,
+                          ntrees = 5,
                           param_grid = list(
-                            ntrees = c(10, 20),
+                            # ntrees = c(10, 20),
                             learn_rate = c(0.5),
                             max_depth = 5,
                             sample_rate = c(0.9, 1),
@@ -178,9 +180,10 @@ test.GBM_xgboost_vs_H2O <- function() {
                           seed = 23) +
 
                 defModel(estimator = "xgboost__gbm", family = "gaussian",
-                          nrounds = 25,
+                         nthread = 1,
+                         nrounds = 5,
                           param_grid = list(
-                            nrounds = c(10, 20),
+                            # nrounds = c(10, 20),
                             eta = c(0.3, 0.5),
                             max_depth = 5,
                             max_delta_step = c(0,1),
@@ -210,7 +213,7 @@ test.H2O_GRID_GBM_GLM <- function() {
 
   require("h2o")
   Sys.sleep(3)
-  h2o::h2o.init(nthreads = 2)
+  h2o::h2o.init(nthreads = 1)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]

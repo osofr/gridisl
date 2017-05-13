@@ -7,7 +7,7 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
 
   library("h2o")
   Sys.sleep(3)
-  h2o::h2o.init(nthreads = 2)
+  h2o::h2o.init(nthreads = 1)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -187,7 +187,7 @@ NOtest.H2O_residual_holdoutSL_old_syntax <- function() {
 
   library("h2o")
   Sys.sleep(3)
-  h2o::h2o.init(nthreads = 2)
+  h2o::h2o.init(nthreads = 1)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]

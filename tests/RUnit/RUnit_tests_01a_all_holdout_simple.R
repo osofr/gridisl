@@ -68,7 +68,7 @@ test.holdoutfit_all <- function() {
 
   library("h2o")
   Sys.sleep(3)
-  h2o::h2o.init(nthreads = 2)
+  h2o::h2o.init(nthreads = 1)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -120,18 +120,16 @@ test.holdoutfit_all <- function() {
   # res_GLM1 <- run_algo("speedglm", "glm")
   # res_GLM2 <- run_algo("glm", "glm")
   res_BS <- run_algo("brokenstick", "brokenstick")
-
   res_GLM3 <- run_algo("h2o", "glm")
   res_GBM <- run_algo("h2o", "gbm")
   res_DRF <- run_algo("h2o", "randomForest")
   res_DP <- run_algo("h2o", "deeplearning")
-
-  res_XGBM <- run_algo("xgboost", "gbm")
-  res_XGLM <- run_algo("xgboost", "glm")
+  # res_XGBM <- run_algo("xgboost", "gbm")
+  # res_XGLM <- run_algo("xgboost", "glm")
 
   mfits_stack <- make_PredictionStack(res_GLM3$mfit_cor_hold, res_GBM$mfit_cor_hold,
-                                      res_DRF$mfit_cor_hold, res_DP$mfit_cor_hold,
-                                      res_XGBM$mfit_cor_hold, res_XGLM$mfit_cor_hold
+                                      res_DRF$mfit_cor_hold, res_DP$mfit_cor_hold
+                                      # res_XGBM$mfit_cor_hold, res_XGLM$mfit_cor_hold
                                       )
 
   print(mfits_stack$get_best_MSEs(K = 1))

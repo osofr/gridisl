@@ -61,7 +61,6 @@ r_github_packages:
 r_packages:
   - brokenstick
   - face
-  - ggiraph
 
 addons:
   apt:
@@ -75,9 +74,9 @@ env:
 
 after_success:
   - Rscript -e 'print(packageVersion("brokenstick")); print(packageVersion("face"))'
-  - Rscript -e "packagedocs::deploy_travis()"
   - Rscript -e 'covr::coveralls()'
 
+# - Rscript -e "packagedocs::deploy_travis()"
 # - Rscript -e "travisDrat::deploy_drat()"
 
 on_failure:
