@@ -19,7 +19,7 @@ test.dataconvert <- function() {
   cpp[, ("logic_test") := sample(c(TRUE,FALSE), nrow(cpp), replace = TRUE)]
 
   class(cpp[["char_num_test1"]]); class(cpp[["char_num_test2"]])
-  cpp <- to_numeric(cpp, c("char_num_test1", "char_num_test2"))
+  cpp <- as.num(cpp, c("char_num_test1", "char_num_test2"))
   class(cpp[["char_num_test1"]]); class(cpp[["char_num_test2"]])
 
   names(cpp)[unlist(lapply(cpp, is.logical))]

@@ -6,8 +6,9 @@ test.genericSL.subset <- function() {
   options(gridisl.verbose = FALSE)
 
   require("h2o")
-  Sys.sleep(3)
+  Sys.sleep(1)
   h2o::h2o.init(nthreads = 1)
+  Sys.sleep(1)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]

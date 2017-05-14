@@ -302,6 +302,24 @@ getPredictXGBDMat <- function(m.fit, ParentObject, DataStorageObject, subset_idx
   return(pred_dmat)
 }
 
+## S3 prediction function for cross-validated xgb object
+predict.xgb.cv.synchronous <- function(xgbcvfit, newdata, ntreelimit, ...) {
+  xgbfits <- xgbcvfit[["models"]]
+  pAoutDT <- rep.int(list(numeric()), length(xgbfits))
+  names(pAoutDT) <- "xgbCV." %+% seq_along(xgbfits)
+  for (idx in seq_along(xgbfits)) {
+    pAoutDT[[idx]] <- predict(xgbfits[[idx]], newdata = newdata, ntreelimit = ntreelimit, ...)
+  }
+  pAoutDT <-
+    tibble::as_tibble(pAoutDT) %>%
+    dplyr::mutate(ID = 1:length(pAoutDT[[1]])) %>%
+    tidyr::nest(1:length(xgbfits), .key = "xgbCV")
+  data.table::setDT(pAoutDT)
+  pAoutDT[, ID := NULL]
+  # pAoutDT2 %>% tidyr::unnest()
+  return(pAoutDT)
+}
+
 predictP1.XGBoostgrid <- function(m.fit, ParentObject, DataStorageObject, subset_idx, ...) {
   return(predictP1.XGBoostmodel(m.fit, ParentObject, DataStorageObject, subset_idx, ...))
 }
@@ -326,7 +344,9 @@ predictP1.XGBoostmodel <- function(m.fit, ParentObject, DataStorageObject, subse
       ## will generally return a vector, needs to be put into a corresponding column of a data.table
       pAoutDT[[names(models_list)[idx]]] <- predict(models_list[[idx]], newdata = pred_dmat, ntreelimit = ntreelimit)
     }
-    setDT(pAoutDT)
+    pAoutDT <- as.data.table(pAoutDT)
+    names(pAoutDT) <- names(models_list)
+    # setDT(pAoutDT)
     # pAoutDT <- as.data.table(pAoutDT)
     # names(pAoutDT) <- names(models_list)
   }

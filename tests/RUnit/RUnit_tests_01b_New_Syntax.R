@@ -5,6 +5,7 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
   library("h2o")
   Sys.sleep(3)
   h2o::h2o.init(nthreads = 1)
+  Sys.sleep(3)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -22,7 +23,7 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
                defModel(estimator = "h2o__glm", family = "gaussian",
                           x = c("agedays", "apgar1", "apgar5", "parity")) +
 
-                defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 50,
+                defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 5,
                          search_criteria = list(strategy = "Cartesian"),
                          stopping_rounds = 2, stopping_metric = "MSE", # score_each_iteration = TRUE, score_tree_interval = 1,
                          param_grid = list(learn_rate = c(0.5),
@@ -41,7 +42,7 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
   ## ------------------------------------------------------------------------------------
   GRIDparams <- defModel(estimator = "h2o__glm", family = "gaussian",
                            x = c("agedays", "apgar1", "apgar5", "parity")) +
-                defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 50,
+                defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 5,
                          search_criteria = list(strategy = "Cartesian"),
                          stopping_rounds = 2, stopping_metric = "MSE", # score_each_iteration = TRUE, score_tree_interval = 1,
                          param_grid = list(learn_rate = c(0.5),
@@ -62,7 +63,7 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
   # mfit_cv$getMSE_bysubj
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(1)
+  Sys.sleep(2)
 }
 
 test.GBM_xgboost_onelearner <- function() {
@@ -124,6 +125,7 @@ test.GBM_xgboost_vs_H2O <- function() {
   require("h2o")
   Sys.sleep(3)
   h2o::h2o.init(nthreads = 1)
+  Sys.sleep(3)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -214,6 +216,7 @@ test.H2O_GRID_GBM_GLM <- function() {
   require("h2o")
   Sys.sleep(3)
   h2o::h2o.init(nthreads = 1)
+  Sys.sleep(3)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -232,22 +235,23 @@ test.H2O_GRID_GBM_GLM <- function() {
                            col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
                            balance_classes = c(TRUE, FALSE))
 
-  GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 20,
+  GRIDparams <- defModel(estimator = "h2o__gbm", family = "gaussian", ntrees = 5,
                          search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
-                         stopping_rounds = 10, stopping_metric = "MSE",
+                         stopping_rounds = 2, stopping_metric = "MSE",
                          param_grid = gbm_hyper_params, seed = 23) +
 
                 defModel(estimator = "h2o__glm", family = "gaussian",
-                          alpha = 0.3, nlambdas = 5, lambda_search = TRUE) +
+                          alpha = 0, nlambdas = 5, lambda_search = TRUE)
+                #            +
 
-                defModel(estimator = "h2o__glm", family = "gaussian",
-                         search_criteria = list(strategy = "Cartesian"),
-                         param_grid = list(alpha = seq(0,1,0.1)),
-                         nlambdas = 5, lambda_search = TRUE) +
+                # defModel(estimator = "h2o__glm", family = "gaussian",
+                #          search_criteria = list(strategy = "Cartesian"),
+                #          param_grid = list(alpha = seq(0,1,0.1)),
+                #          nlambdas = 5, lambda_search = TRUE) +
 
-                defModel(estimator = "h2o__glm", family = "gaussian",
-                         search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
-                         param_grid = list(alpha = alpha_opt, lambda = lambda_opt), seed = 23)
+                # defModel(estimator = "h2o__glm", family = "gaussian",
+                #          search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
+                #          param_grid = list(alpha = alpha_opt, lambda = lambda_opt), seed = 23)
   # old early stop params for gbm:
   # stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10,
 

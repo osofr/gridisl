@@ -8,6 +8,7 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
   library("h2o")
   Sys.sleep(3)
   h2o::h2o.init(nthreads = 1)
+  Sys.sleep(3)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -25,10 +26,11 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
     col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
     balance_classes = c(TRUE, FALSE))
 
-  params <- defModel(estimator = "h2o__glm",
-                    family = "gaussian",
-                    seed = 23,
-                    alpha = 0.3, nlambdas = 5, lambda_search = TRUE) +
+  params <- # defModel(estimator = "xgboost__gbm", nrounds = 20) +
+            # defModel(estimator = "h2o__glm",
+            #         family = "gaussian",
+            #         seed = 23,
+            #         alpha = 0.3, nlambdas = 5, lambda_search = TRUE) +
 
             defModel(estimator = "h2o__glm",
                     search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
@@ -97,7 +99,6 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
 
   ## SAME BUT WITH predict_SL, NEW RESCORING ON TRAINING DATA:
   cv_valid_preds_rescore <- predict_SL(mfit_cv1, add_subject_data = FALSE, holdout = TRUE)
-  cv_valid_preds_rescore[]
   checkTrue(all.equal(cv_valid_preds_2, cv_valid_preds_rescore))
   ## SAME BUT WITH predict_SL, RESCORING ON newdata:
   cv_valid_preds_newdata <- predict_SL(mfit_cv1, newdata = cpp_folds, add_subject_data = FALSE, holdout = TRUE)
@@ -173,7 +174,7 @@ test.H2O_cvSL_GRID_GBM_new_syntax <- function() {
   }
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(1)
+  Sys.sleep(3)
 }
 
 
@@ -188,6 +189,7 @@ NOtest.H2O_residual_holdoutSL_old_syntax <- function() {
   library("h2o")
   Sys.sleep(3)
   h2o::h2o.init(nthreads = 1)
+  Sys.sleep(3)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -247,5 +249,5 @@ NOtest.H2O_residual_holdoutSL_old_syntax <- function() {
   preds_alldat[]
 
   h2o::h2o.shutdown(prompt = FALSE)
-  Sys.sleep(1)
+  Sys.sleep(3)
 }
