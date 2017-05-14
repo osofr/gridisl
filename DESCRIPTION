@@ -1,8 +1,9 @@
 Package: gridisl
-Title: Machine Learning Toolkit with Grid-Search Discrete SuperLearner for Longitudinal Data
+Title: Discrete SuperLearner with Grid-Search for Longitudinal Data
 Version: 0.0.7.9000
 Authors@R: c(
-    person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"))
+    person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"),
+    person(c("Mark", "J."), "van der Laan", role="aut", email="laan@berkeley.edu"))
 Description: Machine Learning Toolkit with Grid-Search Discrete SuperLearner for Longitudinal Data. Provides access to machine learning algorithms implemented in xgboost or h2o (RandomForests, Gradient Boosting Machines, Deep Neural Nets). Simple syntax for specifying large grids of tuning parameters, including random grid search over parameter space. Model selection can be performed via V-fold cross-validation or random validation splits.
 URL: https://github.com/osofr/gridisl
 BugReports: https://github.com/osofr/gridisl/issues
