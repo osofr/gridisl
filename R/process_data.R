@@ -63,8 +63,9 @@ as.num <- function(data, vars) {
 #' @param vars_to_int Column name(s) that should be converted to integer type.
 #' @param skip_vars These columns will not be converted into other types
 #' @param drop_vars Drop the variables in skip_vars and drop the factor variables that were re-coded into binary dummies from the resulting analytic dataset?
+#' @param verbose Print processing info
 #' @export
-prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars, drop_vars = FALSE) {
+prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars, drop_vars = FALSE, verbose = FALSE) {
   data <- data.table::data.table(data)
   data <- drop_NA_y(data, OUTCOME)
 
@@ -84,12 +85,14 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars,
   data <- char_to_factor(data, skip_vars)
   data <- factor_to_dummy(data, skip_vars, drop_vars)
 
-  cat("\ndefined the following new dummy columns:\n")
-  print(unlist(attributes(data)$new.factor.names))
+  if (verbose) {
+    cat("\ndefined the following new dummy columns:\n")
+    print(unlist(attributes(data)$new.factor.names))
+  }
 
   if (drop_vars && !missing(skip_vars)) {
     really_skip_vars <- names(data)[names(data) %in% skip_vars]
-    cat("\ndropping the following columns: ", paste(really_skip_vars, collapse=","),"\n")
+    if (verbose) cat("\ndropping the following columns: ", paste(really_skip_vars, collapse=","),"\n")
     for (var in really_skip_vars) set(data, j = var, value = NULL)
   }
 
