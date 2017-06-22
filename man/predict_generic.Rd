@@ -38,4 +38,3 @@ or a data.table with subject level covariates added along with model-based predi
 \description{
 Generic SuperLearner prediction function
 }
-

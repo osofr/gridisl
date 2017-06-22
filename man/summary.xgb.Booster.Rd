@@ -20,4 +20,3 @@ The markdown-formated model summary returned by \code{pander::pander_return}.
 \description{
 Prints the modeling summary for the xgboost model fit (see \code{xgboost} R package).
 }
-

@@ -19,4 +19,3 @@ Subset of growth data from the collaborative perinatal project (CPP).
 head(cpp)
 }
 \keyword{data}
-

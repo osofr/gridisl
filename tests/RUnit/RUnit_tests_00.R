@@ -1,8 +1,8 @@
 ### --- Test setup ---
 
 if(FALSE) {
-  library("RUnit")
-  library("roxygen2")
+  # library("RUnit")
+  # library("roxygen2")
   library("devtools")
   setwd(".."); setwd(".."); getwd()
   document()

@@ -18,4 +18,3 @@ Must also contain validation /test set predictions and corresponding MSEs.}
 \description{
 Plot the top (smallest) validation MSEs for an ensemble of prediction models
 }
-

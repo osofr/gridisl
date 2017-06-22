@@ -39,4 +39,3 @@ String specifying the path to the main report file.
 \description{
 Generate report(s) with modeling stats using pandoc.
 }
-

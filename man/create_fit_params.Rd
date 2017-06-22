@@ -12,4 +12,3 @@ create_fit_params(reg)
 \description{
 Create a list with main model parameters
 }
-

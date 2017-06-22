@@ -19,4 +19,3 @@ The markdown-formated model summary returned by \code{pander::pander_return}.
 \description{
 Prints the modeling summary for the GLM fit (\code{stats::glm.fit} or \code{speedglm::speedglm.wfit})
 }
-

@@ -14,4 +14,3 @@ drop_NA_y(data, OUTCOME)
 \description{
 Drop all observation rows with missing outcomes
 }
-

@@ -79,4 +79,3 @@ The code for using \code{tidyverse} syntax for model grid search is borrowed and
 \href{https://drsimonj.svbtle.com/grid-search-in-the-tidyverse}{https://drsimonj.svbtle.com/grid-search-in-the-tidyverse}.
 The \code{search_criteria} idea is borrowed from \code{h2o::h2o.grid}.
 }
-

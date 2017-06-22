@@ -22,4 +22,3 @@ The markdown-formated model summary returned by \code{pander::pander_return}.
 \description{
 Prints the modeling summary for the h2o model fit (see \code{h2o} R package).
 }
-

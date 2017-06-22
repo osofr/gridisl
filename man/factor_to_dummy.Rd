@@ -4,7 +4,7 @@
 \alias{factor_to_dummy}
 \title{Convert factors to binary indicators, for factors with > 2 levels drop the first factor level and define several dummy variables for the rest of the levels}
 \usage{
-factor_to_dummy(data, skip_vars, drop_factor = FALSE)
+factor_to_dummy(data, skip_vars, drop_factor = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{data}{Input dataset, as \code{data.table}.}
@@ -12,8 +12,9 @@ factor_to_dummy(data, skip_vars, drop_factor = FALSE)
 \item{skip_vars}{These columns will not be converted}
 
 \item{drop_factor}{Drop the factor variables that were re-coded into binary dummies from the resulting analytic dataset?}
+
+\item{verbose}{Print processing info}
 }
 \description{
 Convert factors to binary indicators, for factors with > 2 levels drop the first factor level and define several dummy variables for the rest of the levels
 }
-

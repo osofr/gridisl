@@ -25,4 +25,3 @@ An input data with added holdout indicator column (TRUE for holdout observation 
 \description{
 Define and fit growth models evaluated on holdout observations.
 }
-

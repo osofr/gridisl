@@ -14,4 +14,3 @@ logical_to_int(data, skip_vars)
 \description{
 Convert logical covariates to integers
 }
-

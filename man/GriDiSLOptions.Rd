@@ -22,4 +22,3 @@ gridislOptions('fit.package')
 gridislOptions('fit.package', 'h2o')
 }
 }
-

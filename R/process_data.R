@@ -83,7 +83,7 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars,
 
   data <- logical_to_int(data, skip_vars)
   data <- char_to_factor(data, skip_vars)
-  data <- factor_to_dummy(data, skip_vars, drop_vars)
+  data <- factor_to_dummy(data, skip_vars, drop_vars, verbose)
 
   if (verbose) {
     cat("\ndefined the following new dummy columns:\n")
@@ -140,9 +140,10 @@ char_to_factor <- function(data, skip_vars) fromtype_totype(data, is.character, 
 #' @param data Input dataset, as \code{data.table}.
 #' @param skip_vars These columns will not be converted
 #' @param drop_factor Drop the factor variables that were re-coded into binary dummies from the resulting analytic dataset?
+#' @param verbose  Print processing info
 #' @export
-factor_to_dummy <- function(data, skip_vars, drop_factor = FALSE) {
-  verbose <- gvars$verbose
+factor_to_dummy <- function(data, skip_vars, drop_factor = FALSE, verbose = FALSE) {
+  # verbose <- gvars$verbose
 
   # Create dummies for each factor in the data
   factor.Ls <- as.character(CheckExistFactors(data))
@@ -166,7 +167,7 @@ factor_to_dummy <- function(data, skip_vars, drop_factor = FALSE) {
       data[,(factor.varnm %+% "_" %+% factor.levs.code) := lapply(factor.levs, function(x) as.integer(levels(get(factor.varnm))[get(factor.varnm)] %in% x))]
       # Remove the original factor var:
       if (drop_factor) {
-        cat("dropping the following factor: ", factor.varnm,"\n")
+        if (verbose) cat("dropping the following factor: ", factor.varnm,"\n")
         data[,(factor.varnm) := NULL]
       }
       new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs.code

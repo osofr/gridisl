@@ -15,4 +15,3 @@ A vector of out-of-sample predictions from the best selected model (CV-MSE).
 \description{
 Get the combined out of sample predictions from V cross-validation models
 }
-

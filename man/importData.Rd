@@ -26,4 +26,3 @@ An R6 object that contains the input data. This can be passed as an argument to 
 \description{
 Import data, define nodes (columns) and define input data R6 object
 }
-

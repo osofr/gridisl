@@ -17,4 +17,3 @@ The output is printed with \code{cat}. To capture the markdown-formated model su
 \description{
 Prints the modeling summary for the h2o model fit (see \code{h2o} R package).
 }
-

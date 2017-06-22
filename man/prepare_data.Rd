@@ -5,7 +5,7 @@
 \title{Wrapper for several data processing functions.}
 \usage{
 prepare_data(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars,
-  drop_vars = FALSE)
+  drop_vars = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{data}{Input dataset, can be a \code{data.frame} or a \code{data.table}.}
@@ -19,6 +19,8 @@ prepare_data(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars,
 \item{skip_vars}{These columns will not be converted into other types}
 
 \item{drop_vars}{Drop the variables in skip_vars and drop the factor variables that were re-coded into binary dummies from the resulting analytic dataset?}
+
+\item{verbose}{Print processing info}
 }
 \description{
 Clean up the input data by dropping observations with missing outcomes \code{OUTCOME},
@@ -28,4 +30,3 @@ convert all character columns into factors
 convert all factors into integers,
 by defining additional dummy variables for every factor with > 2 levels.
 }
-

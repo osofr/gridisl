@@ -15,4 +15,3 @@ get_train_data(modelfit)
 \description{
 Wrapper function for obtaining the training dataset saved in the modeling object.
 }
-

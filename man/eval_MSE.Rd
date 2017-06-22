@@ -28,4 +28,3 @@ These predictions and the outcome stored in \code{newdata} are then used to re-e
 Note that \code{newdata} must be of the same
 dimensionality as the original training data used for fitting the h2o models.
 }
-

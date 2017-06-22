@@ -49,4 +49,3 @@ An R6 object containing the model fit(s).
 \description{
 Generic modeling function for longitudinal data.
 }
-

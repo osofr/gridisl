@@ -16,4 +16,3 @@ If you would want to catch the result instead, then call \code{pander_return} in
 \description{
 Prints a H2OGrid object in Pandoc's markdown.
 }
-

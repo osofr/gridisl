@@ -14,4 +14,3 @@ as.int(data, vars)
 \description{
 Convert specific columns in \code{vars} to numeric
 }
-

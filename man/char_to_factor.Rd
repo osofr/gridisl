@@ -14,4 +14,3 @@ char_to_factor(data, skip_vars)
 \description{
 Convert all character columns to factors
 }
-

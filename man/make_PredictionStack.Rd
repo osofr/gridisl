@@ -12,4 +12,3 @@ make_PredictionStack(...)
 \description{
 Combine several fitted models into a single ensemble model of class 'PredictionStack'.
 }
-

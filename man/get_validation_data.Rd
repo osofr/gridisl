@@ -15,4 +15,3 @@ get_validation_data(modelfit)
 \description{
 Wrapper function for obtaining the validation dataset saved in the modeling object.
 }
-

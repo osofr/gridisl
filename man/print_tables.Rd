@@ -2,13 +2,13 @@
 % Please edit documentation in R/summaryS3methods.R
 \name{print_tables}
 \alias{print_tables}
-\alias{print_tables.GLMmodel}
-\alias{print_tables.H2OBinomialModel}
-\alias{print_tables.H2ORegressionModel}
-\alias{print_tables.brokenstick}
 \alias{print_tables.face.sparse}
+\alias{print_tables.brokenstick}
 \alias{print_tables.xgb.Booster}
 \alias{print_tables.xgb.cv.synchronous}
+\alias{print_tables.H2OBinomialModel}
+\alias{print_tables.H2ORegressionModel}
+\alias{print_tables.GLMmodel}
 \title{S3 methods for printing model fit summaries as pander tables}
 \usage{
 print_tables(model, only.coefs = FALSE, ...)
@@ -41,4 +41,3 @@ The output is printed with \code{cat}. To capture the markdown-formated model su
 \description{
 Used internally to prints the modeling summary stats for reporting (see \code{\link{make_model_report}}).
 }
-

@@ -23,4 +23,3 @@ An input data with added fold indicator column (as ordered factor with levels 1:
 \description{
 Define and fit growth models evaluated on holdout observations.
 }
-

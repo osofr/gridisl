@@ -15,4 +15,3 @@ Print Current Option Settings for \code{gridisl}
 \seealso{
 \code{\link{set_all_gridisl_options}}
 }
-

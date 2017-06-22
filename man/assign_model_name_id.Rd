@@ -18,4 +18,3 @@ assign_model_name_id(params, H2O.model.object, model_algorithm, name = NULL)
 \description{
 Generate model names / IDs
 }
-

@@ -14,4 +14,3 @@ save_best_model(modelfit, file.path = getOption("gridisl.file.path"))
 \description{
 Save the best performing h2o model
 }
-

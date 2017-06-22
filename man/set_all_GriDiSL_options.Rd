@@ -25,4 +25,3 @@ To reset all options to their defaults simply run \code{set_all_gridisl_options(
 \seealso{
 \code{\link{gridislOptions}}, \code{\link{print_gridisl_opts}}
 }
-

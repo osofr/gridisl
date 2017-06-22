@@ -58,4 +58,3 @@ Define and fit discrete SuperLearner for longitudinal data.
 Model selection (scoring) can be based on MSE evaluated for random holdout observations (method = "holdout")
 or V-fold cross-validated MSE (method = "cv").
 }
-

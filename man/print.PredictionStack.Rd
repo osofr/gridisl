@@ -14,4 +14,3 @@
 \description{
 Prints the modeling summaries
 }
-

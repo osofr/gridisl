@@ -29,4 +29,3 @@ create_fit_object(model.fit, model_alg, fitfunname, params, coef, nobs,
 \description{
 Create a model fit list
 }
-
