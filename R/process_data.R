@@ -14,13 +14,13 @@ is.numericish <- function (x) {
   )
 }
 
-recover_true_type <- function(data, check_type_f, want_type_f, make_type_f) {
+recover_true_type <- function(data, check_type_f, want_type_f, make_type_f, verbose = FALSE) {
   ## these columns are really integers/numerics, but are coded as character
   update_cols_idx <- unlist(lapply(data, check_type_f))
   update_cols <- update_cols_idx[(update_cols_idx & !(unlist(lapply(data, want_type_f)))) %in% TRUE]
   update_cols <- names(update_cols)
   if (length(update_cols) > 0) {
-    cat("\nchanging the type of the following columns from 'character' to 'integer' or 'numeric':", paste(update_cols, collapse=","),"\n")
+    if (verbose) cat("\nchanging the type of the following columns from 'character' to 'integer' or 'numeric':", paste(update_cols, collapse=","),"\n")
     data <- make_type_f(data, update_cols)
   }
   return(data)
@@ -78,8 +78,8 @@ prepare_data <- function(data, OUTCOME, vars_to_numeric, vars_to_int, skip_vars,
 
   if (!missing(vars_to_int)) data <- as.int(data, vars_to_int)
 
-  data <- recover_true_type(data, is.integerish, is.integer, as.int)
-  data <- recover_true_type(data, is.numericish, is.numeric, as.num)
+  data <- recover_true_type(data, is.integerish, is.integer, as.int, verbose)
+  data <- recover_true_type(data, is.numericish, is.numeric, as.num, verbose)
 
   data <- logical_to_int(data, skip_vars)
   data <- char_to_factor(data, skip_vars)
