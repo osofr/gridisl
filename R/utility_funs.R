@@ -54,10 +54,37 @@ save_best_model <- function(modelfit, file.path = getOption('gridisl.file.path')
 
   return(invisible(NULL))
 }
+# ---------------------------------------------------------------------------------------
+#' Convert a column of validation folds into origami format
+#'
+#' From a column of validation folds (length n) into an origami-based format for fold storage
+#' for V-fold cross-validation
+#' @param fold_column A vector with validation fold indicators
+#' @return An object (list) or validation / training folds of length V, for V-fold cross-validation
+#' @export
+make_kfold_from_column <- function(fold_column) {
+  if (missing(fold_column)) stop("must provide a fold column -- a vector with validation fold indicators")
+# make_kfold_from_column <- function(data, id = ".id", fold_column = "fold") {
+  n <- length(fold_column)
+  # n <- nrow(data)
+  folds <- fold_column
+  # folds <- data[[fold_column]]
+  k <- length(unique(folds))
+
+  idx <- seq_len(n)
+  fold_idx <- split(idx, folds)
+
+  fold <- function(v, test) {
+      origami::make_fold(v, setdiff(idx, test), test)
+  }
+  purrr::map2((1:k), fold_idx, fold)
+}
+
 
 # ---------------------------------------------------------------------------------------
-#' Define and fit growth models evaluated on holdout observations.
+#' Define a column of fold indicators for V-fold cross-validation
 #'
+#' The input data is assumed to have repeated observations per subjects, the folds are defined as clustered by subject IDs.
 #' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
 #' @param ID A character string name of the column that contains the unique subject identifiers.
 #' @param nfolds Number of unique folds (same fold is always assigned to all observations that share the same ID).

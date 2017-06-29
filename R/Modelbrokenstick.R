@@ -73,6 +73,7 @@ fit.brokenstick <- function(fit.class, params, subject, x, Yvals, knots = NULL, 
                               knots = knots,
                               boundary = c(mn, mx))
               )
+    model.fit <- brokenstick::export(model.fit)
   }
 
   return(create_fit_object(model.fit, model_alg = "brokenstick", fitfunname = "brokenstick",
@@ -127,7 +128,10 @@ predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, s
     assert_that(new_vals_idx[1] > length(fitted.Yvals))
 
     setkeyv(new.dat, cols = "subject")
-    bs.predict <- utils::getFromNamespace("predict.brokenstick", "brokenstick")
+
+    bs.predict <- utils::getFromNamespace("predict.brokenstick_export", "brokenstick")
+    # bs.predict <- utils::getFromNamespace("predict.brokenstick", "brokenstick")
+
     # bs.predict <- function(object, y, x, output, ...) {
     #   bs.predict.fun <- utils::getFromNamespace("predict.brokenstick", "brokenstick")
     #   res <- bs.predict.fun(object, y = y, x = x, output = output, ...)
@@ -137,6 +141,7 @@ predictP1.brokenstickmodel <- function(m.fit, ParentObject, DataStorageObject, s
     new.dat[, yhat := bs.predict(model.object, y = y, x = x, output = "vector"), by = subject]
     new.preds <- new.dat[new_vals_ind == TRUE, yhat]
     pAout[subset_idx] <- as.vector(new.preds)
+
   }
   return(pAout)
 }

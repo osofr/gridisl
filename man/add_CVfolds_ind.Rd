@@ -2,7 +2,7 @@
 % Please edit documentation in R/utility_funs.R
 \name{add_CVfolds_ind}
 \alias{add_CVfolds_ind}
-\title{Define and fit growth models evaluated on holdout observations.}
+\title{Define a column of fold indicators for V-fold cross-validation}
 \usage{
 add_CVfolds_ind(data, ID, nfolds = 5, fold_column = "fold", seed = NULL)
 }
@@ -21,5 +21,5 @@ add_CVfolds_ind(data, ID, nfolds = 5, fold_column = "fold", seed = NULL)
 An input data with added fold indicator column (as ordered factor with levels 1:nfolds).
 }
 \description{
-Define and fit growth models evaluated on holdout observations.
+The input data is assumed to have repeated observations per subjects, the folds are defined as clustered by subject IDs.
 }

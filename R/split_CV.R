@@ -1,17 +1,4 @@
-#' @export
-make_kfold_from_column <- function(data, id = ".id", fold_column = "fold") {
-  n <- nrow(data)
-  folds <- data[[fold_column]]
-  k <- length(unique(folds))
 
-  idx <- seq_len(n)
-  fold_idx <- split(idx, folds)
-
-  fold <- function(v, test) {
-      origami::make_fold(v, setdiff(idx, test), test)
-  }
-  purrr::map2((1:k), fold_idx, fold)
-}
 
 ## ----------------------------------------------------------------
 ## TO DO TO FINISH external CV for using with stremr:

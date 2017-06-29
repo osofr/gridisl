@@ -53,6 +53,7 @@ test.SL.H2O.GLM_GBM_change_covars <- function() {
                          seed = 23)
 
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+
   mfit_cv <- fit(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                     data = cpp_folds, method = "cv", fold_column = "fold")
 

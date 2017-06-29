@@ -20,6 +20,7 @@ Imports:
     h2o,
     magrittr,
     methods,
+    origami,
     R6,
     Rcpp,
     rmarkdown,
@@ -39,6 +40,8 @@ Suggests:
     ggiraph,
     knitr,
     RUnit,
+    testthat,
+    mockery
 License: MIT + file LICENSE
 LazyData: true
 RoxygenNote: 6.0.1
