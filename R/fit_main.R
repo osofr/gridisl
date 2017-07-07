@@ -118,7 +118,7 @@ fit <- function(...) { UseMethod("fit") }
 # @example tests/examples/1_gridisl_example.R
 #' @export
 fit.ModelStack <- function(models,
-                           method = c("none", "cv", "holdout"),
+                           method = c("none", "cv", "holdout", "origamiSL"),
                            data,
                            ID,
                            t_name,
@@ -138,8 +138,8 @@ fit.ModelStack <- function(models,
 
   # if (!is.ModelStack(models)) stop("argument models must be of class 'ModelStack'")
 
-  if (!(method %in% c("none", "cv", "holdout")))
-    stop("argument method must be one of: 'none', 'cv', 'holdout'")
+  if (!(method %in% c("none", "cv", "holdout", "origamiSL")))
+    stop("argument method must be one of: 'none', 'cv', 'holdout', 'origamiSL'")
   if (!data.table::is.data.table(data) && !is.DataStorageClass(data))
     stop("argument data must be of class 'data.table, please convert the existing data.frame to data.table by calling 'data.table::as.data.table(...)'")
 
@@ -158,6 +158,8 @@ fit.ModelStack <- function(models,
     modelfit <- fit_cvSL(ID, t_name, x, y, data, models = models, nfolds = nfolds, fold_column = fold_column, refit = refit, seed = seed, verbose = verbose, ...)
   } else if (method %in% "holdout") {
     modelfit <- fit_holdoutSL(ID, t_name, x, y, data, models = models, hold_column = hold_column, hold_random = hold_random, refit = refit, seed = seed, verbose = verbose, ...)
+  } else if (method %in% "origamiSL") {
+    modelfit <- fit_origamiSL(ID, t_name, x, y, data, models = models, nfolds = nfolds, fold_column = fold_column, refit = refit, seed = seed, verbose = verbose, ...)
   }
 
   return(modelfit)

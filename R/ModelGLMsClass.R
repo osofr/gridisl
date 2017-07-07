@@ -223,8 +223,8 @@ glmModelClass <- R6Class(classname = "glmModelClass",
       # if (!is.matrix(P1)) P1 <- matrix(P1, nrow = length(P1), ncol = 1)
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)
-        colnames(P1) <- names(self$getmodel_ids)
       }
+      colnames(P1) <- names(self$getmodel_ids)
       return(P1)
     },
 

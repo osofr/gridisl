@@ -7,9 +7,9 @@
 \usage{
 fit(...)
 
-\method{fit}{ModelStack}(models, method = c("none", "cv", "holdout"), data,
-  ID, t_name, x, y, nfolds = NULL, fold_column = NULL, hold_column = NULL,
-  hold_random = FALSE, seed = NULL, refit = TRUE,
+\method{fit}{ModelStack}(models, method = c("none", "cv", "holdout",
+  "origamiSL"), data, ID, t_name, x, y, nfolds = NULL, fold_column = NULL,
+  hold_column = NULL, hold_random = FALSE, seed = NULL, refit = TRUE,
   verbose = getOption("gridisl.verbose"), ...)
 }
 \arguments{

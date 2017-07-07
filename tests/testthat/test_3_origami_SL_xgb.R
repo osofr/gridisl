@@ -35,7 +35,8 @@ context("CV brokenstick")
                             # colsample_bytree = c(0.5, 1.0)
                             ),
                           # early_stopping_rounds = 50,
-                          seed = 23)
+                          seed = 23) +
+                defModel(estimator = "speedglm__glm", family = "gaussian", x = "agedays")
 
 cv_origami <- function(models, data, fold_column, hold_column, ID, t_name, x, y) {
   cv_1fold <- function(fold) {
@@ -90,7 +91,63 @@ cv_origami <- function(models, data, fold_column, hold_column, ID, t_name, x, y)
   x = c("agedays", covars)
   models <- GRIDparams
   ## Convert folds to origami format (performed inside cv_origami)
-  # Vfolds <- make_kfold_from_column(cpp_folds[["fold"]])
+  # cv_origami(models, cpp, "fold", "hold", ID = "subjid", t_name = "agedays", x = x, y = "haz")
 
-  cv_origami(models, cpp, "fold", "hold", ID = "subjid", t_name = "agedays", x = x, y = "haz")
+  Vfolds <- make_kfold_from_column(cpp[["fold"]])
+  SLfit <- origami_SuperLearner(X = cpp, y_name = "haz", x_name = x, id_name = "subjid", t_name = "agedays",
+                       SL.library = models,
+                       folds = Vfolds
+                       )
+  # class(SLfit)
+#                        Risk       Coef
+# m.1.h2o.gbm.grid.1 1.479386 0.42243010
+# m.1.h2o.gbm.grid.2 1.505647 0.17311494
+# m.1.h2o.gbm.grid.3 1.528869 0.09132913
+# m.1.h2o.gbm.grid.4 1.606154 0.00000000
+# m.2.xgb.gbm.grid.1 1.497424 0.09265465
+# m.2.xgb.gbm.grid.2 1.588657 0.00000000
+# m.3.h2o.glm        1.537484 0.22047118
+
+
+  ## SL holdout predictions from original data:
+  Z1 <- predict_SL(SLfit, holdout = TRUE)
+  Z1
+  ## SL holdout predictions for new data:
+  Z2_holdout <- predict_SL(SLfit, cpp, holdout = TRUE)
+  Z2_holdout[]
+  ## SL prediction for new data:
+  Z2 <- predict_SL(SLfit, cpp)
+  Z2
+
+  split_preds <- predict_SL_splitspec.origami_SuperLearner(SLfit, cpp)
+
+  SLfit_SS <- origami_SuperLearner(X = cpp, y_name = "haz", x_name = x, id_name = "subjid", t_name = "agedays",
+                       SL.library = models,
+                       folds = Vfolds,
+                       splitspec_y = split_preds
+                       )
+#                          Risk       Coef
+# m.1.h2o.gbm.grid.1 0.01692271 0.36455182
+# m.1.h2o.gbm.grid.2 0.01763421 0.17718720
+# m.1.h2o.gbm.grid.3 0.02048878 0.20380576
+# m.1.h2o.gbm.grid.4 0.02120910 0.02848721
+# m.2.xgb.gbm.grid.1 0.03038491 0.00000000
+# m.2.xgb.gbm.grid.2 0.01758235 0.22596801
+# m.3.glm            0.10645430 0.00000000
+
+  cpp2 <- cpp
+  cpp2[["haz"]] <- Z2[["pred"]]
+  SLfit_noSS <- origami_SuperLearner(X = cpp2, y_name = "haz", x_name = x, id_name = "subjid", t_name = "agedays",
+                       SL.library = models,
+                       folds = Vfolds
+                       )
+
+  #                          Risk      Coef
+  # m.1.h2o.gbm.grid.1 0.03357588 0.4333617
+  # m.1.h2o.gbm.grid.2 0.03620003 0.1335599
+  # m.1.h2o.gbm.grid.3 0.04452229 0.1239840
+  # m.1.h2o.gbm.grid.4 0.04669002 0.0000000
+  # m.2.xgb.gbm.grid.1 0.05067947 0.0000000
+  # m.2.xgb.gbm.grid.2 0.03532525 0.3090944
+  # m.3.h2o.glm        0.10704434 0.0000000
 

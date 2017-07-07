@@ -129,8 +129,8 @@ faceModelClass <- R6Class(classname = "faceModelClass",
 
       if (!is.matrix(P1)) {
         P1 <- matrix(P1, byrow = TRUE)
-        colnames(P1) <- names(self$getmodel_ids)
       }
+      colnames(P1) <- names(self$getmodel_ids)
       return(P1)
     },
 

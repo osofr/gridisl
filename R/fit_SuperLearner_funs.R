@@ -88,7 +88,7 @@ fit_model <- function(ID,
                       useH2Oframe = FALSE,
                       subset_exprs = NULL,
                       subset_idx = NULL,
-                      verbose = getOption("gridisl.verbose")) {
+                      verbose = getOption("gridisl.verbose"), ...) {
   gvars$verbose <- verbose
 
   if (missing(train_data)) stop("train_data arg must be specified")
@@ -327,7 +327,6 @@ predict_SL.PredictionStack <- function(modelfit,
 
   return(preds)
 }
-
 
 # ---------------------------------------------------------------------------------------
 # Predict for new dataset for models trained on non-holdouts only

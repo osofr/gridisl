@@ -6,7 +6,7 @@
 \usage{
 fit_model(ID, t_name, x, y, train_data, valid_data, models, nfolds, fold_column,
   seed, useH2Oframe = FALSE, subset_exprs = NULL, subset_idx = NULL,
-  verbose = getOption("gridisl.verbose"))
+  verbose = getOption("gridisl.verbose"), ...)
 }
 \arguments{
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}
