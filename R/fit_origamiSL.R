@@ -440,7 +440,7 @@ predict_SL.origamiSL_fit <- function(modelfit, newdata, ...) {
   # dimnames(Z)[[length(dim(Z))]] <- names(modelfit$library_fits)
   pred <- modelfit$method$computePred(library_pred, modelfit$coef, control = modelfit$control)
   pred <- data.table::data.table(pred)
-  colnames(pred) <- "pred"
+  colnames(pred) <- "preds"
   return(pred)
   # return(list(pred = pred, library_pred = library_pred))
 }
