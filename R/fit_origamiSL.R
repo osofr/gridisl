@@ -388,7 +388,7 @@ predict_SL.origamiSL <- function(modelfit,
       # pred_obj <- list(
           pred = modelfit$fullFit$method$computePred(Z, modelfit$fullFit$coef, control = modelfit$fullFit$control)
           pred <- data.table::data.table(pred)
-          colnames(pred) <- "pred"
+          colnames(pred) <- "preds"
           # library_pred = Z)
     } else if (byfold) {
       stop("... byfold prediction with missing newdata is not implemented...")
