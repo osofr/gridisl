@@ -17,12 +17,12 @@ check_out_of_sample_consistency <- function(models_list, valid_H2Oframe, predvar
   }
 
   ## 3. Test that the validation and training data have exactly the same fold assignments (in h2oFrame)
-  if (!all(valid_H2Oframe[[fold_column]] == all_folds_h2o[[1]]))
-    stop("Out-of-sample (holdout) predictions for new data has failed. The fold assignments in new data (validation_data) and training data appear to be different.")
+  # if (!all(valid_H2Oframe[[fold_column]] == all_folds_h2o[[1]]))
+  #   stop("Out-of-sample (holdout) predictions for new data has failed. The fold assignments in new data (validation_data) and training data appear to be different.")
 
   ## 4a. Test that the new validation data (in h2oFrame) has the same number of observations as the training data
-  if (!( nrow(valid_H2Oframe) == nrow(all_folds_h2o[[1]]) ))
-    stop("Out-of-sample (holdout) predictions for new data has failed. The number of rows in new data (validation_data) does not match that of the training data.")
+  # if (!( nrow(valid_H2Oframe) == nrow(all_folds_h2o[[1]]) ))
+  #   stop("Out-of-sample (holdout) predictions for new data has failed. The number of rows in new data (validation_data) does not match that of the training data.")
 
   ## 4b. Test that all predictors are present in the validation data (in h2oFrame)
   if (!all(c(predvars,fold_column) %in% colnames(valid_H2Oframe)))
@@ -70,6 +70,7 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
 
     ##  **** Loads new h2o frame based on validation_data ****
     valid_H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, validation_data, subset_idx)
+    valid_folds <- validation_data$dat.sVar[subset_idx, ][[validation_data$fold_column]]
 
     if (gvars$verbose == 2) message("Obtaining out-of-sample/holdout CV predictions for h2o with newdata")
     res <- check_out_of_sample_consistency(models_list, valid_H2Oframe, predvars, fold_column)
@@ -77,10 +78,18 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
     ## hack to deal with latest h2o mod, requires internal cv weights column for prediction from CV models:
     valid_H2Oframe[["__internal_cv_weights__"]] <- as.h2o(rep.int(1L, nrow(valid_H2Oframe)))
 
-    ## Get the fold assignments for the 1st model in ensemble:
-    h2o_model_1 <- models_list[[1]]
-    fold_h2o <- h2o::h2o.cross_validation_fold_assignment(h2o_model_1)
-    vfolds_cat_h2o <- sort(h2o::h2o.levels(fold_h2o)) # # vfolds_ncat_h2o <- h2o.nlevels(fold_h2o)
+    if (!is.null(valid_folds)) {
+      # fold_origami <- make_kfold_from_column(valid_folds)
+      # fold_valid <- lapply(fold_origami, '[[', "validation_set")
+      # names(fold_valid) <- levels(valid_folds)
+      fold_valid <- h2o::as.h2o(valid_folds)
+    } else {
+      ## Get the fold assignments for the 1st model in ensemble:
+      h2o_model_1 <- models_list[[1]]
+      fold_valid <- h2o::h2o.cross_validation_fold_assignment(h2o_model_1)
+    }
+
+    vfolds_cat_h2o <- sort(h2o::h2o.levels(fold_valid)) # # vfolds_ncat_h2o <- h2o.nlevels(fold_valid)
 
     pAoutMat_h2o <- NULL
     # CV_loop_t <- system.time({
@@ -88,7 +97,7 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
 
       if (gvars$verbose == 2) message("Obtaining out-of-sample CV predictions for all models and validation fold: " %+% vfolds_cat_h2o[vfold_idx])
 
-      fold_CV_i_logical <- fold_h2o == vfolds_cat_h2o[vfold_idx]
+      fold_CV_i_logical <- fold_valid == vfolds_cat_h2o[vfold_idx]
       ## Define validation frame for this fold:
       valid_H2Oframe_CV.i <- valid_H2Oframe[fold_CV_i_logical, ]
       cv.i_foldframeID <- h2o::h2o.getId(valid_H2Oframe_CV.i)

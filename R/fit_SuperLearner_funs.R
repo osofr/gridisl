@@ -125,7 +125,7 @@ fit_model <- function(ID,
   ## Define R6 object with validation data:
   if (!missing(valid_data)) {
     valid_data <- validate_convert_input_data(valid_data, ID = ID, t_name = t_name, x = x, y = y, useH2Oframe = useH2Oframe, dest_frame = "all_valid_H2Oframe")
-
+    if (!is.null(fold_column)) valid_data$fold_column <- fold_column
     # CheckVarNameExists(valid_data$dat.sVar, y)
 
   } else {

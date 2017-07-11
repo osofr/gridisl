@@ -33,28 +33,30 @@ xgb_predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, s
     # fold_model <- models_list[[1]][["models"]][[1]]
 
     valid_dmat <- getPredictXGBDMat(m.fit, ParentObject, validation_data, subset_idx)
+    valid_folds <- validation_data$dat.sVar[subset_idx, ][[validation_data$fold_column]]
 
-    # outvar <- m.fit$params$outvar
-    # predvars <- m.fit$params$predvars
-    # fold_column <- ParentObject$fold_column
-    # res <- check_out_of_sample_consistency(models_list, valid_dmat, predvars, fold_column)
+    if (!is.null(valid_folds)) {
+      fold_origami <- make_kfold_from_column(valid_folds)
+      fold_valid <- lapply(fold_origami, '[[', "validation_set")
+      names(fold_valid) <- levels(valid_folds)
+    } else {
+      # ## Get the fold assignments for the 1st model in ensemble:
+      xgb_model_1 <- models_list[[1]]
+      fold_valid <- xgb_model_1[["folds"]]
+    }
 
-    # ## Get the fold assignments for the 1st model in ensemble:
-    xgb_model_1 <- models_list[[1]]
-
-    fold_xgb <- xgb_model_1[["folds"]]
-    vfolds_cat_xgb <- names(fold_xgb)
+    vfolds_cat <- names(fold_valid)
 
     pAoutDT <- matrix(data = NA_real_, nrow = nrow(valid_dmat), ncol = length(models_list))
     colnames(pAoutDT) <- names(models_list)
     pAoutDT <- data.table::data.table(pAoutDT)
 
-    for (vfold_idx in seq_along(vfolds_cat_xgb)) {
+    for (vfold_idx in seq_along(vfolds_cat)) {
 
-      if (gvars$verbose == 2) message("Obtaining out-of-sample CV predictions for all models and validation fold: " %+% vfolds_cat_xgb[vfold_idx])
+      if (gvars$verbose == 2) message("Obtaining out-of-sample CV predictions for all models and validation fold: " %+% vfolds_cat[vfold_idx])
 
       ## validation row indices for the current fold:
-      fold_CV_i_idx <- fold_xgb[[vfolds_cat_xgb[vfold_idx]]]
+      fold_CV_i_idx <- fold_valid[[vfolds_cat[vfold_idx]]]
 
       ## subset the validation data by the current validation fold indices (will do predict for this data)
       valid_dmat_CV.i <- valid_dmat[fold_CV_i_idx, ]
