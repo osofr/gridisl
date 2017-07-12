@@ -35,6 +35,20 @@ get_out_of_sample_predictions <- function(modelfit) {
   return(modelfit$get_out_of_sample_preds)
 }
 
+#' Get the y values (outcomes) used in the training data
+#'
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit}.
+#' @param subset_idx The index of rows (subset of training data) that was actually used for buiding / fitting the models
+#' @return A vector of out-of-sample predictions from the best selected model (CV-MSE).
+#' @export
+get_yvalues <- function(modelfit, subset_idx = NULL, ...) {
+  assert_that(is.PredictionModel(modelfit) || is.PredictionStack(modelfit))
+  OData_train <- modelfit$OData_train
+  subset_idx <- OData_train$evalsubst(subset_exprs = subset_idx)
+  yvalues <- OData_train$get.outvar(subset_idx, var = modelfit$nodes[["Ynode"]])
+  return(yvalues)
+}
+
 validate_convert_input_data <- function(input_data, ID, t_name, x, y, useH2Oframe = FALSE, dest_frame = "all_train_H2Oframe") {
   if (is.DataStorageClass(input_data)) {
     OData_input <- input_data
@@ -156,7 +170,6 @@ fit_model <- function(ID,
 
     ## Define a modeling object, perform fitting (real data is being passed for the first time here):
     modelfit <- PredictionModel$new(reg = regobj, useH2Oframe = useH2Oframe)
-    # modelfit <- modelfit$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx)
     modelfit <- try(modelfit$fit(data = train_data, validation_data = valid_data, subset_exprs = subset_idx), silent = FALSE)
 
     if (inherits(modelfit, "try-error")) {
@@ -273,7 +286,7 @@ predict_generic <- function(modelfit,
 predict_SL <- function(modelfit, newdata, ...) { UseMethod("predict_SL") }
 
 # ---------------------------------------------------------------------------------------
-#' Predict from SuperLearner fit
+#' Predict for discrete SuperLearner fit
 #'
 #' @param modelfit Model fit object returned by \code{\link{fit}}.
 #' @param newdata Subject-specific data for which predictions should be obtained.
@@ -324,6 +337,60 @@ predict_SL.PredictionStack <- function(modelfit,
                            holdout,
                            force_data.table,
                            verbose)
+
+  return(preds)
+}
+
+
+# ---------------------------------------------------------------------------------------
+#' Predict for convex (continuous) SuperLearner fit
+#'
+#' @param modelfit Model fit object returned by \code{\link{fit}}.
+#' @param newdata Subject-specific data for which predictions should be obtained.
+#' If missing then the predictions for the training data will be typically returned.
+#' See \code{holdout} for discussion of alternative cases.
+#' @param add_subject_data Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
+#' When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).
+#' @param subset_idx A vector of row indices in \code{newdata} for which the predictions should be obtain.
+#' Default is \code{NULL} in which case all observations in \code{newdata} will be used for prediction.
+# @param best_refit_only Set to \code{TRUE} to obtained the predictions from the best scoring model that was re-trained on all observed data.
+#' @param holdout Set to \code{TRUE} for out-of-sample predictions for validation folds (out-of-sample observations) or holdouts.
+#'  When \code{newdata} is missing there are two possible types of holdout predictions, depending on the modeling approach.
+#'  1. For \code{method = "holdout"} the default holdout predictions will be based on validation data.
+#'  2. For \code{method = "cv"} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
+# @param force_data.table Force the output predictions to be a \code{data.table}
+#' @param stack Stack the predictions from individual models into a single vector of Super Learner predictions (default).
+#' If set to \code{FALSE} the usual by model (by library) predictions are returned for every successful model fit in the library.
+#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
+#' @return A data.table of subject level predictions (subject are rows, columns are different models)
+#' or a data.table with subject level covariates added along with model-based predictions.
+#' @export
+predict_SL.PredictionSL <- function(modelfit,
+                       newdata,
+                       add_subject_data = FALSE,
+                       subset_idx = NULL,
+                       holdout = FALSE,
+                       stack = TRUE,
+                       verbose = getOption("gridisl.verbose")) {
+
+  force_data.table <- TRUE
+
+  if (is.null(modelfit)) stop("must call fit() before obtaining predictions")
+  if (is.list(modelfit) && ("modelfit" %in% names(modelfit))) modelfit <- modelfit$modelfit
+  assert_that(is.PredictionModel(modelfit) || is.PredictionStack(modelfit))
+  gvars$verbose <- verbose
+  nodes <- modelfit$OData_train$nodes
+  if (missing(newdata)) {
+    newdata <- modelfit$OData_train
+  }
+  SL_method <- modelfit$SL_method
+  SL_coefs <- modelfit$SL_coefs
+  preds <- predict_generic(modelfit, newdata, add_subject_data = FALSE, subset_idx, best_only = FALSE, holdout)
+
+  if (stack) {
+    preds <- data.table::data.table(SL_method$computePred(preds, SL_coefs$coef))
+    names(preds) <- "preds"
+  }
 
   return(preds)
 }

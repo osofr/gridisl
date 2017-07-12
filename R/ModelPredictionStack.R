@@ -39,6 +39,8 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
     nodes = NULL,
     OData_train = NULL, # object of class DataStorageClass used for training
     OData_valid = NULL, # object of class DataStorageClass used for scoring models (contains validation data)
+    SL_method = NULL,
+    SL_coefs = NULL,
 
     initialize = function(PredictionModels) {
       if (!all(unlist(lapply(PredictionModels, is.PredictionModel))) && !all(unlist(lapply(PredictionModels, is.PredictionStack)))) {
@@ -227,7 +229,15 @@ PredictionStack  <- R6Class(classname = "PredictionStack",
 
     # Output info on the general type of regression being fitted:
     show = function(print_format = TRUE, model_stats = FALSE, all_fits = FALSE) {
-      return(lapply(self$PredictionModels, function(PredictionModel) PredictionModel$show(print_format = TRUE, model_stats = FALSE, all_fits = FALSE)))
+
+      out_res <- lapply(self$PredictionModels, function(PredictionModel) PredictionModel$show(print_format = TRUE, model_stats = FALSE, all_fits = FALSE))
+
+      cat("\n", fill = getOption("width"))
+
+      if (!is.null(self$SL_coefs)) {
+        print(cbind(Risk = self$SL_coefs$cvRisk, Coef = self$SL_coefs$coef))
+      }
+      return(invisible(NULL))
     },
 
     summary = function(all_fits = FALSE) {

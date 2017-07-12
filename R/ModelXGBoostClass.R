@@ -303,20 +303,26 @@ getPredictXGBDMat <- function(m.fit, ParentObject, DataStorageObject, subset_idx
 }
 
 ## S3 prediction function for cross-validated xgb object
-predict.xgb.cv.synchronous <- function(xgbcvfit, newdata, ntreelimit, ...) {
+predict.xgb.cv.synchronous <- function(xgbcvfit, newdata, ntreelimit, average = TRUE, ...) {
   xgbfits <- xgbcvfit[["models"]]
   pAoutDT <- rep.int(list(numeric()), length(xgbfits))
   names(pAoutDT) <- "xgbCV." %+% seq_along(xgbfits)
   for (idx in seq_along(xgbfits)) {
     pAoutDT[[idx]] <- predict(xgbfits[[idx]], newdata = newdata, ntreelimit = ntreelimit, ...)
   }
-  pAoutDT <-
-    tibble::as_tibble(pAoutDT) %>%
-    dplyr::mutate(ID = 1:length(pAoutDT[[1]])) %>%
-    tidyr::nest(1:length(xgbfits), .key = "xgbCV")
-  data.table::setDT(pAoutDT)
-  pAoutDT[, ID := NULL]
-  # pAoutDT2 %>% tidyr::unnest()
+
+  if (average) {
+    pAoutDT <- data.table(preds = data.table::as.data.table(pAoutDT)[, rowMeans(.SD, na.rm = TRUE)])
+  } else {
+    pAoutDT <-
+      tibble::as_tibble(pAoutDT) %>%
+      dplyr::mutate(ID = 1:length(pAoutDT[[1]])) %>%
+      tidyr::nest(1:length(xgbfits), .key = "xgbCV")
+    data.table::setDT(pAoutDT)
+    pAoutDT[, ID := NULL]
+    # pAoutDT2 %>% tidyr::unnest()
+  }
+
   return(pAoutDT)
 }
 

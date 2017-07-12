@@ -93,10 +93,13 @@ fit <- function(...) { UseMethod("fit") }
 #' or V-fold cross-validated MSE (method = "cv").
 #' @param models Parameters specifying the model(s) to fit. This must be a result of calling \code{defModel(...) + defModel(...)} functions.
 #' See \code{\link{defModel}} for additional information.
-#' @param method The type of model selection procedure when fitting several models.
-#' Possible options are "none" (no model selection),
-#' "cv" (model selection with V-fold cross-validation), and
-#' "holdout" (model selection based on validation holdout sample).
+#' @param method The type of model selection and model stacking procedure when fitting more than one model.
+#' Possible options are:
+#' \code{"none"} -- no model selection;
+#' \code{"holdout"} -- model selection based on a (possibly) random holdout validation sample;
+#' \code{"cv"} -- discrete Super Learner, select a single best-performing model via internal V-fold cross-validation;
+#' \code{"origamiSL"} -- convex (NNLS) Super Learner with external V-fold cross-validation (using \code{origami} R package);
+#' \code{"internalSL"} -- convex (NNLS) Super Learner with internal V-fold cross-validation (same CV as in method="cv");
 #' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
 #' @param ID A character string name of the column that contains the unique subject identifiers.
 #' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
@@ -111,6 +114,8 @@ fit <- function(...) { UseMethod("fit") }
 #' @param seed Random number seed for selecting random holdouts or validation folds.
 #' @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 #' When \code{FALSE}, it might be impossible to make predictions from this model fit.
+#' @param fold_y_names (ADVANCED FEATURE) The names of columns in \code{data} containing the fold-specific outcomes.
+#' Can be used for contructing split-specific (or by-fold) Super-Learner with \code{method}=\code{"origamiSL"}.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
 #' @param ... Additional arguments that will be passed on directly to \code{\link{fit_model}} function.
 #' @return An R6 object containing the model fit(s).
@@ -118,7 +123,7 @@ fit <- function(...) { UseMethod("fit") }
 # @example tests/examples/1_gridisl_example.R
 #' @export
 fit.ModelStack <- function(models,
-                           method = c("none", "cv", "holdout", "origamiSL"),
+                           method = c("none", "holdout", "cv", "origamiSL", "internalSL"),
                            data,
                            ID,
                            t_name,
@@ -130,6 +135,7 @@ fit.ModelStack <- function(models,
                            hold_random = FALSE,
                            seed = NULL,
                            refit = TRUE,
+                           fold_y_names = NULL,
                            verbose = getOption("gridisl.verbose"),
                            ...) {
   method <- method[1L]
@@ -138,8 +144,8 @@ fit.ModelStack <- function(models,
 
   # if (!is.ModelStack(models)) stop("argument models must be of class 'ModelStack'")
 
-  if (!(method %in% c("none", "cv", "holdout", "origamiSL")))
-    stop("argument method must be one of: 'none', 'cv', 'holdout', 'origamiSL'")
+  if (!(method %in% c("none", "cv", "holdout", "origamiSL", "internalSL")))
+    stop("argument method must be one of: 'none', 'cv', 'holdout', 'origamiSL', 'internalSL'")
   if (!data.table::is.data.table(data) && !is.DataStorageClass(data))
     stop("argument data must be of class 'data.table, please convert the existing data.frame to data.table by calling 'data.table::as.data.table(...)'")
 
@@ -154,12 +160,30 @@ fit.ModelStack <- function(models,
   if (method %in% "none") {
     ## Fit models based on all available data
     modelfit <- fit_model(ID, t_name, x, y, data, models = models, verbose = verbose, ...)
+
   } else if (method %in% "cv") {
     modelfit <- fit_cvSL(ID, t_name, x, y, data, models = models, nfolds = nfolds, fold_column = fold_column, refit = refit, seed = seed, verbose = verbose, ...)
+
   } else if (method %in% "holdout") {
     modelfit <- fit_holdoutSL(ID, t_name, x, y, data, models = models, hold_column = hold_column, hold_random = hold_random, refit = refit, seed = seed, verbose = verbose, ...)
+
   } else if (method %in% "origamiSL") {
-    modelfit <- fit_origamiSL(ID, t_name, x, y, data, models = models, nfolds = nfolds, fold_column = fold_column, refit = refit, seed = seed, verbose = verbose, ...)
+    modelfit <- fit_origamiSL(ID, t_name, x, y, data, models = models, nfolds = nfolds, fold_column = fold_column, refit = refit, seed = seed, fold_y_names = fold_y_names, verbose = verbose, ...)
+
+  } else if (method %in% "internalSL") {
+    modelfit <- fit_cvSL(ID, t_name, x, y, data, models = models, nfolds = nfolds, fold_column = fold_column, refit = FALSE, seed = seed, verbose = verbose, ...)
+    # modelfit <- fit_internalSL(ID, t_name, x, y, data, models = models, nfolds = nfolds, fold_column = fold_column, refit = refit, seed = seed, verbose = verbose, ...)
+    Zpreds <- predict_generic(modelfit, add_subject_data = FALSE, best_only = FALSE, holdout = TRUE)
+    ## this allows us to pass the subset_idx if it was provided by the user.
+    ## Thus super-learner can be built with a subset of the original outcomes in the data, using only the
+    ## outcomes for observations that were used in fitting the models.
+    Yvals <- get_yvalues(modelfit, ...)
+    Wtsvals <- rep.int(1L, length(Yvals))
+    SL_method <- SuperLearner::method.NNLS()
+    modelfit$SL_method <- SL_method
+    SL_coefs <- SL_method$computeCoef(Z = as.matrix(Zpreds), Y = Yvals, obsWeights = Wtsvals, libraryNames = names(Zpreds), verbose = TRUE)
+    modelfit$SL_coefs <- SL_coefs
+    class(modelfit) <- c("PredictionSL", class(modelfit))
   }
 
   return(modelfit)
