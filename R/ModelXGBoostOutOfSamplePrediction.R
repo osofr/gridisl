@@ -33,7 +33,9 @@ xgb_predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, s
     # fold_model <- models_list[[1]][["models"]][[1]]
 
     valid_dmat <- getPredictXGBDMat(m.fit, ParentObject, validation_data, subset_idx)
-    valid_folds <- validation_data$dat.sVar[subset_idx, ][[validation_data$fold_column]]
+    fold_column <- validation_data$fold_column
+    if (is.null(fold_column)) fold_column <- ParentObject$fold_column
+    valid_folds <- validation_data$dat.sVar[subset_idx, ][[fold_column]]
 
     if (!is.null(valid_folds)) {
       fold_origami <- make_kfold_from_column(valid_folds)

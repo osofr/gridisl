@@ -70,7 +70,9 @@ predict_out_of_sample_cv <- function(m.fit, ParentObject, validation_data, subse
 
     ##  **** Loads new h2o frame based on validation_data ****
     valid_H2Oframe <- getPredictH2OFRAME(m.fit, ParentObject, validation_data, subset_idx)
-    valid_folds <- validation_data$dat.sVar[subset_idx, ][[validation_data$fold_column]]
+    fold_column <- validation_data$fold_column
+    if (is.null(fold_column)) fold_column <- ParentObject$fold_column
+    valid_folds <- validation_data$dat.sVar[subset_idx, ][[fold_column]]
 
     if (gvars$verbose == 2) message("Obtaining out-of-sample/holdout CV predictions for h2o with newdata")
     res <- check_out_of_sample_consistency(models_list, valid_H2Oframe, predvars, fold_column)

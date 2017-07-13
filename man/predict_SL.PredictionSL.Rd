@@ -6,7 +6,7 @@
 \usage{
 \method{predict_SL}{PredictionSL}(modelfit, newdata, add_subject_data = FALSE,
   subset_idx = NULL, holdout = FALSE, stack = TRUE,
-  verbose = getOption("gridisl.verbose"))
+  verbose = getOption("gridisl.verbose"), ...)
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit}}.}
@@ -30,6 +30,8 @@ When \code{newdata} is missing there are two possible types of holdout predictio
 If set to \code{FALSE} the usual by model (by library) predictions are returned for every successful model fit in the library.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.}
+
+\item{...}{Additional arguments, used only for compatibility with other \code{predict_SL} functions.}
 }
 \value{
 A data.table of subject level predictions (subject are rows, columns are different models)

@@ -6,7 +6,7 @@
 \usage{
 \method{predict_SL}{PredictionStack}(modelfit, newdata,
   add_subject_data = FALSE, subset_idx = NULL, holdout = FALSE,
-  verbose = getOption("gridisl.verbose"))
+  verbose = getOption("gridisl.verbose"), ...)
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit}}.}
@@ -27,6 +27,8 @@ When \code{newdata} is missing there are two possible types of holdout predictio
 2. For \code{method = "cv"} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.}
+
+\item{...}{Additional arguments, used only for compatibility with other \code{predict_SL} functions.}
 }
 \value{
 A data.table of subject level predictions (subject are rows, columns are different models)

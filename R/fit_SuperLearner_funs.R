@@ -303,6 +303,7 @@ predict_SL <- function(modelfit, newdata, ...) { UseMethod("predict_SL") }
 #'  2. For \code{method = "cv"} the default is to leave use the previous out-of-sample (holdout) predictions from the training data.
 # @param force_data.table Force the output predictions to be a \code{data.table}
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
+#' @param ... Additional arguments, used only for compatibility with other \code{predict_SL} functions.
 #' @return A data.table of subject level predictions (subject are rows, columns are different models)
 #' or a data.table with subject level covariates added along with model-based predictions.
 #' @export
@@ -311,7 +312,7 @@ predict_SL.PredictionStack <- function(modelfit,
                        add_subject_data = FALSE,
                        subset_idx = NULL,
                        holdout = FALSE,
-                       verbose = getOption("gridisl.verbose")) {
+                       verbose = getOption("gridisl.verbose"), ...) {
 
   force_data.table <- TRUE
 
@@ -362,6 +363,7 @@ predict_SL.PredictionStack <- function(modelfit,
 #' @param stack Stack the predictions from individual models into a single vector of Super Learner predictions (default).
 #' If set to \code{FALSE} the usual by model (by library) predictions are returned for every successful model fit in the library.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
+#' @param ... Additional arguments, used only for compatibility with other \code{predict_SL} functions.
 #' @return A data.table of subject level predictions (subject are rows, columns are different models)
 #' or a data.table with subject level covariates added along with model-based predictions.
 #' @export
@@ -371,7 +373,7 @@ predict_SL.PredictionSL <- function(modelfit,
                        subset_idx = NULL,
                        holdout = FALSE,
                        stack = TRUE,
-                       verbose = getOption("gridisl.verbose")) {
+                       verbose = getOption("gridisl.verbose"), ...) {
 
   force_data.table <- TRUE
 
@@ -380,9 +382,11 @@ predict_SL.PredictionSL <- function(modelfit,
   assert_that(is.PredictionModel(modelfit) || is.PredictionStack(modelfit))
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
+
   if (missing(newdata)) {
     newdata <- modelfit$OData_train
   }
+
   SL_method <- modelfit$SL_method
   SL_coefs <- modelfit$SL_coefs
   preds <- predict_generic(modelfit, newdata, add_subject_data = FALSE, subset_idx, best_only = FALSE, holdout)
