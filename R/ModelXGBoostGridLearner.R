@@ -156,7 +156,7 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
     raw_models_cv <- lapply(model_fit[["models"]], '[[', "raw")
     reloaded_models <- lapply(raw_models_cv, function(raw) xgboost::xgb.load(raw))
     model_fit[["models"]] <- NULL
-    gc(verbose = FALSE)
+    # gc(verbose = FALSE)
     model_fit[["models"]] <- reloaded_models
     return(model_fit)
   }
@@ -187,6 +187,7 @@ xgb.grid <- function(param_grid, data, nrounds, nfold, label = NULL, missing = N
   data.table::setDT(gs)
   for (i in 1:nrow(gs)) {
     gs[i, xgb_fit := list(list(purrr::lift(run_singe_model)(gs_params[i, ])))]
+    # gc(verbose = FALSE)
   }
   gs <- tibble::as_tibble(gs)
 

@@ -63,7 +63,8 @@ fit_single_h2o_grid <- function(grid.algorithm, training_frame, y, x, family = "
   model_fit <- try(do.call(h2o::h2o.grid, mainArgs), silent = FALSE)
   if (inherits(model_fit, "try-error")) return(model_fit)
   ## sort the grid by increasing MSE:
-  model_fit <- h2o::h2o.getGrid(model_fit@grid_id, sort_by = "mse", decreasing = FALSE)
+  model_fit <- h2o::h2o.getGrid(model_fit@grid_id)
+  # model_fit <- h2o::h2o.getGrid(model_fit@grid_id, sort_by = "mse", decreasing = FALSE)
   # str(model_fit@model_ids[[1]])
   # h2o.getModel(model_fit@model_ids[[1]])
 

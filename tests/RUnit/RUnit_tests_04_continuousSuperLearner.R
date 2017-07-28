@@ -2,8 +2,8 @@
 ## Growth Curve SL with model scoring based on full V-FOLD CROSS-VALIDATION
 ## ------------------------------------------------------------------------------------
 test.convexSL_GRIDs <- function() {
-  # options(gridisl.verbose = TRUE)
-  options(gridisl.verbose = FALSE)
+  options(gridisl.verbose = TRUE)
+  # options(gridisl.verbose = FALSE)
   require("gridisl")
 
   library("h2o")
@@ -37,11 +37,11 @@ test.convexSL_GRIDs <- function() {
                   scale_pos_weight = 1)
 
   params <-
-    defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 200, nthread = 1) +
-    defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 20,
-             nthread = 1,
-             param_grid = xgb_hyper,
-             seed = 123456)
+    # defModel(estimator = "xgboost__glm", family = "gaussian", nrounds = 200, nthread = 1) +
+    # defModel(estimator = "xgboost__gbm", family = "gaussian", nrounds = 20,
+    #          nthread = 1,
+    #          param_grid = xgb_hyper,
+    #          seed = 123456)
     # defModel(estimator = "h2o__glm",
     #       # search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
     #       family = "gaussian",
@@ -51,28 +51,37 @@ test.convexSL_GRIDs <- function() {
     #         # alpha = c(0,1,seq(0.1,0.9,0.1)),
     #         lambda = c(0,1e-7,1e-5,1e-3,1e-1)
     #         )) +
-    # defModel(estimator = "h2o__gbm",
-    #         # search_criteria = list(strategy = "RandomDiscrete", max_models = 5, max_runtime_secs = 60*60),
-    #         family = "gaussian",
-    #         seed = 12345,
-    #         param_grid = h2ogbm_hyper
-    #         # stopping_rounds = 2,
-    #         # stopping_tolerance = 1e-4,
-    #         # stopping_metric = "MSE"
-    #         )
+    defModel(estimator = "h2o__gbm",
+            # search_criteria = list(strategy = "RandomDiscrete", max_models = 5, max_runtime_secs = 60*60),
+            family = "gaussian",
+            seed = 12345,
+            param_grid = h2ogbm_hyper
+            # stopping_rounds = 2,
+            # stopping_tolerance = 1e-4,
+            # stopping_metric = "MSE"
+            )
 
   ## define CV folds (respecting that multiple observations per subject must fall within the same fold)
   cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 10, seed = 23)
+  # cpp_folds_10 <- data.table::rbindlist(lapply(1:10, function(x) cpp_folds))
+
 
   ## ------------------------------------------------------------------------------------------------
   ## use internal CV with manually defined fold column, then fit the SL on Z matrix
   ## ------------------------------------------------------------------------------------------------
   # set.seed(12345)
   system.time(
+Rprof(tmp <- tempfile())
+# example(glm)
     mfit_origamiSL <- fit(models = params, method = "origamiSL", data = cpp_folds,
                           ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                          fold_column = "fold",
-                          subset_idx = 1:1200)
+                          fold_column = "fold"
+                          # subset_idx = 1:1200
+                          )
+Rprof()
+summaryRprof(tmp)
+unlink(tmp)
+
   )
    #   user  system elapsed
    # 38.590   0.281  38.717
@@ -82,7 +91,9 @@ test.convexSL_GRIDs <- function() {
     mfit_internalSL <- fit(models = params, method = "internalSL", data = cpp_folds,
                             ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
                             fold_column = "fold",
-                            refit = FALSE, subset_idx = 1:1200)
+                            refit = FALSE
+                            # subset_idx = 1:1200
+                            )
   )
   #  user  system elapsed
   # 8.014   0.076   8.077

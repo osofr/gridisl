@@ -223,14 +223,17 @@ DataStorageClass <- R6Class(classname = "DataStorageClass",
       if (!missing(subset_vars)) {
         assert_that(is.character(subset_vars))
         for (subsetvar in subset_vars) {
-          ## (*) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
+          # (*) find the var of interest (in self$dat.sVar or self$dat.bin.sVar), give error if not found
           sVar.vec <- self$get.outvar(var = subsetvar)
           assert_that(!is.null(sVar.vec))
-          ## (*) reconstruct correct expression that tests for missing values
+          # (*) reconstruct correct expression that tests for missing values
           res <- res & (!gvars$misfun(sVar.vec))
         }
       }
-      if (!is.null(subset_exprs)) {
+
+      if (length(subset_exprs)==0L && !is.null(subset_exprs)) return(as.integer(subset_exprs))
+
+      if (!is.null(subset_exprs) && !is.na(subset_exprs)) {
         if (is.logical(subset_exprs)) {
           return(which(res & subset_exprs))
         } else if (is.character(subset_exprs)) {

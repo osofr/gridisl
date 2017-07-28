@@ -27,6 +27,7 @@ Imports:
     pander,
     purrr,
     speedglm,
+    SuperLearner,
     stats,
     tibble,
     tidyr,
