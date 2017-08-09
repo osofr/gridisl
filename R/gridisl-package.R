@@ -12,5 +12,6 @@
 #' @usage cpp
 #' @keywords data
 #' @examples
+#' data(cpp)
 #' head(cpp)
 NULL

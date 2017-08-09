@@ -76,9 +76,9 @@ predictP1.H2Ogrid <- function(m.fit, ParentObject, DataStorageObject, subset_idx
   models_list <- m.fit$modelfits_all
   if (!missing(predict_model_names) && !is.null(predict_model_names)) models_list <- models_list[predict_model_names]
 
-  pAoutDT <- rep.int(list(numeric()), length(models_list))
-  names(pAoutDT) <- names(models_list)
-  pAoutDT <- as.data.table(pAoutDT)
+  pAout_h2o <- rep.int(list(numeric()), length(models_list))
+  names(pAout_h2o) <- names(models_list)
+  pAout_h2o <- as.data.table(pAout_h2o)
 
   if (nrow(H2Oframe) > 0) {
     h2o::h2o.no_progress()
@@ -152,8 +152,8 @@ h2oModelClass  <- R6Class(classname = "h2oModelClass",
       if (inherits(connectH2O <- try(h2o::h2o.getConnection(), silent = TRUE), "try-error")) {
         if (gvars$verbose) message("No active connection to an H2O cluster has been detected.
 Will now attempt to initialize a local h2o cluster.
-In the future, please run `h2o::h2o.init()` prior to model training with h2o.")
-        h2o::h2o.init(nthreads=-1)
+In the future, please run `h2o::h2o.init(nthreads=...)` prior to model training with h2o.")
+        h2o::h2o.init(nthreads=2)
       }
 
       self$fit.class <- fit.algorithm
